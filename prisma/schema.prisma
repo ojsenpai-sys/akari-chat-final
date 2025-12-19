@@ -1,0 +1,42 @@
+// データベースの接続設定（PostgreSQLを使います）
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Prismaクライアントの生成設定
+generator client {
+  provider = "prisma-client-js"
+}
+
+// --- 以下、あかりちゃん専用の記憶設計図 ---
+
+// 1. ユーザー（ご主人様）のモデル
+model User {
+  id            String    @id @default(uuid()) // ユーザーごとのID
+  isPremium     Boolean   @default(false)      // 有料会員かどうか (trueなら有料)
+  
+  // 状態保存（リロードしても忘れないように）
+  currentOutfit String    @default("maid")     // 今の衣装 (maid, swim, bunny)
+  currentEvent  String?                        // 今発生中のイベント画像名 (nullなら通常)
+  
+  createdAt     DateTime  @default(now())      // 初めて会った日
+  updatedAt     DateTime  @updatedAt           // 最後に遊んだ日
+
+  // 会話履歴との紐付け
+  messages      Message[]
+}
+
+// 2. メッセージ（会話ログ）のモデル
+model Message {
+  id        String   @id @default(uuid())
+  role      String   // 'user' か 'assistant' (あかり) か
+  content   String   // 話した内容
+  emotion   String?  // あかりの感情 (smile, shy, etc...) ※あかりの発言のみ使用
+  
+  createdAt DateTime @default(now()) // 話した時間
+
+  // どのユーザーの会話か
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+}
