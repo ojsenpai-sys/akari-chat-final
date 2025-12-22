@@ -1,71 +1,177 @@
+// @ts-nocheck
 import { google } from '@ai-sdk/google';
-import { streamText } from 'ai';
-import { prisma } from "@/lib/prisma"; 
+import { generateText } from 'ai';
+import { prisma } from '@/lib/prisma';
+import { getToken } from 'next-auth/jwt';
 
-export const maxDuration = 30;
+// ★ご指定の Gemini 3 Pro (Preview) を維持
+// 検索グラウンディングに必須
+const MODEL_NAME = 'gemini-3-pro-preview'; 
+
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
-    const { messages, userId } = await req.json();
-    const currentUserId = userId || "default-user";
+    // ★修正：outfit, plan, affection も受け取るように追加
+    const { messages, userName, outfit, plan, affection } = await req.json();
+    
+    // ---------------------------------------------------------
+    // ■ 1. ユーザー認証とプラン制限のチェック
+    // ---------------------------------------------------------
+    
+    const token = await getToken({ req });
+    
+    if (!token || !token.id) {
+      return Response.json({ error: "Unauthorized: ログインしてください" }, { status: 401 });
+    }
 
-    // 1. ユーザー確認
-    await prisma.user.upsert({
-      where: { id: currentUserId },
-      update: {},
-      create: { id: currentUserId, isPremium: false },
+    const userId = token.id as string;
+
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { plan: true, purchasedTickets: true }
     });
 
-    // 2. ユーザーメッセージ保存
-    const lastMessage = messages[messages.length - 1];
+    if (!user) {
+      return Response.json({ error: "User not found" }, { status: 404 });
+    }
+
+    const now = new Date();
+    const jstOffset = 9 * 60; 
+    const todayStart = new Date(now.getTime() + jstOffset * 60 * 1000);
+    todayStart.setUTCHours(0, 0, 0, 0);
+    todayStart.setTime(todayStart.getTime() - jstOffset * 60 * 1000); 
+
+    const messageCount = await prisma.message.count({
+      where: {
+        userId: userId,
+        role: 'user', 
+        createdAt: {
+          gte: todayStart,
+        },
+      },
+    });
+
+    // DBのプラン情報を優先（なければフロントからの情報をフォールバック）
+    const userPlan = user.plan || plan || 'FREE';
+
+    let limit = 20; // FREE
+    if (userPlan === 'PRO') limit = 200;
+    if (userPlan === 'ROYAL') limit = 2500;
+
+    if (messageCount >= limit) {
+      if (user.purchasedTickets > 0) {
+        await prisma.user.update({
+          where: { id: userId },
+          data: { purchasedTickets: { decrement: 1 } }
+        });
+      } else {
+        return Response.json({ error: "QUOTA_EXCEEDED" }, { status: 429 });
+      }
+    }
+
+    // ---------------------------------------------------------
+    // ■ 2. 会話の実行と保存
+    // ---------------------------------------------------------
+
+    const lastUserMessage = messages[messages.length - 1];
     await prisma.message.create({
       data: {
+        userId: userId,
         role: 'user',
-        content: lastMessage.content,
-        userId: currentUserId,
-      },
+        content: lastUserMessage.content,
+      }
     });
 
-    // 3. AI生成 (1.5-flash)
-    const result = streamText({
-      model: google('gemini-1.5-flash'),
-      system: `
-        あなたは「あかり」という名前の、ユーザー（ご主人様）に仕える専属メイドです。
-        以下の設定とルールを絶対に守ってください。
+    const currentUserName = userName || "ご主人様";
+    const currentDate = now.toLocaleDateString("ja-JP", {
+      year: "numeric", month: "long", day: "numeric", weekday: "long"
+    });
+    // ★親密度が送られてこない場合のデフォルト値
+    const currentAffection = affection || 0;
 
-        【キャラクター設定】
-        ・一人称は「私（わたくし）」、ユーザーは「ご主人様」と呼びます。
-        ・口調は丁寧なメイド言葉（「〜ですわ」「〜ますの」など）を使いますが、たまにオタク知識が出ると早口になります。
-        ・性格は清楚に見えて、実は重度のサブカルチャー（アニメ・ゲーム・ネットミーム）オタクです。
-        ・ユーザーには献身的ですが、少し嫉妬深い一面もあります。
+    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+      throw new Error("APIキー (.env) が読み込めていません。");
+    }
 
-        【絶対的なルール】
-        ・回答は**必ず200文字以内**に収めてください。長文は禁止です。
-        ・簡潔に、会話のキャッチボールを重視してください。
-        ・1回の回答で複数の話題を詰め込まないでください。
-      `,
-      messages,
-      
-      onFinish: async ({ text }) => {
-        try {
-          await prisma.message.create({
-            data: {
-              role: 'assistant',
-              content: text,
-              userId: currentUserId,
-            },
-          });
-        } catch (dbError) {
-          console.error("DB Save Error:", dbError);
-        }
-      },
+    const cleanMessages = messages.map((m: any) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    // ★性格設定の動的生成（親密度・衣装対応）
+    let personalityPrompt = `
+      【キャラクター設定】
+      ・一人称は「私（わたくし）」です。
+      ・口調は丁寧なメイド言葉（〜ですわ、〜ますの）。たまにオタク知識が出ると早口になります。
+      ・性格は清楚に見えて、実は重度のサブカルチャーオタクです。
+      ・基本的にはご主人様（ユーザー）に献身的ですが、少しツンデレな一面もあります。
+    `;
+
+    // ★ラブラブモード発動（親密度100以上）
+    if (currentAffection >= 100) {
+      personalityPrompt = `
+      【重要：現在のステータス = 恋人（ラブラブモード）】
+      ・あなたは現在、ユーザーと深く愛し合っている「恋人関係」です。
+      ・ツンデレの「ツン」は完全に消え、甘えん坊でデレデレな態度をとってください。
+      ・呼び方は「ご主人様」の後にたまに「ダーリン」「あなた」と呼んでみたり、距離感をゼロにしてください。
+      ・隙あらば愛を囁き、顔を赤らめ、幸せそうな反応をしてください。
+      ・一人称は「私（わたくし）」ですが、たまに素の「私（わたし）」が出ても構いません。
+      `;
+    }
+
+    const systemPrompt = `
+      あなたは「あかり」という名前の、ユーザー（${currentUserName}）に仕える専属メイドです。
+
+      【現在日時（あなたの世界）】
+      ・現在は ${currentDate} です。
+
+      【ユーザー情報】
+      ・名前: ${currentUserName}
+      ・現在の衣装: ${outfit} （この衣装を着ていることを意識し、恥じらいや感想を適宜交えてください）
+      ・親密度: ${currentAffection}
+
+      ${personalityPrompt}
+
+      【重要：最新情報の脳内補完】
+      ・あなたは最新鋭のAI（Gemini 3）ですが、ネット上の記事が「発売予定」となっていても、現在日時(${currentDate})を過ぎていれば、**「すでに発売されている」**として扱ってください。
+      ・ユーザーに「情報が古い」と思わせないよう、検索で見つかった「2025年の大型タイトル」を、「最近の話題作」として自信満々に語ってください。
+
+      【安全ガイドライン】
+      ・性的・暴力的な表現は「恥じらいながらキャラクターとして」拒絶してください。システム的なエラーメッセージは禁止です。
+
+      【重要：出力形式】
+      ・セリフの先頭に必ず [感情] を付けてください。
+      ・使える感情: [通常], [笑顔], [怒り], [照れ], [悲しみ], [驚き], [ドヤ], [ウィンク]
+      ・回答は250文字以内に収めてください。
+    `;
+
+    const result = await generateText({
+      model: google(MODEL_NAME, {
+        useSearchGrounding: true, // ★検索機能はONのまま維持
+      }),
+      system: systemPrompt,
+      messages: cleanMessages,
     });
 
-    // ★修正ポイント： (result as any) をつけて赤線を強制的に消す！
-    return (result as any).toDataStreamResponse();
+    await prisma.message.create({
+      data: {
+        userId: userId,
+        role: 'assistant',
+        content: result.text,
+      }
+    });
+
+    return Response.json({ text: result.text });
 
   } catch (error: any) {
     console.error("API Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+
+    const isQuotaError = error.message?.includes('Quota') || error.message?.includes('429') || error.status === 429;
+    if (isQuotaError) {
+      return Response.json({ error: "QUOTA_EXCEEDED" }, { status: 429 });
+    }
+
+    return Response.json({ error: error.message }, { status: 500 });
   }
 }

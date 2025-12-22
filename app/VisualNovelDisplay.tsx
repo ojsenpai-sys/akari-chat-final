@@ -1,313 +1,276 @@
-"use client";
-
+// @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
-import { Shirt, X, Check } from 'lucide-react';
 
-// --- 設定エリア ---
-const EMOTION_MAP: { [key: string]: string } = {
-  '通常': 'normal',
-  '笑顔': 'smile',
-  '照れ': 'shy',
-  '怒り': 'angry',
-  '悲しみ': 'sad',
-  '驚き': 'surprised',
-  'ドヤ': 'smug',
-  'ウィンク': 'wink',
+// --- 各衣装の定義 ---
+const MAID_EMOTIONS = {
+  normal: "/images/akari_normal.png",
+  shy: "/images/akari_shy.png",
+  smile: "/images/akari_smile.png",
+  angry: "/images/akari_angry.png",
+  sad: "/images/akari_sad.png",
+  surprised: "/images/akari_surprised.png",
+  smug: "/images/akari_smug.png",
+  wink: "/images/akari_wink.png",
 };
 
-const OUTFITS = ['maid', 'swim', 'bunny'] as const;
-type Outfit = typeof OUTFITS[number];
-
-const OUTFIT_LABELS: Record<Outfit, string> = {
-  maid: 'メイド服',
-  swim: '水着',
-  bunny: 'バニーガール',
+const SANTA_EMOTIONS = {
+  normal: "/images/akari_santa_normal.png",
+  shy: "/images/akari_santa_shy.png",
+  smile: "/images/akari_santa_smile.png",
+  angry: "/images/akari_santa_angry.png",
+  sad: "/images/akari_santa_sad.png",
+  surprised: "/images/akari_santa_surprised.png",
+  smug: "/images/akari_santa_smug.png",
+  wink: "/images/akari_santa_wink.png",
 };
 
-const OUTFIT_REACTIONS: Record<Outfit, { text: string; emotion: string }> = {
-  maid: { text: "お待たせしました。基本のメイド服に戻りましたわ。やっぱりこれが一番落ち着きますね。", emotion: "笑顔" },
-  swim: { text: "えっと…ご主人様、その…水着、似合ってますか？ あまりじろじろ見ないでください…。", emotion: "照れ" },
-  bunny: { text: "どうですか？ …バニーガール。恥ずかしいですけど、ご主人様のために頑張りましたわ！", emotion: "照れ" }
+const SWIM_EMOTIONS = {
+  normal: "/images/akari_swim_normal.png",
+  shy: "/images/akari_swim_shy.png",
+  smile: "/images/akari_swim_smile.png",
+  angry: "/images/akari_swim_angry.png",
+  sad: "/images/akari_swim_sad.png",
+  surprised: "/images/akari_swim_surprised.png",
+  smug: "/images/akari_swim_smug.png",
+  wink: "/images/akari_swim_wink.png",
 };
 
-const IMAGES = {
-  bg: { day: '/images/bg_room_day.png', night: '/images/bg_room_night.png' },
+const BUNNY_EMOTIONS = {
+  normal: "/images/akari_bunny_normal.png",
+  shy: "/images/akari_bunny_shy.png",
+  smile: "/images/akari_bunny_smile.png",
+  angry: "/images/akari_bunny_angry.png",
+  sad: "/images/akari_bunny_sad.png",
+  surprised: "/images/akari_bunny_surprised.png",
+  smug: "/images/akari_bunny_smug.png",
+  wink: "/images/akari_bunny_wink.png",
 };
 
-// イベント発動ワード
-const EVENT_TRIGGERS: Record<string, string[]> = {
-  "event_sleeping.png": ["寝よう", "おやすみ", "布団", "一緒に寝"],
-  "event_washing.png": ["背中流", "お風呂", "入浴", "洗いっこ"],
-  "event_christmas.png": ["クリスマス", "イルミネーション", "デート", "外に行こう"],
-  "event_cooking.png": ["お腹すい", "ご飯作って", "何か作って", "オムライス"],
-  "event_dining.png": ["いただきます", "一緒に食べ", "ご飯食べる", "モグモグ"],
-  "event_massage.png": ["疲れた", "肩凝った", "マッサージ", "癒やして"],
-  "event_yoga.png": ["ヨガ", "運動", "ストレッチ", "ポーズ"],
-  "event_onsen.png": ["温泉", "混浴", "露天風呂", "湯船"]
+// ★ラブラブモード用画像（親密度100以上で使用）
+const LOVE_IMAGES = {
+  maid: "/images/akari_maid_love.png",
+  santa: "/images/akari_santa_love.png",
+  swimsuit: "/images/akari_swim_love.png",
+  bunny: "/images/akari_bunny_love.png"
 };
 
-const RELEASE_KEYWORDS = ["おはよう", "起きて", "上がろう", "服着て", "帰ろう", "ごちそうさま", "終わろう", "戻って", "通常"];
+const ROOMWEAR_IMAGE = "/images/akari_roomwear.png";
+const BG_DAY = "/images/bg_room_day.png";
+const BG_NIGHT = "/images/bg_room_night.png";
+const BG_ROYAL_DAY = "/images/bg_royal_day.png";
+const BG_ROYAL_NIGHT = "/images/bg_royal_night.png";
 
-type Props = {
-  messages: any[];
-};
+const SITUATION_DEFINITIONS = [
+  { id: "sleeping", image: "/images/event_sleeping.png", triggers: ["そろそろ寝よう", "おやすみ"], releases: ["おはよう"] },
+  { id: "washing", image: "/images/event_washing.png", triggers: ["お風呂入ろう"], releases: ["上がろう"] },
+  { id: "christmas", image: "/images/event_christmas.png", triggers: ["クリスマスだね"], releases: ["帰ろうか"] },
+  { id: "cooking", image: "/images/event_cooking.png", triggers: ["ご飯作って"], releases: ["いただきます"] },
+  { id: "onsen", image: "/images/event_onsen.png", triggers: ["温泉行こう"], releases: ["そろそろ上がろうか"] },
+  { id: "massage", image: "/images/event_massage.png", triggers: ["マッサージして"], releases: ["楽になった"] },
+  { id: "yoga", image: "/images/event_yoga.png", triggers: ["ヨガしよう"], releases: ["終わろう"] }
+];
 
-export default function VisualNovelDisplay({ messages }: Props) {
-  const lastMessage = messages[messages.length - 1];
-  const isUser = lastMessage?.role === 'user';
-  
-  const [displayText, setDisplayText] = useState('');
-  const [currentEmotion, setCurrentEmotion] = useState('通常');
-  const [currentOutfit, setCurrentOutfit] = useState<Outfit>('maid');
-  const [currentEventImage, setCurrentEventImage] = useState<string | null>(null);
-  const [userId, setUserId] = useState<string | null>(null);
-
+// ★引数に affection を追加
+export default function VisualNovelDisplay({ messages, outfit = 'maid', currentPlan = 'free', affection = 0 }) {
+  const [currentEmotion, setCurrentEmotion] = useState('normal');
+  const [currentSituation, setCurrentSituation] = useState(null); 
+  const [displayedText, setDisplayedText] = useState('');
   const [showUI, setShowUI] = useState(true);
-  const [showOutfitMenu, setShowOutfitMenu] = useState(false);
+  const [isNightTime, setIsNightTime] = useState(false); 
+  const [isRoomwearTime, setIsRoomwearTime] = useState(false); 
+  const scrollRef = useRef(null);
+
+  // ★親密度100以上でラブラブモード判定
+  const isLoveMode = affection >= 100;
+
+  const toggleUI = () => setShowUI(!showUI);
+
+  useEffect(() => {
+    const checkTime = () => {
+      const now = new Date();
+      const hour = now.getHours();
+      // 18時〜翌5時を夜とする
+      setIsNightTime(hour >= 18 || hour < 5);
+      // ルームウェアの時間帯（深夜）
+      setIsRoomwearTime(hour >= 23 || hour < 5);
+    };
+    checkTime();
+    const timer = setInterval(checkTime, 60000);
+    return () => clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (messages.length === 0) return;
+    const lastMsg = messages[messages.length - 1];
+
+    if (lastMsg.role === 'user') {
+      const text = lastMsg.content;
+      const nextSituation = SITUATION_DEFINITIONS.find(def => 
+        def.triggers.some(keyword => text.includes(keyword))
+      );
+      if (nextSituation) {
+        setCurrentSituation(nextSituation);
+      } else if (currentSituation) {
+        const shouldRelease = currentSituation.releases.some(keyword => text.includes(keyword));
+        if (shouldRelease) setCurrentSituation(null);
+      }
+    }
+
+    if (lastMsg.role === 'assistant') {
+      let content = lastMsg.content;
+      const emotionRegex = /\[(.*?)\]/g;
+      let match;
+      const emoKeyMap = { '通常': 'normal', '笑顔': 'smile', '怒り': 'angry', '照れ': 'shy', '悲しみ': 'sad', '驚き': 'surprised', 'ドヤ': 'smug', 'ウィンク': 'wink' };
+
+      while ((match = emotionRegex.exec(content)) !== null) {
+        if (emoKeyMap[match[1]]) setCurrentEmotion(emoKeyMap[match[1]]);
+      }
+
+      const cleanContent = content.replace(/\[.*?\]/g, '');
+      setDisplayedText('');
+      let i = 0;
+      const interval = setInterval(() => {
+        setDisplayedText(cleanContent.substring(0, i + 1));
+        i++;
+        if (i >= cleanContent.length) clearInterval(interval);
+        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      }, 30);
+      return () => clearInterval(interval);
+    } 
+  }, [messages, currentSituation]);
+
+  // --- 衣装権限チェックと画像決定 ---
+  let characterSrc = MAID_EMOTIONS[currentEmotion] || MAID_EMOTIONS.normal;
   
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  // プラン名の大文字小文字を吸収して判定
+  const plan = currentPlan?.toUpperCase() || 'FREE';
+  
+  let activeOutfit = outfit;
+  if (outfit === 'swimsuit' || outfit === 'bunny') {
+    if (plan === 'FREE') activeOutfit = 'maid';
+  } else if (outfit === 'santa') {
+    if (plan !== 'ROYAL') activeOutfit = 'maid';
+  }
 
-  // ----------------------------------------------------------------
-  // ★バグ修正1: 画像プリロード（点滅防止）
-  // ----------------------------------------------------------------
-  useEffect(() => {
-    const imagesToPreload = [
-      IMAGES.bg.day,
-      IMAGES.bg.night,
-      ...Object.keys(EVENT_TRIGGERS).map(img => `/images/${img}`),
-      ...OUTFITS.flatMap(outfit => 
-        Object.values(EMOTION_MAP).map(emotion => `/images/akari_${outfit}_${emotion}.png`)
-      )
-    ];
-
-    imagesToPreload.forEach(src => {
-      const img = new Image();
-      img.src = src;
-    });
-  }, []);
-
-  // ユーザーID管理 & ロード
-  useEffect(() => {
-    let storedId = localStorage.getItem('akari_user_id');
-    if (!storedId) {
-      storedId = 'user_' + Math.random().toString(36).substr(2, 9);
-      localStorage.setItem('akari_user_id', storedId);
-    }
-    setUserId(storedId);
-
-    const loadState = async () => {
-      try {
-        const res = await fetch(`/api/user/sync?userId=${storedId}`);
-        if (res.ok) {
-          const data = await res.json();
-          if (data.currentOutfit) setCurrentOutfit(data.currentOutfit as Outfit);
-          if (data.currentEvent) setCurrentEventImage(data.currentEvent);
-        }
-      } catch (e) { console.error("状態ロード失敗:", e); }
-    };
-    loadState();
-  }, []);
-
-  // DB保存
-  const saveStateToDB = async (outfit: string, event: string | null) => {
-    if (!userId) return;
-    try {
-      await fetch('/api/user/sync', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, outfit, event }),
-      });
-    } catch (e) { console.error("状態保存失敗:", e); }
-  };
-
-  const getCharacterImagePath = () => {
-    const emotionKey = EMOTION_MAP[currentEmotion] || 'normal';
-    return `/images/akari_${currentOutfit}_${emotionKey}.png`;
-  };
-
-  const playVoice = async (text: string, emotion: string) => {
-    try {
-      if (audioRef.current) {
-        audioRef.current.pause();
-        audioRef.current.currentTime = 0;
-      }
-      const response = await fetch('/api/voice', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text, emotion }), 
-      });
-      if (!response.ok) return;
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      if (audioRef.current) {
-        audioRef.current.src = url;
-        audioRef.current.play().catch(() => {});
-      }
-    } catch (e) { console.error(e); }
-  };
-
-  const startTyping = (text: string) => {
-    if (typingTimeoutRef.current) clearInterval(typingTimeoutRef.current);
-    let charIndex = 0;
-    setDisplayText('');
-    
-    typingTimeoutRef.current = setInterval(() => {
-      if (charIndex < text.length) {
-        setDisplayText(text.slice(0, charIndex + 1));
-        charIndex++;
-      } else {
-        if (typingTimeoutRef.current) clearInterval(typingTimeoutRef.current);
-      }
-    }, 30);
-  };
-
-  const changeOutfit = (outfit: Outfit) => {
-    setCurrentOutfit(outfit);
-    setShowOutfitMenu(false);
-    setCurrentEventImage(null);
-    saveStateToDB(outfit, null);
-
-    const reaction = OUTFIT_REACTIONS[outfit];
-    setCurrentEmotion(reaction.emotion);
-    startTyping(reaction.text);
-    playVoice(reaction.text, reaction.emotion);
-  };
-
-  // メッセージ監視・イベント判定
-  useEffect(() => {
-    if (!lastMessage) return;
-
-    const fullText = lastMessage.content;
-    let nextEvent = currentEventImage;
-    
-    // ----------------------------------------------------------------
-    // ★バグ修正2: イベント自爆防止
-    // 必ず「ユーザーの発言(isUser)」である場合のみイベント判定を行う
-    // ----------------------------------------------------------------
-    if (isUser) {
-      if (RELEASE_KEYWORDS.some(word => fullText.includes(word))) {
-        nextEvent = null;
-      } else {
-        for (const [imageFile, keywords] of Object.entries(EVENT_TRIGGERS)) {
-          if (keywords.some(word => fullText.includes(word))) {
-            nextEvent = imageFile;
+  // 2. 画像の適用
+  // ラブラブモード中はルームウェアより恋画像を優先
+  if (isRoomwearTime && activeOutfit === 'maid' && !isLoveMode) {
+    characterSrc = ROOMWEAR_IMAGE;
+  } else {
+    // ★ラブラブモードなら専用画像を優先
+    if (isLoveMode) {
+        // 衣装に応じた恋画像を選択
+        characterSrc = LOVE_IMAGES[activeOutfit] || LOVE_IMAGES.maid;
+    } else {
+        // 通常モード
+        switch (activeOutfit) {
+          case 'santa':
+            characterSrc = SANTA_EMOTIONS[currentEmotion] || SANTA_EMOTIONS.normal;
             break;
-          }
+          case 'swimsuit':
+            characterSrc = SWIM_EMOTIONS[currentEmotion] || SWIM_EMOTIONS.normal;
+            break;
+          case 'bunny':
+            characterSrc = BUNNY_EMOTIONS[currentEmotion] || BUNNY_EMOTIONS.normal;
+            break;
+          default:
+            characterSrc = MAID_EMOTIONS[currentEmotion] || MAID_EMOTIONS.normal;
         }
-      }
-      
-      // 状態変化があれば保存
-      if (nextEvent !== currentEventImage) {
-        setCurrentEventImage(nextEvent);
-        saveStateToDB(currentOutfit, nextEvent);
-      }
     }
+  }
 
-    // あかりのターン（ユーザーじゃない場合）のみ、表情変更と読み上げを行う
-    if (!isUser) {
-      let cleanText = fullText;
-      Object.keys(EMOTION_MAP).forEach(tag => {
-        const regex = new RegExp(`[\\[\\(【]${tag}[\\]\\)】]`, 'g');
-        cleanText = cleanText.replace(regex, '');
-      });
-      cleanText = cleanText.trim();
+  // ★ポジション設定の修正
+  // サンタ服(常に全身) または ラブラブモード(すべて全身・拡大) の場合に位置調整を適用
+  const adjustPosition = (activeOutfit === 'santa') || isLoveMode;
+  
+  // デレモードのときは、さらに少し近づく（拡大する）
+  const imageScale = isLoveMode ? "scale-110" : "scale-100";
 
-      const match = fullText.match(/[\[\(【](.*?)[\]\)】]/);
-      const emotionWord = match ? match[1] : '通常';
-      const nextEmotion = EMOTION_MAP[emotionWord] ? emotionWord : '通常';
+  const imageStyle = adjustPosition
+    ? `max-h-[160%] md:max-h-[220%] -bottom-[48%] md:-bottom-[120%] ${imageScale}` 
+    : "max-h-[110%] md:max-h-[140%] -bottom-[20%] md:-bottom-[45%]";
 
-      setCurrentEmotion(nextEmotion);
-      startTyping(cleanText);
-      playVoice(cleanText, nextEmotion);
-    }
-
-    return () => {
-      if (typingTimeoutRef.current) clearInterval(typingTimeoutRef.current);
-    };
-  }, [messages, lastMessage]); // 依存配列を最小限に
-
-  const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
-    const target = e.target as HTMLImageElement;
-    target.src = `/images/akari_normal.png`;
-  };
+  // 背景画像決定ロジック
+  let currentBg = isNightTime ? BG_NIGHT : BG_DAY;
+  if (plan === 'ROYAL') {
+    currentBg = isNightTime ? BG_ROYAL_NIGHT : BG_ROYAL_DAY;
+  }
+  if (currentSituation) {
+    currentBg = currentSituation.image;
+  }
 
   return (
-    <div className="w-full h-full relative flex justify-center items-end bg-black cursor-pointer overflow-hidden" onClick={() => setShowUI(!showUI)}>
-      <audio ref={audioRef} preload="auto" />
-      
-      {/* ---------------------------------------------------------------- */}
-      {/* ★バグ修正3: イベント画像のスマホスクロール対応 */}
-      {/* overflow-autoを追加し、画像サイズを大きく保つことでスクロール可能に */}
-      {/* ---------------------------------------------------------------- */}
-      {currentEventImage ? (
-        <div className="absolute inset-0 z-10 animate-in fade-in duration-700 overflow-auto bg-black">
-           <div className="min-w-full min-h-full flex justify-center items-center">
-             <img 
-              src={`/images/${currentEventImage}`}
-              alt="Event"
-              // min-w-[100vw]で画面幅いっぱいを保証しつつ、object-coverで綺麗に見せる
-              className="min-w-[100vw] min-h-[100vh] object-cover"
-              onError={() => setCurrentEventImage(null)}
-            />
-           </div>
-        </div>
-      ) : (
-        <>
-          <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${IMAGES.bg.day})` }} />
-          <div className="absolute inset-0 flex justify-center items-start pointer-events-none z-10">
-            <img 
-              src={getCharacterImagePath()}
-              onError={handleImageError}
-              alt="あかり"
-              className="h-[110vh] max-w-none object-contain translate-y-[2vh] drop-shadow-2xl transition-all duration-300" 
-            />
-          </div>
-        </>
-      )}
-
-      {/* 衣装メニュー */}
-      <div 
-        className={`absolute top-4 left-4 z-50 transition-all duration-500 flex flex-col items-start gap-2 ${showUI ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
-        onClick={(e) => e.stopPropagation()} 
-      >
-        <button 
-          onClick={() => setShowOutfitMenu(!showOutfitMenu)}
-          className={`p-3 rounded-full backdrop-blur-md border shadow-lg transition-all duration-300 ${showOutfitMenu ? 'bg-pink-600 border-pink-400 text-white rotate-90' : 'bg-black/50 border-white/20 text-white hover:bg-pink-600/80'}`}
-        >
-          {showOutfitMenu ? <X size={24} /> : <Shirt size={24} />}
-        </button>
-
-        {showOutfitMenu && (
-          <div className="bg-black/80 border border-white/20 rounded-xl p-2 flex flex-col gap-1 backdrop-blur-md shadow-2xl animate-in slide-in-from-left-4 fade-in duration-200">
-            {OUTFITS.map((outfit) => (
-              <button
-                key={outfit}
-                onClick={() => changeOutfit(outfit)}
-                className={`flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-bold transition-all w-48 text-left ${
-                  currentOutfit === outfit 
-                    ? 'bg-gradient-to-r from-pink-600 to-pink-500 text-white shadow-md' 
-                    : 'text-gray-300 hover:bg-white/10 hover:text-white'
-                }`}
-              >
-                <div className="w-5 flex justify-center">
-                   {currentOutfit === outfit && <Check size={16} />}
-                </div>
-                {OUTFIT_LABELS[outfit]}
-              </button>
-            ))}
-          </div>
-        )}
+    <div className="relative w-full h-full bg-black overflow-hidden cursor-pointer select-none outline-none caret-transparent" onClick={toggleUI}>
+      {/* 背景レイヤー */}
+      <div className="absolute inset-0 w-full h-full z-0">
+        <img src={currentBg} alt="BG" className="w-full h-full object-cover transition-opacity duration-500"/>
       </div>
 
-      {/* ---------------------------------------------------------------- */}
-      {/* ★バグ修正4: セリフ枠のスクロール対応 */}
-      {/* ---------------------------------------------------------------- */}
-      <div className={`absolute bottom-4 left-0 right-0 mx-auto w-[90%] max-w-2xl z-50 transition-all duration-500 transform ${showUI ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 pointer-events-none'}`} onClick={(e) => e.stopPropagation()}>
-        <div className="bg-black/60 border border-white/20 rounded-2xl p-4 min-h-[100px] max-h-[40vh] overflow-y-auto backdrop-blur-md shadow-2xl">
-          <div className="text-pink-400 font-bold text-lg mb-1 drop-shadow-md sticky top-0 bg-black/0">あかり</div>
-          <div className="text-white text-base leading-relaxed font-medium drop-shadow-sm whitespace-pre-wrap">{displayText}</div>
+      {/* ★追加: ピンク色のデレフィルター (親密度100以上で表示) */}
+      <div 
+        className={`absolute inset-0 pointer-events-none transition-opacity duration-1000 z-1 ${
+          isLoveMode ? 'opacity-100' : 'opacity-0'
+        }`}
+        style={{
+          // 中心は薄く、周りが濃いピンクのグラデーション
+          background: 'radial-gradient(circle, rgba(255, 192, 203, 0.1) 40%, rgba(255, 20, 147, 0.3) 100%)',
+        }}
+      />
+
+      {/* ★追加: デレ演出の光パーティクル (簡易版) */}
+      {isLoveMode && (
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-2">
+           <div className="absolute top-1/4 left-1/4 w-3 h-3 bg-pink-300 rounded-full blur-[4px] animate-pulse opacity-60" />
+           <div className="absolute bottom-1/3 right-1/4 w-4 h-4 bg-white rounded-full blur-[6px] animate-bounce opacity-50" style={{ animationDuration: '3s' }} />
+           <div className="absolute top-1/2 left-2/3 w-2 h-2 bg-pink-200 rounded-full blur-[2px] animate-ping opacity-70" style={{ animationDuration: '2s' }} />
         </div>
+      )}
+
+      {/* キャラクター画像 */}
+      {!currentSituation && (
+        <div className="absolute inset-0 z-10 flex items-end justify-center pointer-events-none">
+          <img 
+            key={characterSrc} // keyを変更してアニメーションを発火させる
+            src={characterSrc} 
+            alt="Akari" 
+            className={`${imageStyle} w-auto object-cover relative drop-shadow-2xl transition-all duration-500 animate-in fade-in slide-in-from-bottom-4`}
+          />
+        </div>
+      )}
+
+      {/* UIウィンドウ */}
+      {showUI && (
+        <div className="absolute bottom-0 left-0 w-full z-20 pb-4 px-2 md:pb-8 md:px-8 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-20" onClick={(e) => e.stopPropagation()}>
+          <div className={`
+            max-w-4xl mx-auto rounded-xl p-4 md:p-6 shadow-2xl backdrop-blur-sm border
+            ${isLoveMode 
+                ? 'bg-pink-900/40 border-pink-400/50' // デレ時はウィンドウも少しピンクに
+                : 'bg-black/80 border-white/20'
+            }
+          `}>
+            <div className="text-pink-400 font-bold text-lg mb-2 flex items-center gap-2">
+              <span>あかり</span>
+              {/* ステータス表示 */}
+              {isLoveMode && <span className="text-xs text-white bg-pink-600 px-2 py-0.5 rounded border border-white/10 animate-pulse">❤ Love ❤</span>}
+              {currentSituation && <span className="text-xs text-gray-400 bg-gray-800 px-2 py-0.5 rounded border border-white/10">イベント中</span>}
+            </div>
+            <div ref={scrollRef} className="text-white text-base md:text-xl leading-relaxed min-h-[4rem] max-h-[12rem] overflow-y-auto pr-2 custom-scrollbar select-text caret-auto">
+              {messages.length > 0 && messages[messages.length - 1].role === 'assistant' ? displayedText : <span className="text-gray-400 text-sm animate-pulse">（あかりの返答を待っています...）</span>}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* プリロード用 */}
+      <div className="hidden">
+        {Object.values(MAID_EMOTIONS).map(s => <img key={s} src={s} />)}
+        {Object.values(SANTA_EMOTIONS).map(s => <img key={s} src={s} />)}
+        {Object.values(SWIM_EMOTIONS).map(s => <img key={s} src={s} />)}
+        {Object.values(BUNNY_EMOTIONS).map(s => <img key={s} src={s} />)}
+        {Object.values(LOVE_IMAGES).map(s => <img key={s} src={s} />)}
+        {SITUATION_DEFINITIONS.map(d => <img key={d.id} src={d.image} />)}
+        <img src={BG_DAY} /><img src={BG_NIGHT} /><img src={ROOMWEAR_IMAGE} />
+        <img src={BG_ROYAL_DAY} /><img src={BG_ROYAL_NIGHT} />
       </div>
     </div>
   );

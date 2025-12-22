@@ -1,42 +1,106 @@
-// データベースの接続設定（PostgreSQLを使います）
+// 1. データベース接続設定
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-// Prismaクライアントの生成設定
+// 2. クライアント生成設定
 generator client {
   provider = "prisma-client-js"
 }
 
-// --- 以下、あかりちゃん専用の記憶設計図 ---
+// ==========================================
+//  ユーザーとあかりのデータモデル
+// ==========================================
 
-// 1. ユーザー（ご主人様）のモデル
+// ユーザー（ご主人様）のモデル
 model User {
-  id            String    @id @default(uuid()) // ユーザーごとのID
-  isPremium     Boolean   @default(false)      // 有料会員かどうか (trueなら有料)
-  
-  // 状態保存（リロードしても忘れないように）
-  currentOutfit String    @default("maid")     // 今の衣装 (maid, swim, bunny)
-  currentEvent  String?                        // 今発生中のイベント画像名 (nullなら通常)
-  
-  createdAt     DateTime  @default(now())      // 初めて会った日
-  updatedAt     DateTime  @updatedAt           // 最後に遊んだ日
+  id            String    @id @default(cuid())
+  name          String?   // Googleアカウントの名前
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?   // Googleアイコン画像
 
-  // 会話履歴との紐付け
+  // ▼ アプリ専用設定（あかりとの関係性）
+  customName    String?   @default("ご主人様") // あかりからの呼び名
+  currentOutfit String    @default("maid")     // 今の衣装 (maid, swim, bunny, santa)
+  currentEvent  String?                        // 今発生中のイベント画像
+
+  // ▼ 追加：新機能用ステータス
+  affection     Int       @default(0)          // 親密度（100以上でラブラブモード）
+  points        Int       @default(0)          // 所持ポイント（プレゼント購入用）
+  lastLoginAt   DateTime  @default(now())      // 最終ログイン日時（ログボ判定用）
+
+  // ▼ 料金プラン・課金情報
+  plan             Plan      @default(FREE)    // プラン (FREE, PRO, ROYAL)
+  subscriptionId   String?                     // StripeのサブスクID
+  stripeCustomerId String?                     // Stripeの顧客ID
+  purchasedTickets Int       @default(0)       // 追加購入した会話チケット残数
+
+  // ▼ リレーション（紐付け）
+  accounts      Account[]
+  sessions      Session[]
   messages      Message[]
+
+  createdAt     DateTime  @default(now())      // 初めて会った日
+  updatedAt     DateTime  @updatedAt           // 最後に更新した日
 }
 
-// 2. メッセージ（会話ログ）のモデル
+// メッセージ（会話ログ）のモデル
 model Message {
-  id        String   @id @default(uuid())
-  role      String   // 'user' か 'assistant' (あかり) か
-  content   String   // 話した内容
-  emotion   String?  // あかりの感情 (smile, shy, etc...) ※あかりの発言のみ使用
-  
-  createdAt DateTime @default(now()) // 話した時間
-
-  // どのユーザーの会話か
+  id        String   @id @default(cuid())
+  role      String   // "user" or "assistant"
+  content   String   // 会話内容
+  emotion   String?  // あかりの感情 (smile, shy, etc...) 
+   
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+   
+  createdAt DateTime @default(now()) // 話した時間
+}
+
+// プランの定義（3段階）
+enum Plan {
+  FREE   // 無料：1日20回
+  PRO    // 一般：1日200回 ＋ 衣装変更
+  ROYAL  // VIP：1日2500回 ＋ 全機能
+}
+
+// ==========================================
+//  NextAuth（Googleログイン）必須モデル
+// ==========================================
+
+model Account {
+  id                 String  @id @default(cuid())
+  userId             String
+  type               String
+  provider           String
+  providerAccountId  String
+  refresh_token      String? @db.Text
+  access_token       String? @db.Text
+  expires_at         Int?
+  token_type         String?
+  scope              String?
+  id_token           String? @db.Text
+  session_state      String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
 }
