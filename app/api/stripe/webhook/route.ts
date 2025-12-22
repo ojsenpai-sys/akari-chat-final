@@ -28,43 +28,52 @@ export async function POST(req: Request) {
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
     
+    // メタデータからユーザーIDや購入タイプを取得
     const userId = session.metadata?.userId;
-    const type = session.metadata?.type;
-    const planName = session.metadata?.planName;
+    const type = session.metadata?.type;         // 'plan' または 'ticket'
+    const planName = session.metadata?.planName; // 'PRO' または 'ROYAL'
 
     if (userId) {
       try {
         if (type === 'plan' && planName) {
-          // パターンA: プラン加入（ここでポイントも付与する！）
+          // ==========================================
+          // パターンA: サブスクプラン加入
+          // ==========================================
           
-          // プランに応じたポイントを決定（名前はご自身のプラン名に合わせて調整してください）
-          // 例: 'Royal'なら500、それ以外(Standard)なら300
+          // プランに応じたポイントを決定
+          // (Royalなら500pt、Proなら300pt)
           let pointsToAdd = 300; 
-          if (planName.includes('Royal') || planName.includes('royal')) {
+          if (planName.toUpperCase().includes('ROYAL')) {
              pointsToAdd = 500;
           }
 
+          // DB更新: プラン変更 ＋ ポイント付与
           await prisma.user.update({
             where: { id: userId },
             data: { 
-              plan: planName as any,
-              points: { increment: pointsToAdd } // ★ここを追加しました！
+              plan: planName as any,       // 'PRO' or 'ROYAL'
+              points: { increment: pointsToAdd },
+              // ※プランに入ったらチケット残数をリセットしたい場合はここで purchasedTickets: 0 もありですが、
+              //   今回は「繰り越し」仕様なのでリセットしません。
             },
           });
           console.log(`User ${userId} upgraded to ${planName} and got ${pointsToAdd} points.`);
 
         } else if (type === 'ticket') {
-          // パターンB: 単発チケット（ポイント）購入
-          // もしチケット＝ポイント購入なら、ここも points カラムにすべきかもしれません
+          // ==========================================
+          // パターンB: 会話チケット単発購入
+          // ==========================================
+          
+          // ポイントではなく「会話チケット残数」を増やす！
           await prisma.user.update({
             where: { id: userId },
             data: { 
-              // purchasedTickets: { increment: 100 } // 元のコード
-              points: { increment: 100 } // ★ポイントを増やす形に変更（必要であれば）
+              purchasedTickets: { increment: 100 } // ★ここが修正ポイント！
             },
           });
-          console.log(`User ${userId} purchased points.`);
+          console.log(`User ${userId} purchased +100 chat tickets.`);
         }
+
       } catch (dbError) {
         console.error('Database update failed:', dbError);
         return NextResponse.json({ error: 'DB Error' }, { status: 500 });

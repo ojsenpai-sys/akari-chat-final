@@ -4,14 +4,38 @@ import React from 'react';
 import { Check, Star, Zap, Crown, PlusCircle, MessageCircle } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 
-// Stripeの商品リンク
+// ==========================================
+// ★重要：ここにStripeの新しい価格IDを貼り付けてください
+// ==========================================
+const STRIPE_PRICES = {
+  PRO:    'price_1Sh9np52ZRZku31ouIBlRsAb',    // 例: price_1Pxxxxx
+  ROYAL:  'price_1Sh9oi52ZRZku31oiObqaBKT',  // 例: price_1Pxxxxx
+  TICKET: 'price_1Sh9sz52ZRZku31ocC72SsfT', // 例: price_1Pxxxxx
+};
+
+// ヘルパー関数: IDからプラン名を逆引き（APIに渡すため）
+const getPlanNameFromPriceId = (priceId: string) => {
+  if (priceId === STRIPE_PRICES.PRO) return 'PRO';
+  if (priceId === STRIPE_PRICES.ROYAL) return 'ROYAL';
+  if (priceId === STRIPE_PRICES.TICKET) return 'TICKET';
+  return '';
+};
+
+// Stripeの商品リンク処理
 const handleCheckout = async (priceId: string, mode: 'subscription' | 'payment' = 'subscription') => {
-  if (!priceId) return;
+  if (!priceId || priceId.includes('貼り付け')) {
+    alert('システムエラー: 価格IDが設定されていません');
+    return;
+  }
 
   try {
     const res = await fetch('/api/stripe/checkout', {
       method: 'POST',
-      body: JSON.stringify({ priceId, mode, planName: getPlanNameFromPriceId(priceId) }),
+      body: JSON.stringify({ 
+        priceId, 
+        mode, 
+        planName: getPlanNameFromPriceId(priceId) 
+      }),
       headers: { 'Content-Type': 'application/json' },
     });
     
@@ -25,13 +49,6 @@ const handleCheckout = async (priceId: string, mode: 'subscription' | 'payment' 
     console.error(err);
     alert('通信エラーが発生しました');
   }
-};
-
-// ヘルパー関数: IDからプラン名を逆引き（APIに渡すため）
-const getPlanNameFromPriceId = (priceId: string) => {
-  if (priceId === 'price_1Sh2k1LdS36oSDkePyDTrveV') return 'PRO';
-  if (priceId === 'price_1Sh2nrLdS36oSDkeYNke8mys') return 'ROYAL';
-  return '';
 };
 
 export default function PlansPage() {
@@ -54,8 +71,8 @@ export default function PlansPage() {
     },
     {
       name: 'Pro Plan',
-      price: '月額 980円',
-      priceId: 'price_1Sh2k1LdS36oSDkePyDTrveV', // ★Pro ID
+      price: '月額 980円 (税込)',
+      priceId: STRIPE_PRICES.PRO,
       icon: <Zap className="text-yellow-400" size={32} />,
       features: [
         '会話 1日200回まで大幅UP',
@@ -70,8 +87,8 @@ export default function PlansPage() {
     },
     {
       name: 'Royal Plan',
-      price: '月額 5,000円',
-      priceId: 'price_1Sh2nrLdS36oSDkeYNke8mys', // ★Royal ID
+      price: '月額 5,000円 (税込)',
+      priceId: STRIPE_PRICES.ROYAL,
       icon: <Crown className="text-pink-500" size={32} />,
       features: [
         '会話 1日2,500回 (実質無制限)',
@@ -90,8 +107,8 @@ export default function PlansPage() {
   // 追加チケット定義
   const ticket = {
     name: '会話チケット (+100回)',
-    price: '500円 / 回',
-    priceId: 'price_1Sh2pJLdS36oSDkeqOJxJU8x', // ★Ticket ID
+    price: '500円 / 回 (税込)',
+    priceId: STRIPE_PRICES.TICKET,
     desc: 'プランの上限に達しても、もっと話したい時に。購入分は翌日以降も繰り越されます。',
   };
 
@@ -176,8 +193,8 @@ export default function PlansPage() {
             <div className="flex flex-col items-center gap-2 shrink-0">
                <span className="text-2xl font-bold text-yellow-400">{ticket.price}</span>
                <button
-                  onClick={() => handleCheckout(ticket.priceId, 'payment')}
-                  className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-8 rounded-full shadow-lg flex items-center gap-2 transition-transform hover:scale-105"
+                 onClick={() => handleCheckout(ticket.priceId, 'payment')}
+                 className="bg-yellow-500 hover:bg-yellow-400 text-black font-bold py-2 px-8 rounded-full shadow-lg flex items-center gap-2 transition-transform hover:scale-105"
                >
                  <PlusCircle size={20} />
                  {ticket.name}を購入
