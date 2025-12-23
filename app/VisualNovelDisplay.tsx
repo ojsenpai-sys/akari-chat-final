@@ -55,10 +55,12 @@ const LOVE_IMAGES = {
 };
 
 const ROOMWEAR_IMAGE = "/images/akari_roomwear.png";
-const BG_DAY = "/images/bg_room_day.png";
-const BG_NIGHT = "/images/bg_room_night.png";
-const BG_ROYAL_DAY = "/images/bg_royal_day.png";
-const BG_ROYAL_NIGHT = "/images/bg_royal_night.png";
+
+// ★ここを修正：背景画像を軽量な jpg に変更
+const BG_DAY = "/images/bg_room_day.jpg";
+const BG_NIGHT = "/images/bg_room_night.jpg";
+const BG_ROYAL_DAY = "/images/bg_royal_day.jpg";
+const BG_ROYAL_NIGHT = "/images/bg_royal_night.jpg";
 
 const SITUATION_DEFINITIONS = [
   { id: "sleeping", image: "/images/event_sleeping.png", triggers: ["そろそろ寝よう", "おやすみ"], releases: ["おはよう"] },
