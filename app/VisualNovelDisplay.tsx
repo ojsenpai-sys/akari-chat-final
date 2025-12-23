@@ -238,24 +238,31 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         </div>
       )}
 
-      {/* UIウィンドウ */}
+      {/* UIウィンドウ（★デザイン修正箇所） */}
       {showUI && (
-        <div className="absolute bottom-0 left-0 w-full z-20 pb-4 px-2 md:pb-8 md:px-8 bg-gradient-to-t from-black/90 via-black/60 to-transparent pt-20" onClick={(e) => e.stopPropagation()}>
-          <div className={`
-            max-w-4xl mx-auto rounded-xl p-4 md:p-6 shadow-2xl backdrop-blur-sm border
-            ${isLoveMode 
-                ? 'bg-pink-900/40 border-pink-400/50' // デレ時はウィンドウも少しピンクに
-                : 'bg-black/80 border-white/20'
-            }
-          `}>
-            <div className="text-pink-400 font-bold text-lg mb-2 flex items-center gap-2">
+        <div className="absolute bottom-0 left-0 w-full z-20 pb-6 px-2 md:pb-8 md:px-8 bg-gradient-to-t from-black/80 via-black/30 to-transparent pt-32 pointer-events-none" >
+          <div 
+            onClick={(e) => e.stopPropagation()} // ウィンドウクリックでUIが消えないように
+            className={`
+              pointer-events-auto max-w-4xl mx-auto rounded-3xl p-5 md:p-6 shadow-2xl backdrop-blur-md border transition-colors duration-500
+              ${isLoveMode 
+                ? 'bg-pink-900/40 border-pink-400/30' // デレ時はうっすらピンク
+                : 'bg-black/40 border-white/10'       // 通常時は薄い黒ですりガラス風（ここを修正！）
+              }
+            `}
+          >
+            <div className="text-pink-400 font-bold text-lg mb-2 flex items-center gap-2 drop-shadow-md">
               <span>あかり</span>
               {/* ステータス表示 */}
-              {isLoveMode && <span className="text-xs text-white bg-pink-600 px-2 py-0.5 rounded border border-white/10 animate-pulse">❤ Love ❤</span>}
-              {currentSituation && <span className="text-xs text-gray-400 bg-gray-800 px-2 py-0.5 rounded border border-white/10">イベント中</span>}
+              {isLoveMode && <span className="text-xs text-white bg-pink-600/80 px-2 py-0.5 rounded-full border border-white/20 animate-pulse shadow-sm">❤ Love ❤</span>}
+              {currentSituation && <span className="text-xs text-gray-300 bg-gray-800/80 px-2 py-0.5 rounded-full border border-white/20">イベント中</span>}
             </div>
-            <div ref={scrollRef} className="text-white text-base md:text-xl leading-relaxed min-h-[4rem] max-h-[12rem] overflow-y-auto pr-2 custom-scrollbar select-text caret-auto">
-              {messages.length > 0 && messages[messages.length - 1].role === 'assistant' ? displayedText : <span className="text-gray-400 text-sm animate-pulse">（あかりの返答を待っています...）</span>}
+            <div 
+              ref={scrollRef} 
+              className="text-white text-base md:text-xl leading-relaxed min-h-[4rem] max-h-[12rem] overflow-y-auto pr-2 custom-scrollbar select-text caret-auto drop-shadow-sm font-medium"
+              style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }} // 文字の視認性を上げるために影を追加
+            >
+              {messages.length > 0 && messages[messages.length - 1].role === 'assistant' ? displayedText : <span className="text-gray-300 text-sm animate-pulse">（あかりの返答を待っています...）</span>}
             </div>
           </div>
         </div>
