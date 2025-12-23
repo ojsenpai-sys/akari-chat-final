@@ -1,11 +1,11 @@
 // @ts-nocheck
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, Music, ShoppingCart, Crown, Zap } from 'lucide-react'; 
 import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
-import { useRouter, useSearchParams } from 'next/navigation'; // リダイレクト判定用
+import { useRouter, useSearchParams } from 'next/navigation'; 
 
 // ★マスタデータ
 const GIFT_ITEMS = [
@@ -22,7 +22,8 @@ const GIFT_ITEMS = [
   { id: 'ring', name: '指輪', price: 5000, love: 50, reaction: '「えっ…この指輪って…そういうこと…ですかね？とても嬉しくて言葉が見つからないです…私、一生ご主人様…アナタのそばで尽くさせていただきますわ。…ねぇ、ダーリンって呼んでもいい？？」' },
 ];
 
-export default function Home() {
+// ★メインロジックを別コンポーネントに分離
+function HomeContent() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -36,7 +37,7 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [showCostume, setShowCostume] = useState(false);
   const [showGift, setShowGift] = useState(false);
-  const [showShop, setShowShop] = useState(false); // ショップ画面用
+  const [showShop, setShowShop] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -55,7 +56,7 @@ export default function Home() {
   const [points, setPoints] = useState(0);
   const [affection, setAffection] = useState(0);
 
-  // ★Stripe決済処理
+  // Stripe決済処理
   const handleCheckout = async (plan) => {
     try {
       const res = await fetch('/api/stripe/checkout', {
@@ -70,14 +71,14 @@ export default function Home() {
         return;
       }
       if (data.url) {
-        window.location.href = data.url; // Stripeへリダイレクト
+        window.location.href = data.url; 
       }
     } catch (err) {
       alert("通信エラーが発生しました");
     }
   };
 
-  // ★決済完了後のメッセージ表示
+  // 決済完了後のメッセージ表示
   useEffect(() => {
     if (searchParams.get('success')) {
       setNotification("🎉 ありがとうございます！プランが更新されました！");
@@ -106,7 +107,7 @@ export default function Home() {
 
   useEffect(() => {
     if (audioRef.current) {
-        audioRef.current.volume = 0.3; // 音量30%
+        audioRef.current.volume = 0.3; 
     }
   }, []);
 
@@ -401,7 +402,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ★オーディオタグ */}
+      {/* オーディオタグ */}
       <audio ref={audioRef} loop src={bgmSrc} />
 
       <div className="flex-1 relative z-0">
@@ -422,9 +423,8 @@ export default function Home() {
             </div>
          </div>
 
-         {/* 左上メニューボタン群（スマホ:縦 / PC:横） */}
+         {/* 左上メニューボタン群 */}
          <div className="flex flex-col md:flex-row items-start gap-2 mt-1">
-            {/* ★ショップボタン（新規追加） */}
             <button 
                 type="button"
                 onClick={() => setShowShop(!showShop)}
@@ -490,7 +490,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* ★ショップ画面（修正版） */}
+      {/* ショップ画面 */}
       {showShop && (
         <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4">
             <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl">
@@ -657,5 +657,14 @@ export default function Home() {
         </div>
       </div>
     </main>
+  );
+}
+
+// ★修正：Suspenseで全体を包むデフォルトエクスポート
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="h-screen w-screen bg-black flex items-center justify-center text-white">読み込み中...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
