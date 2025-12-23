@@ -1,12 +1,13 @@
 // @ts-nocheck
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart } from 'lucide-react'; 
+import React, { useState, useEffect, useRef } from 'react';
+// ★Music アイコンを追加
+import { Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, Music } from 'lucide-react'; 
 import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
-// ★追加：BGMコンポーネントを読み込み
-import BackgroundMusic from '@/components/BackgroundMusic';
+
+// ★BackgroundMusicコンポーネントのインポートは削除（直接書くため）
 
 // ★マスタデータ（変更なし）
 const GIFT_ITEMS = [
@@ -40,43 +41,65 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [isAgreed, setIsAgreed] = useState(false);
 
-  // ★追加：通知用（ログインボーナスなど）
+  // 通知用
   const [notification, setNotification] = useState(null);
+
+  // BGM用ステート
+  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
+  const audioRef = useRef(null);
 
   // サーバーと同期するステート
   const [currentOutfit, setCurrentOutfit] = useState('maid');
-  const [currentPlan, setCurrentPlan] = useState('FREE'); // 初期値はFREE
+  const [currentPlan, setCurrentPlan] = useState('FREE'); 
   const [points, setPoints] = useState(0);
   const [affection, setAffection] = useState(0);
 
-  // ==========================================
-  // ★重要：起動時のデータ同期 (DB → フロント)
-  // ==========================================
+  // ★BGM制御ロジック
+  const toggleMusic = () => {
+    if (!audioRef.current) return;
+    if (isMusicPlaying) {
+      audioRef.current.pause();
+    } else {
+      audioRef.current.play().catch(e => console.log("再生エラー:", e));
+    }
+    setIsMusicPlaying(!isMusicPlaying);
+  };
+
+  // 親密度によるBGM切り替え（もしあれば）
+  // ※ファイル名は環境に合わせて書き換えてください！
+  // 今は仮に '/bgm/bgm_normal.mp3' としています。
+  const bgmSrc = affection >= 100 ? '/bgm/bgm_love.mp3' : '/bgm/bgm_normal.mp3';
+
+  // 音量調整
+  useEffect(() => {
+    if (audioRef.current) {
+        audioRef.current.volume = 0.3; // 音量30%
+    }
+  }, []);
+
+  // データ同期
   useEffect(() => {
     if (status === 'authenticated') {
-      // ローディング開始などの処理を入れてもOK
       fetch('/api/user/sync')
         .then((res) => res.json())
         .then((data) => {
           if (data.error) {
             console.error('Sync Error:', data.error);
           } else {
-            // DBの値をStateにセット
             setPoints(data.points);
             setAffection(data.affection);
             setCurrentPlan(data.plan);
             setCurrentOutfit(data.currentOutfit);
 
-            // ログインボーナスがあれば通知を表示
             if (data.bonusMessage) {
               setNotification(data.bonusMessage);
-              setTimeout(() => setNotification(null), 5000); // 5秒後に消す
+              setTimeout(() => setNotification(null), 5000); 
             }
           }
         })
         .catch((err) => console.error('通信エラー:', err));
     }
-  }, [status]); // ログイン状態が変わったら実行
+  }, [status]);
 
   // 初回メッセージ
   useEffect(() => {
@@ -97,7 +120,6 @@ export default function Home() {
   };
 
   const saveName = () => {
-    // プランチェック（小文字・大文字の揺らぎを吸収できるように修正）
     const plan = currentPlan.toUpperCase();
     if (plan === 'FREE') {
       setShowSettings(false);
@@ -119,18 +141,12 @@ export default function Home() {
     ]);
   };
 
-  // ==========================================
-  // ★重要：プレゼントを贈る処理 (API連携)
-  // ==========================================
   const giveGift = async (item) => {
-    // 事前チェック（UX向上）
     if (points < item.price) {
         alert("ポイントが足りません！");
         return;
     }
-
     try {
-        // API呼び出し
         const res = await fetch('/api/user/gift', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -139,46 +155,32 @@ export default function Home() {
                 affectionGain: item.love
             }),
         });
-
         const data = await res.json();
-
         if (!res.ok) {
             alert(data.error || 'エラーが発生しました');
             return;
         }
-
-        // 成功したらDBの正確な値で更新
         setPoints(data.points);
         setAffection(data.affection);
         setShowGift(false);
 
-        // 親密度判定
         const isLoveModeNow = data.affection >= 100;
-        
-        // リアクション
         let reactionText = item.reaction;
         if (!reactionText.startsWith('[')) {
             reactionText = (isLoveModeNow ? "[照れ]" : "[笑顔]") + reactionText;
         }
-
         setMessages(prev => [
             ...prev, 
             { id: Date.now().toString(), role: 'assistant', content: reactionText }
         ]);
-
     } catch (err) {
         console.error(err);
         alert('通信エラーが発生しました');
     }
   };
 
-  // ==========================================
-  // ★重要：衣装変更 (API連携で保存)
-  // ==========================================
   const changeOutfit = async (newOutfit) => {
     const plan = currentPlan.toUpperCase();
-
-    // プラン制限チェック
     if (newOutfit === 'swimsuit' || newOutfit === 'bunny') {
       if (plan === 'FREE') {
         setMessages(prev => [...prev, { 
@@ -190,7 +192,6 @@ export default function Home() {
         return;
       }
     }
-
     if (newOutfit === 'santa') {
       if (plan !== 'ROYAL') {
         setMessages(prev => [...prev, { 
@@ -202,8 +203,6 @@ export default function Home() {
         return;
       }
     }
-
-    // DBに保存
     try {
         await fetch('/api/user/sync', {
             method: 'POST',
@@ -213,7 +212,6 @@ export default function Home() {
     } catch (e) {
         console.error('衣装保存エラー', e);
     }
-
     setCurrentOutfit(newOutfit);
     setShowCostume(false);
 
@@ -233,7 +231,6 @@ export default function Home() {
         reactionContent = `[笑顔]メイド服に着替えましたわ！やっぱりこれが一番落ち着きますね。`;
         break;
     }
-
     setMessages(prev => [
       ...prev, 
       { id: Date.now().toString(), role: 'assistant', content: reactionContent }
@@ -259,7 +256,7 @@ export default function Home() {
           userName: userName, 
           outfit: currentOutfit,
           plan: currentPlan,
-          affection: affection // DB同期済みの値を送信
+          affection: affection 
         }),
       });
 
@@ -299,7 +296,6 @@ export default function Home() {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-black text-white gap-6 relative overflow-hidden">
         <div className="absolute inset-0 opacity-30">
-           {/* 画像パスは環境に合わせてください */}
            <img src="/images/bg_room_day.jpg" className="w-full h-full object-cover blur-sm" />
         </div>
         <div className="z-10 bg-gray-900/80 p-10 rounded-2xl border border-pink-500/30 shadow-2xl text-center max-w-md w-full backdrop-blur-md">
@@ -329,26 +325,18 @@ export default function Home() {
               </div>
               <div className="p-6 overflow-y-auto text-sm text-gray-300 space-y-4 leading-relaxed">
                 <p>本サービス（以下「当サービス」）を利用する前に、以下の注意事項を必ずご確認ください。</p>
-                
                 <h3 className="font-bold text-pink-400">1. AIの回答精度と免責</h3>
                 <p>当サービスは生成AI技術を使用しています。キャラクター「あかり」の発言はフィクションであり、事実と異なる情報や架空の情報を話す場合があります（幻覚）。AIの発言内容によって生じた損害について、運営者は一切の責任を負いません。</p>
-                
                 <h3 className="font-bold text-pink-400">2. 会話データの扱い</h3>
                 <p>サービスの品質向上および会話履歴機能の提供のため、会話内容はデータベースに保存されます。これらを第三者に販売したり、無断で公開することはありません。</p>
-                
                 <h3 className="font-bold text-pink-400">3. 課金と返金</h3>
                 <p>有料プランは月額サブスクリプション方式です。いかなる場合も日割り計算による返金は行いません。API障害等による一時的な不具合への補償もいたしかねます。</p>
-                
                 <h3 className="font-bold text-pink-400">4. 禁止事項</h3>
                 <p>AIへの過度な暴言、性的・暴力的なコンテンツの生成誘導、スクレイピング等の自動アクセスを禁止します。違反時は予告なくアカウントを停止します。</p>
-                
                 <h3 className="font-bold text-pink-400">5. 年齢制限</h3>
                 <p>本サービスは13歳以上のご利用を推奨します。未成年者が有料プランを利用する場合は、親権者の同意を得たものとみなします。</p>
-                
                 <h3 className="font-bold text-pink-400">6. 知的財産権</h3>
                 <p>生成されたテキストの利用権はユーザーに帰属しますが、本サービスのキャラクター設定、画像、システムに関する権利は運営者に帰属します。</p>
-
-                {/* ★追加箇所：特定商取引法に基づく表記 */}
                 <h3 className="font-bold text-pink-400">7. 特定商取引法に基づく表記</h3>
                 <div className="space-y-2 border-t border-gray-700 pt-2 mt-2">
                     <p><span className="font-bold">・販売事業者:</span> 請求があり次第遅滞なく提供します</p>
@@ -374,15 +362,15 @@ export default function Home() {
 
   return (
     <main className="flex h-screen flex-col bg-black overflow-hidden relative">
-      {/* ★追加：通知バナー（ログインボーナス等） */}
       {notification && (
         <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[99999] bg-pink-500 text-white px-6 py-2 rounded-full shadow-lg animate-bounce font-bold border border-white/20">
           {notification}
         </div>
       )}
 
-      {/* ★追加：BGMプレイヤー（親密度100以上判定を渡す） */}
-      <BackgroundMusic isLoveMode={affection >= 100} />
+      {/* ★オーディオタグを埋め込み（隠し要素） */}
+      {/* ⚠️注意：/bgm/bgm_normal.mp3 など、実際のファイルパスに合わせてください！ */}
+      <audio ref={audioRef} loop src={bgmSrc} />
 
       <div className="flex-1 relative z-0">
         <VisualNovelDisplay messages={messages} outfit={currentOutfit} currentPlan={currentPlan} affection={affection} />
@@ -429,9 +417,9 @@ export default function Home() {
          </div>
       </div>
 
-      {/* 呼び名設定（既存コードと同じ） */}
+      {/* 呼び名設定 */}
       {showSettings && (
-        <div className="absolute top-20 right-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-top-4">
+        <div className="absolute bottom-24 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-bottom-4">
           <h3 className="text-pink-400 font-bold mb-4">呼び方の設定</h3>
           <p className="text-xs text-gray-400 mb-2">※特別な呼び名は有料機能です</p>
           <input 
@@ -444,7 +432,7 @@ export default function Home() {
         </div>
       )}
 
-      {/* 衣装変更画面（既存コードと同じ） */}
+      {/* 衣装変更画面 */}
       {showCostume && (
         <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-top-4">
           <h3 className="text-pink-400 font-bold mb-4">衣装変更（有料会員限定）</h3>
@@ -473,7 +461,6 @@ export default function Home() {
                         <p className="text-2xl font-bold text-yellow-400">{points} pt</p>
                     </div>
 
-                    {/* プラン判定ロジック（小文字大文字対応） */}
                     {currentPlan.toUpperCase() === 'FREE' ? (
                         <div className="p-8 text-center text-gray-400">
                             <p>プレゼント機能は有料会員（Pro/Royal）限定です。</p>
@@ -506,16 +493,30 @@ export default function Home() {
         </div>
       )}
 
-      {/* チャット入力欄（変更なし） */}
+      {/* ★UI修正：チャット入力欄にボタンを統合 */}
       <div className="h-auto min-h-[6rem] bg-gray-900 border-t border-white/10 p-4 flex items-center justify-center relative z-[100]">
-        <div className="w-full max-w-2xl flex gap-4 items-end bg-gray-800 p-2 rounded-3xl border border-white/5 shadow-inner">
-          <button 
-            type="button"
-            onClick={openSettings}
-            className={`p-2 transition-colors mb-1 ${showSettings ? 'text-pink-400' : 'text-gray-400 hover:text-white'}`}
-          >
-            <Settings size={24} />
-          </button>
+        <div className="w-full max-w-2xl flex gap-2 items-end bg-gray-800 p-2 rounded-3xl border border-white/5 shadow-inner">
+          
+          {/* 左側のボタングループ（設定＆音楽） */}
+          <div className="flex flex-col gap-1 mb-1">
+              <button 
+                type="button"
+                onClick={openSettings}
+                className={`p-2 transition-colors rounded-full ${showSettings ? 'text-pink-400 bg-white/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                title="呼び名設定"
+              >
+                <Settings size={20} />
+              </button>
+
+              <button 
+                type="button"
+                onClick={toggleMusic}
+                className={`p-2 transition-colors rounded-full ${isMusicPlaying ? 'text-green-400 bg-white/10' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
+                title="BGM ON/OFF"
+              >
+                <Music size={20} className={isMusicPlaying ? "animate-pulse" : ""} />
+              </button>
+          </div>
           
           <textarea
             value={localInput}

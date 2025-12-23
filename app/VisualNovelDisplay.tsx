@@ -171,11 +171,15 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
   }
 
+  // ★修正：スマホで画像を大きく表示するための調整
   const adjustPosition = (activeOutfit === 'santa') || isLoveMode;
   const imageScale = isLoveMode ? "scale-110" : "scale-100";
+
   const imageStyle = adjustPosition
-    ? `max-h-[160%] md:max-h-[220%] -bottom-[48%] md:-bottom-[120%] ${imageScale}` 
-    : "max-h-[110%] md:max-h-[140%] -bottom-[20%] md:-bottom-[45%]";
+    // サンタ・デレモード用（さらに大きく・位置調整）
+    ? `max-h-[180%] md:max-h-[220%] -bottom-[60%] md:-bottom-[120%] ${imageScale}` 
+    // 通常・バニー・水着など（ここを155%に巨大化！）
+    : "max-h-[155%] md:max-h-[140%] -bottom-[35%] md:-bottom-[45%]";
 
   let currentBg = isNightTime ? BG_NIGHT : BG_DAY;
   if (plan === 'ROYAL') {
@@ -231,8 +235,8 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
             className={`
               pointer-events-auto max-w-4xl mx-auto rounded-3xl p-5 md:p-6 shadow-2xl backdrop-blur-md border transition-colors duration-500
               ${isLoveMode 
-                ? 'bg-pink-900/20 border-pink-400/30' // ★修正：透過度を上げて薄く (40->20)
-                : 'bg-black/20 border-white/10'       // ★修正：透過度を上げて薄く (40->20)
+                ? 'bg-pink-900/10 border-pink-400/30' // ★修正：透過度をさらに薄く (20->10)
+                : 'bg-black/10 border-white/10'       // ★修正：透過度をさらに薄く (20->10)
               }
             `}
           >
@@ -243,7 +247,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
             </div>
             <div 
               ref={scrollRef} 
-              // ★修正：高さ固定(h-32)に変更し、伸び縮みしないように設定
+              // 高さ固定(h-32)
               className="text-white text-base md:text-xl leading-relaxed h-32 overflow-y-auto pr-2 custom-scrollbar select-text caret-auto drop-shadow-sm font-medium"
               style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }} 
             >
