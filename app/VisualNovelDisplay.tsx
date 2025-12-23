@@ -80,6 +80,9 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const [isNightTime, setIsNightTime] = useState(false); 
   const [isRoomwearTime, setIsRoomwearTime] = useState(false); 
   const scrollRef = useRef(null);
+  
+  // ★修正：タイマー競合を防ぐためのRef
+  const typingRef = useRef(null);
 
   const isLoveMode = affection >= 100;
 
@@ -90,13 +93,17 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       const now = new Date();
       const hour = now.getHours();
       setIsNightTime(hour >= 18 || hour < 5);
-      setIsRoomwearTime(hour >= 23 || hour < 5);
+      
+      // ★修正：状態が変わった瞬間を検知するために変数化
+      const isRoomwear = (hour >= 23 || hour < 5);
+      setIsRoomwearTime(isRoomwear);
     };
     checkTime();
     const timer = setInterval(checkTime, 60000);
     return () => clearInterval(timer);
   }, []);
 
+  // メッセージ表示ロジック（通常）
   useEffect(() => {
     if (messages.length === 0) return;
     const lastMsg = messages[messages.length - 1];
@@ -115,6 +122,9 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
 
     if (lastMsg.role === 'assistant') {
+      // ★新しいメッセージが来たら、ルームウェアの独り言タイマーなどをクリアして優先する
+      if (typingRef.current) clearInterval(typingRef.current);
+
       let content = lastMsg.content;
       const emotionRegex = /\[(.*?)\]/g;
       let match;
@@ -127,16 +137,39 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       const cleanContent = content.replace(/\[.*?\]/g, '');
       setDisplayedText('');
       let i = 0;
-      const interval = setInterval(() => {
+      typingRef.current = setInterval(() => {
         setDisplayedText(cleanContent.substring(0, i + 1));
         i++;
-        if (i >= cleanContent.length) clearInterval(interval);
-        // テキスト追加時に一番下までスクロール
+        if (i >= cleanContent.length) clearInterval(typingRef.current);
         if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
       }, 30);
-      return () => clearInterval(interval);
     } 
+    return () => {
+        if (typingRef.current) clearInterval(typingRef.current);
+    };
   }, [messages, currentSituation]);
+
+  // ★追加：23時（ルームウェア時間）になった瞬間のイベント
+  // このEffectを後に書くことで、マウント時の初期メッセージ(Welcome等)を上書きして表示できる
+  useEffect(() => {
+    if (isRoomwearTime && !isLoveMode) { // ラブラブモード以外のときだけ発動
+        // 既存のタイマーがあればクリア
+        if (typingRef.current) clearInterval(typingRef.current);
+
+        // 強制的に表情を「照れ」に、テキストを特別メッセージに変更
+        setCurrentEmotion('shy');
+        const specialText = "ご主人様、夜も更けてきましたのでそろそろ着替えさせていただきました。その…ご主人様の好きなルームウェアです。ちょっと恥ずかしいですけど…どうですか？";
+        
+        setDisplayedText('');
+        let i = 0;
+        typingRef.current = setInterval(() => {
+            setDisplayedText(specialText.substring(0, i + 1));
+            i++;
+            if (i >= specialText.length) clearInterval(typingRef.current);
+            if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }, 30);
+    }
+  }, [isRoomwearTime]); // isRoomwearTimeがtrueになった時に発火
 
   // --- 画像決定 ---
   let characterSrc = MAID_EMOTIONS[currentEmotion] || MAID_EMOTIONS.normal;
@@ -171,7 +204,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
   }
 
-  // ★修正：位置をさらに下に下げて（-60%程度）、頭が切れないように調整
+  // ★スマホ版のサイズ調整（前回決定版：140% - 150%）
   const adjustPosition = (activeOutfit === 'santa') || isLoveMode;
   const imageScale = isLoveMode ? "scale-110" : "scale-100";
 
