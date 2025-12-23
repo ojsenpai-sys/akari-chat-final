@@ -1,11 +1,10 @@
 // @ts-nocheck
-import { google } from '@ai-sdk/google';
+import { createGoogleGenerativeAI } from '@ai-sdk/google'; // ★変更：専用の作成機をインポート
 import { generateText } from 'ai';
 import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
 
-// ★ご指定の Gemini 3 Pro (Preview) を維持します
-// ★このモデル名は絶対に変更しません
+// ★ご指定のモデル名を維持
 const MODEL_NAME = 'gemini-3-pro-preview'; 
 
 export const maxDuration = 60;
@@ -87,13 +86,16 @@ export async function POST(req: Request) {
     });
     const currentAffection = affection || 0;
 
-    // ★修正ポイント：Vercelに設定した GEMINI_API_KEY を確実に読み込む
+    // ★重要修正：ここで Vercel のキーを使って「専用のgoogle」を作る
     const apiKey = process.env.GEMINI_API_KEY;
-
     if (!apiKey) {
-      // ここでエラーが出ないよう、確実にキーの有無をチェック
-      throw new Error("APIキー (.env: GEMINI_API_KEY) が読み込めていません。Vercelの設定を確認してください。");
+        throw new Error("APIキー (.env: GEMINI_API_KEY) が読み込めていません。");
     }
+
+    // ★専用のプロバイダインスタンスを作成（これで確実にキーが渡ります）
+    const google = createGoogleGenerativeAI({
+        apiKey: apiKey,
+    });
 
     const cleanMessages = messages.map((m: any) => ({
       role: m.role,
@@ -147,9 +149,8 @@ export async function POST(req: Request) {
     `;
 
     const result = await generateText({
-      // ★修正ポイント：apiKeyを明示的に渡すことで、名前の不一致（GOOGLE_...問題）を解決
+      // ★作成した専用インスタンスを使用
       model: google(MODEL_NAME, {
-        apiKey: apiKey, 
         useSearchGrounding: true, 
       }),
       system: systemPrompt,
