@@ -1,12 +1,17 @@
-import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
-import { stripe } from '@/lib/stripe';
 import { prisma } from '@/lib/prisma';
 import Stripe from 'stripe';
 
+// 外部ファイル読み込みによるエラーを防ぐため、ここで直接初期化
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+  typescript: true,
+});
+
 export async function POST(req: Request) {
   const body = await req.text();
-  const signature = (await headers()).get('Stripe-Signature') as string;
+  
+  // ★修正：headers() を使わず、req.headers から直接取得（これで赤字解消）
+  const signature = req.headers.get('stripe-signature') as string;
 
   let event: Stripe.Event;
 
@@ -14,6 +19,7 @@ export async function POST(req: Request) {
     if (!process.env.STRIPE_WEBHOOK_SECRET) {
       throw new Error('STRIPE_WEBHOOK_SECRET is missing');
     }
+    // 署名の検証（なりすまし防止）
     event = stripe.webhooks.constructEvent(
       body,
       signature,
@@ -24,54 +30,46 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Webhook Error' }, { status: 400 });
   }
 
-  // ■ イベント処理：決済完了（初回）
+  // ■ 決済完了イベントの処理
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session;
     
-    // メタデータからユーザーIDや購入タイプを取得
+    // メタデータの取り出し
     const userId = session.metadata?.userId;
-    const type = session.metadata?.type;         // 'plan' または 'ticket'
-    const planName = session.metadata?.planName; // 'PRO' または 'ROYAL'
+    const plan = session.metadata?.plan; 
 
-    if (userId) {
+    if (userId && plan) {
       try {
-        if (type === 'plan' && planName) {
-          // ==========================================
-          // パターンA: サブスクプラン加入
-          // ==========================================
-          
-          // プランに応じたポイントを決定
-          // (Royalなら500pt、Proなら300pt)
-          let pointsToAdd = 300; 
-          if (planName.toUpperCase().includes('ROYAL')) {
-             pointsToAdd = 500;
-          }
-
-          // DB更新: プラン変更 ＋ ポイント付与
-          await prisma.user.update({
-            where: { id: userId },
-            data: { 
-              plan: planName as any,       // 'PRO' or 'ROYAL'
-              points: { increment: pointsToAdd },
-              // ※プランに入ったらチケット残数をリセットしたい場合はここで purchasedTickets: 0 もありですが、
-              //   今回は「繰り越し」仕様なのでリセットしません。
-            },
-          });
-          console.log(`User ${userId} upgraded to ${planName} and got ${pointsToAdd} points.`);
-
-        } else if (type === 'ticket') {
+        if (plan === 'TICKET') {
           // ==========================================
           // パターンB: 会話チケット単発購入
           // ==========================================
-          
-          // ポイントではなく「会話チケット残数」を増やす！
           await prisma.user.update({
             where: { id: userId },
             data: { 
-              purchasedTickets: { increment: 100 } // ★ここが修正ポイント！
+              purchasedTickets: { increment: 100 } 
             },
           });
-          console.log(`User ${userId} purchased +100 chat tickets.`);
+          console.log(`User ${userId} purchased +100 tickets.`);
+
+        } else {
+          // ==========================================
+          // パターンA: サブスクプラン加入 (PRO / ROYAL)
+          // ==========================================
+          
+          // プラン加入時のボーナスポイント
+          let pointsToAdd = 0;
+          if (plan === 'PRO') pointsToAdd = 500;   // PROなら500pt
+          if (plan === 'ROYAL') pointsToAdd = 1000; // ROYALなら1000pt
+
+          await prisma.user.update({
+            where: { id: userId },
+            data: { 
+              plan: plan as any, // 'PRO' or 'ROYAL'
+              points: { increment: pointsToAdd }, // ポイントも付与
+            },
+          });
+          console.log(`User ${userId} upgraded to ${plan}. Points +${pointsToAdd}`);
         }
 
       } catch (dbError) {
