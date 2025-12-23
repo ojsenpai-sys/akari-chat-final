@@ -171,17 +171,15 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
   }
 
-  // ★再修正：スマホ版のサイズ調整
-  // 185%は大きすぎたので、140%〜150%程度に抑える
+  // ★修正：位置を少し下にずらしました (-45% -> -55% など)
   const adjustPosition = (activeOutfit === 'santa') || isLoveMode;
   const imageScale = isLoveMode ? "scale-110" : "scale-100";
 
   const imageStyle = adjustPosition
-    // サンタ・デレモード用（少し大きめ・h-150%）
-    ? `h-[150%] w-auto -bottom-[45%] md:h-auto md:max-h-[220%] md:-bottom-[120%] ${imageScale}` 
-    // 通常時（h-140%）
-    // -bottom-[35%] で、拡大した分だけ少し下にずらす
-    : "h-[140%] w-auto -bottom-[35%] md:h-auto md:max-h-[140%] md:-bottom-[45%]";
+    // サンタ・デレモード用
+    ? `h-[150%] w-auto -bottom-[55%] md:h-auto md:max-h-[220%] md:-bottom-[120%] ${imageScale}` 
+    // 通常時
+    : "h-[140%] w-auto -bottom-[45%] md:h-auto md:max-h-[140%] md:-bottom-[45%]";
 
   let currentBg = isNightTime ? BG_NIGHT : BG_DAY;
   if (plan === 'ROYAL') {
@@ -249,7 +247,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
             </div>
             <div 
               ref={scrollRef} 
-              // 高さ固定(h-32)
               className="text-white text-base md:text-xl leading-relaxed h-32 overflow-y-auto pr-2 custom-scrollbar select-text caret-auto drop-shadow-sm font-medium"
               style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }} 
             >

@@ -2,12 +2,9 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-// ★Music アイコンを追加
 import { Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, Music } from 'lucide-react'; 
 import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
-
-// ★BackgroundMusicコンポーネントのインポートは削除（直接書くため）
 
 // ★マスタデータ（変更なし）
 const GIFT_ITEMS = [
@@ -65,9 +62,7 @@ export default function Home() {
     setIsMusicPlaying(!isMusicPlaying);
   };
 
-  // 親密度によるBGM切り替え（もしあれば）
-  // ※ファイル名は環境に合わせて書き換えてください！
-  // 今は仮に '/bgm/bgm_normal.mp3' としています。
+  // 親密度によるBGM切り替え
   const bgmSrc = affection >= 100 ? '/bgm/bgm_love.mp3' : '/bgm/bgm_normal.mp3';
 
   // 音量調整
@@ -368,16 +363,17 @@ export default function Home() {
         </div>
       )}
 
-      {/* ★オーディオタグを埋め込み（隠し要素） */}
-      {/* ⚠️注意：/bgm/bgm_normal.mp3 など、実際のファイルパスに合わせてください！ */}
+      {/* ★オーディオタグ */}
       <audio ref={audioRef} loop src={bgmSrc} />
 
       <div className="flex-1 relative z-0">
         <VisualNovelDisplay messages={messages} outfit={currentOutfit} currentPlan={currentPlan} affection={affection} />
       </div>
 
-      {/* ステータス表示 */}
+      {/* ★修正箇所：ステータス表示＆アイコン群 */}
+      {/* 左上の配置：スマホでは縦(flex-col)、PCでは横(md:flex-row)に変更 */}
       <div className="absolute top-4 left-4 z-[50] flex flex-col gap-2">
+         {/* ステータスボックス */}
          <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-white text-xs flex flex-col gap-1 shadow-lg">
             <div className="flex items-center gap-2">
                 <span className="text-yellow-400 font-bold">★ {points} pt</span>
@@ -389,7 +385,8 @@ export default function Home() {
             </div>
          </div>
 
-         <div className="flex gap-2 mt-1">
+         {/* ★ここが修正ポイント：スマホ(flex-col) / PC(md:flex-row) */}
+         <div className="flex flex-col md:flex-row gap-2 mt-1">
             <button 
                 type="button"
                 onClick={() => setShowCostume(!showCostume)}
@@ -493,11 +490,10 @@ export default function Home() {
         </div>
       )}
 
-      {/* ★UI修正：チャット入力欄にボタンを統合 */}
+      {/* チャット入力欄 */}
       <div className="h-auto min-h-[6rem] bg-gray-900 border-t border-white/10 p-4 flex items-center justify-center relative z-[100]">
         <div className="w-full max-w-2xl flex gap-2 items-end bg-gray-800 p-2 rounded-3xl border border-white/5 shadow-inner">
           
-          {/* 左側のボタングループ（設定＆音楽） */}
           <div className="flex flex-col gap-1 mb-1">
               <button 
                 type="button"
