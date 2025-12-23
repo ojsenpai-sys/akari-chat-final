@@ -2,11 +2,12 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, Music } from 'lucide-react'; 
+import { Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, Music, ShoppingCart, Crown, Zap } from 'lucide-react'; 
 import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
+import { useRouter, useSearchParams } from 'next/navigation'; // リダイレクト判定用
 
-// ★マスタデータ（変更なし）
+// ★マスタデータ
 const GIFT_ITEMS = [
   { id: 'letter', name: '手紙', price: 100, love: 1, reaction: '「ご主人様、ありがとうございます。大切に読ませていただきますね」' },
   { id: 'tea', name: '紅茶', price: 100, love: 1, reaction: '「私の好きな茶葉、覚えてくれてたんですね！うれしいです。ではティータイムにしましょう！」' },
@@ -23,6 +24,8 @@ const GIFT_ITEMS = [
 
 export default function Home() {
   const { data: session, status } = useSession();
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   const [messages, setMessages] = useState([]);
   const [localInput, setLocalInput] = useState('');
@@ -33,6 +36,7 @@ export default function Home() {
   const [showSettings, setShowSettings] = useState(false);
   const [showCostume, setShowCostume] = useState(false);
   const [showGift, setShowGift] = useState(false);
+  const [showShop, setShowShop] = useState(false); // ショップ画面用
   const [showTerms, setShowTerms] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +55,43 @@ export default function Home() {
   const [points, setPoints] = useState(0);
   const [affection, setAffection] = useState(0);
 
-  // ★BGM制御ロジック
+  // ★Stripe決済処理
+  const handleCheckout = async (plan) => {
+    try {
+      const res = await fetch('/api/stripe/checkout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan }),
+      });
+      const data = await res.json();
+      
+      if (data.error) {
+        alert("エラー: " + data.error);
+        return;
+      }
+      if (data.url) {
+        window.location.href = data.url; // Stripeへリダイレクト
+      }
+    } catch (err) {
+      alert("通信エラーが発生しました");
+    }
+  };
+
+  // ★決済完了後のメッセージ表示
+  useEffect(() => {
+    if (searchParams.get('success')) {
+      setNotification("🎉 ありがとうございます！プランが更新されました！");
+      setTimeout(() => setNotification(null), 8000);
+      router.replace('/');
+    }
+    if (searchParams.get('canceled')) {
+      setNotification("決済がキャンセルされました");
+      setTimeout(() => setNotification(null), 5000);
+      router.replace('/');
+    }
+  }, [searchParams, router]);
+
+  // BGM制御
   const toggleMusic = () => {
     if (!audioRef.current) return;
     if (isMusicPlaying) {
@@ -62,10 +102,8 @@ export default function Home() {
     setIsMusicPlaying(!isMusicPlaying);
   };
 
-  // 親密度によるBGM切り替え
   const bgmSrc = affection >= 100 ? '/bgm/bgm_love.mp3' : '/bgm/bgm_normal.mp3';
 
-  // 音量調整
   useEffect(() => {
     if (audioRef.current) {
         audioRef.current.volume = 0.3; // 音量30%
@@ -370,8 +408,7 @@ export default function Home() {
         <VisualNovelDisplay messages={messages} outfit={currentOutfit} currentPlan={currentPlan} affection={affection} />
       </div>
 
-      {/* ★修正箇所：ステータス表示＆アイコン群 */}
-      {/* 左上の配置：スマホでは縦(flex-col)、PCでは横(md:flex-row)に変更 */}
+      {/* ステータス表示＆アイコン群 */}
       <div className="absolute top-4 left-4 z-[50] flex flex-col gap-2">
          {/* ステータスボックス */}
          <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-white text-xs flex flex-col gap-1 shadow-lg">
@@ -385,9 +422,18 @@ export default function Home() {
             </div>
          </div>
 
-         {/* ★ここが修正ポイント：スマホ(flex-col) / PC(md:flex-row) */}
-         {/* items-start を追加して、ボタンが横に広がらないようにしました */}
+         {/* 左上メニューボタン群（スマホ:縦 / PC:横） */}
          <div className="flex flex-col md:flex-row items-start gap-2 mt-1">
+            {/* ★ショップボタン（新規追加） */}
+            <button 
+                type="button"
+                onClick={() => setShowShop(!showShop)}
+                className="p-3 bg-gray-900/80 text-blue-400 hover:text-white hover:bg-blue-600 rounded-full border border-white/20 shadow-lg transition-all"
+                title="プラン変更"
+            >
+                <ShoppingCart size={24} />
+            </button>
+
             <button 
                 type="button"
                 onClick={() => setShowCostume(!showCostume)}
@@ -441,6 +487,79 @@ export default function Home() {
             <button onClick={() => changeOutfit('bunny')} className={`w-full text-left p-2 rounded hover:bg-white/10 ${currentOutfit === 'bunny' ? 'text-pink-400 font-bold' : 'text-white'}`}>バニーガール {currentOutfit === 'bunny' && '✅'} 👯‍♀️</button>
           </div>
           <button onClick={() => setShowCostume(false)} className="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm">閉じる</button>
+        </div>
+      )}
+
+      {/* ★ショップ画面（修正版） */}
+      {showShop && (
+        <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4">
+            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl">
+                <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 rounded-t-2xl">
+                    <h2 className="text-lg font-bold text-blue-400 flex items-center gap-2"><ShoppingCart size={20}/> プレミアムショップ</h2>
+                    <button onClick={() => setShowShop(false)} className="text-gray-400 hover:text-white"><X size={24}/></button>
+                </div>
+                <div className="p-4 overflow-y-auto custom-scrollbar space-y-4">
+                    
+                    {/* 現在のプラン */}
+                    <div className="bg-gray-800/50 p-4 rounded-xl border border-white/10 text-center">
+                        <p className="text-gray-400 text-xs">現在のご主人様のプラン</p>
+                        <p className="text-2xl font-bold text-white mt-1">{currentPlan}</p>
+                    </div>
+
+                    {/* Pro Plan */}
+                    <div className="border border-yellow-500/30 bg-gradient-to-br from-gray-900 to-gray-800 p-4 rounded-xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 bg-yellow-600 text-white text-[10px] px-2 py-1 rounded-bl">人気</div>
+                        <h3 className="font-bold text-yellow-400 text-lg flex items-center gap-2"><Zap size={18}/> Proプラン</h3>
+                        <p className="text-white font-bold text-xl my-2">¥980 <span className="text-xs text-gray-400">/ 月</span></p>
+                        <ul className="text-sm text-gray-300 space-y-1 mb-4">
+                            <li>✅ 会話数UP（200回/日）</li>
+                            <li>✅ 水着・バニーガール衣装 解放</li>
+                            <li>✅ 呼び名変更・プレゼント機能 解放</li>
+                        </ul>
+                        <button 
+                            onClick={() => handleCheckout('PRO')}
+                            disabled={currentPlan === 'PRO' || currentPlan === 'ROYAL'}
+                            className={`w-full py-2 rounded-lg font-bold transition-all ${currentPlan === 'PRO' ? 'bg-gray-600 text-gray-400 cursor-default' : 'bg-yellow-600 hover:bg-yellow-500 text-white'}`}
+                        >
+                            {currentPlan === 'PRO' ? '契約中' : (currentPlan === 'ROYAL' ? '上位プラン契約中' : 'Proプランにする')}
+                        </button>
+                    </div>
+
+                    {/* Royal Plan */}
+                    <div className="border border-purple-500/30 bg-gradient-to-br from-gray-900 to-purple-900/20 p-4 rounded-xl relative overflow-hidden">
+                        <h3 className="font-bold text-purple-400 text-lg flex items-center gap-2"><Crown size={18}/> Royalプラン</h3>
+                        <p className="text-white font-bold text-xl my-2">¥5,000 <span className="text-xs text-gray-400">/ 月</span></p>
+                        <ul className="text-sm text-gray-300 space-y-1 mb-4">
+                            <li>✅ 会話数・超UP（2500回/日）</li>
+                            <li>✅ <span className="text-pink-400 font-bold">サンタ服・特別背景 解放</span></li>
+                            <li>✅ Proプランの全機能</li>
+                        </ul>
+                        <button 
+                            onClick={() => handleCheckout('ROYAL')}
+                            disabled={currentPlan === 'ROYAL'}
+                            className={`w-full py-2 rounded-lg font-bold transition-all ${currentPlan === 'ROYAL' ? 'bg-gray-600 text-gray-400 cursor-default' : 'bg-purple-600 hover:bg-purple-500 text-white'}`}
+                        >
+                            {currentPlan === 'ROYAL' ? '契約中' : 'Royalプランにする'}
+                        </button>
+                    </div>
+
+                    {/* Ticket */}
+                    <div className="border border-white/10 bg-gray-800 p-4 rounded-xl">
+                        <h3 className="font-bold text-white text-md flex items-center gap-2"><FileText size={16}/> 会話チケット（+100回）</h3>
+                        <p className="text-xs text-gray-400 mt-1 mb-3">プランに関わらず、本日の会話数をチャージできます。</p>
+                        <div className="flex items-center justify-between">
+                            <span className="font-bold text-white">¥500</span>
+                            <button 
+                                onClick={() => handleCheckout('TICKET')}
+                                className="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg text-sm font-bold"
+                            >
+                                購入する
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
         </div>
       )}
 
