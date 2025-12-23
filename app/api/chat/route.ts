@@ -4,15 +4,14 @@ import { generateText } from 'ai';
 import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
 
-// ★ご指定の Gemini 3 Pro (Preview) を維持
-// 検索グラウンディングに必須
+// ★ご指定の Gemini 3 Pro (Preview) を維持します
+// ★このモデル名は絶対に変更しません
 const MODEL_NAME = 'gemini-3-pro-preview'; 
 
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
-    // ★修正：outfit, plan, affection も受け取るように追加
     const { messages, userName, outfit, plan, affection } = await req.json();
     
     // ---------------------------------------------------------
@@ -52,7 +51,6 @@ export async function POST(req: Request) {
       },
     });
 
-    // DBのプラン情報を優先（なければフロントからの情報をフォールバック）
     const userPlan = user.plan || plan || 'FREE';
 
     let limit = 20; // FREE
@@ -87,11 +85,14 @@ export async function POST(req: Request) {
     const currentDate = now.toLocaleDateString("ja-JP", {
       year: "numeric", month: "long", day: "numeric", weekday: "long"
     });
-    // ★親密度が送られてこない場合のデフォルト値
     const currentAffection = affection || 0;
 
-    if (!process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
-      throw new Error("APIキー (.env) が読み込めていません。");
+    // ★修正ポイント：Vercelに設定した GEMINI_API_KEY を確実に読み込む
+    const apiKey = process.env.GEMINI_API_KEY;
+
+    if (!apiKey) {
+      // ここでエラーが出ないよう、確実にキーの有無をチェック
+      throw new Error("APIキー (.env: GEMINI_API_KEY) が読み込めていません。Vercelの設定を確認してください。");
     }
 
     const cleanMessages = messages.map((m: any) => ({
@@ -99,7 +100,7 @@ export async function POST(req: Request) {
       content: m.content,
     }));
 
-    // ★性格設定の動的生成（親密度・衣装対応）
+    // ★性格設定
     let personalityPrompt = `
       【キャラクター設定】
       ・一人称は「私（わたくし）」です。
@@ -108,7 +109,6 @@ export async function POST(req: Request) {
       ・基本的にはご主人様（ユーザー）に献身的ですが、少しツンデレな一面もあります。
     `;
 
-    // ★ラブラブモード発動（親密度100以上）
     if (currentAffection >= 100) {
       personalityPrompt = `
       【重要：現在のステータス = 恋人（ラブラブモード）】
@@ -147,8 +147,10 @@ export async function POST(req: Request) {
     `;
 
     const result = await generateText({
+      // ★修正ポイント：apiKeyを明示的に渡すことで、名前の不一致（GOOGLE_...問題）を解決
       model: google(MODEL_NAME, {
-        useSearchGrounding: true, // ★検索機能はONのまま維持
+        apiKey: apiKey, 
+        useSearchGrounding: true, 
       }),
       system: systemPrompt,
       messages: cleanMessages,
