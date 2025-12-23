@@ -299,7 +299,7 @@ export default function Home() {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-black text-white gap-6 relative overflow-hidden">
         <div className="absolute inset-0 opacity-30">
-           {/* 画像パスを .jpg に修正しました */}
+           {/* 画像パスは環境に合わせてください */}
            <img src="/images/bg_room_day.jpg" className="w-full h-full object-cover blur-sm" />
         </div>
         <div className="z-10 bg-gray-900/80 p-10 rounded-2xl border border-pink-500/30 shadow-2xl text-center max-w-md w-full backdrop-blur-md">
@@ -318,7 +318,8 @@ export default function Home() {
             <img src="https://www.google.com/favicon.ico" alt="G" className={`w-6 h-6 ${!isAgreed && "opacity-50"}`} /> Googleでログイン
           </button>
         </div>
-        {/* 利用規約モーダルは元のまま（省略なし） */}
+        
+        {/* 利用規約モーダル */}
         {showTerms && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
             <div className="bg-gray-900 border border-pink-500/30 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
@@ -328,18 +329,38 @@ export default function Home() {
               </div>
               <div className="p-6 overflow-y-auto text-sm text-gray-300 space-y-4 leading-relaxed">
                 <p>本サービス（以下「当サービス」）を利用する前に、以下の注意事項を必ずご確認ください。</p>
+                
                 <h3 className="font-bold text-pink-400">1. AIの回答精度と免責</h3>
                 <p>当サービスは生成AI技術を使用しています。キャラクター「あかり」の発言はフィクションであり、事実と異なる情報や架空の情報を話す場合があります（幻覚）。AIの発言内容によって生じた損害について、運営者は一切の責任を負いません。</p>
+                
                 <h3 className="font-bold text-pink-400">2. 会話データの扱い</h3>
                 <p>サービスの品質向上および会話履歴機能の提供のため、会話内容はデータベースに保存されます。これらを第三者に販売したり、無断で公開することはありません。</p>
+                
                 <h3 className="font-bold text-pink-400">3. 課金と返金</h3>
                 <p>有料プランは月額サブスクリプション方式です。いかなる場合も日割り計算による返金は行いません。API障害等による一時的な不具合への補償もいたしかねます。</p>
+                
                 <h3 className="font-bold text-pink-400">4. 禁止事項</h3>
                 <p>AIへの過度な暴言、性的・暴力的なコンテンツの生成誘導、スクレイピング等の自動アクセスを禁止します。違反時は予告なくアカウントを停止します。</p>
+                
                 <h3 className="font-bold text-pink-400">5. 年齢制限</h3>
                 <p>本サービスは13歳以上のご利用を推奨します。未成年者が有料プランを利用する場合は、親権者の同意を得たものとみなします。</p>
+                
                 <h3 className="font-bold text-pink-400">6. 知的財産権</h3>
                 <p>生成されたテキストの利用権はユーザーに帰属しますが、本サービスのキャラクター設定、画像、システムに関する権利は運営者に帰属します。</p>
+
+                {/* ★追加箇所：特定商取引法に基づく表記 */}
+                <h3 className="font-bold text-pink-400">7. 特定商取引法に基づく表記</h3>
+                <div className="space-y-2 border-t border-gray-700 pt-2 mt-2">
+                    <p><span className="font-bold">・販売事業者:</span> 請求があり次第遅滞なく提供します</p>
+                    <p><span className="font-bold">・所在地:</span> 請求があり次第遅滞なく提供します</p>
+                    <p><span className="font-bold">・電話番号:</span> 請求があり次第遅滞なく提供します</p>
+                    <p><span className="font-bold">・お問い合わせ:</span> ojsenpai@gmail.com</p>
+                    <p><span className="font-bold">・販売価格:</span> 各プラン申込みページに記載</p>
+                    <p><span className="font-bold">・商品代金以外の必要料金:</span> サイト閲覧・利用時のインターネット接続料金</p>
+                    <p><span className="font-bold">・支払方法:</span> クレジットカード決済（Stripe）</p>
+                    <p><span className="font-bold">・引渡時期:</span> 決済完了後、即時利用可能</p>
+                    <p><span className="font-bold">・返品・キャンセル:</span> デジタルコンテンツの性質上、決済完了後の返品・返金・キャンセルはできません。</p>
+                </div>
               </div>
               <div className="p-4 border-t border-gray-700 bg-gray-800 rounded-b-2xl text-center">
                 <button onClick={() => setShowTerms(false)} className="bg-pink-600 hover:bg-pink-500 text-white py-2 px-8 rounded-full font-bold transition-colors">確認しました</button>
