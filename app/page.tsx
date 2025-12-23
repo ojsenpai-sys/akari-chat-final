@@ -386,7 +386,8 @@ export default function Home() {
          </div>
 
          {/* ★ここが修正ポイント：スマホ(flex-col) / PC(md:flex-row) */}
-         <div className="flex flex-col md:flex-row gap-2 mt-1">
+         {/* items-start を追加して、ボタンが横に広がらないようにしました */}
+         <div className="flex flex-col md:flex-row items-start gap-2 mt-1">
             <button 
                 type="button"
                 onClick={() => setShowCostume(!showCostume)}

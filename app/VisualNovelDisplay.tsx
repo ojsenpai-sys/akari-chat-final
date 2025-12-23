@@ -171,15 +171,15 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
   }
 
-  // ★修正：位置を少し下にずらしました (-45% -> -55% など)
+  // ★修正：位置をさらに下に下げて（-60%程度）、頭が切れないように調整
   const adjustPosition = (activeOutfit === 'santa') || isLoveMode;
   const imageScale = isLoveMode ? "scale-110" : "scale-100";
 
   const imageStyle = adjustPosition
     // サンタ・デレモード用
-    ? `h-[150%] w-auto -bottom-[55%] md:h-auto md:max-h-[220%] md:-bottom-[120%] ${imageScale}` 
+    ? `h-[150%] w-auto -bottom-[60%] md:h-auto md:max-h-[220%] md:-bottom-[120%] ${imageScale}` 
     // 通常時
-    : "h-[140%] w-auto -bottom-[45%] md:h-auto md:max-h-[140%] md:-bottom-[45%]";
+    : "h-[140%] w-auto -bottom-[50%] md:h-auto md:max-h-[140%] md:-bottom-[45%]";
 
   let currentBg = isNightTime ? BG_NIGHT : BG_DAY;
   if (plan === 'ROYAL') {
