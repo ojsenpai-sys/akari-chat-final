@@ -299,8 +299,8 @@ export default function Home() {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-black text-white gap-6 relative overflow-hidden">
         <div className="absolute inset-0 opacity-30">
-           {/* 画像パスは環境に合わせてください */}
-           <img src="/images/bg_room_day.png" className="w-full h-full object-cover blur-sm" />
+           {/* 画像パスを .jpg に修正しました */}
+           <img src="/images/bg_room_day.jpg" className="w-full h-full object-cover blur-sm" />
         </div>
         <div className="z-10 bg-gray-900/80 p-10 rounded-2xl border border-pink-500/30 shadow-2xl text-center max-w-md w-full backdrop-blur-md">
           <h1 className="text-3xl font-bold text-pink-400 mb-2">メイドのあかりちゃん</h1>
