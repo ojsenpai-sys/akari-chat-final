@@ -42,6 +42,9 @@ function HomeContent() {
   const [isComposing, setIsComposing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAgreed, setIsAgreed] = useState(false);
+  
+  // ★追加: マニュアルが開いているかどうか
+  const [isManualOpen, setIsManualOpen] = useState(false);
 
   // 通知用
   const [notification, setNotification] = useState(null);
@@ -214,7 +217,7 @@ function HomeContent() {
         return;
       }
     }
-    // 晴れ着ロジックは VisualNovelDisplay 側でも制限していますが、ここでも念のため
+    // 晴れ着ロジック
     if (newOutfit === 'kimono') {
         if (plan !== 'ROYAL') {
             setMessages(prev => [...prev, { 
@@ -395,61 +398,70 @@ function HomeContent() {
         </div>
       )}
 
+      {/* ★修正: onManualChange を子コンポーネントに渡す */}
       <div className="flex-1 relative z-0">
-        <VisualNovelDisplay messages={messages} outfit={currentOutfit} currentPlan={currentPlan} affection={affection} />
+        <VisualNovelDisplay 
+            messages={messages} 
+            outfit={currentOutfit} 
+            currentPlan={currentPlan} 
+            affection={affection} 
+            onManualChange={setIsManualOpen} 
+        />
       </div>
 
-      {/* ステータス表示＆アイコン群 */}
-      <div className="absolute top-4 left-4 z-[50] flex flex-col gap-2">
-         {/* ステータスボックス */}
-         <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-white text-xs flex flex-col gap-1 shadow-lg">
-            <div className="flex items-center gap-2">
-                <span className="text-yellow-400 font-bold">★ {points} pt</span>
-                <span className="text-gray-400">({currentPlan})</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <Heart size={12} className={affection >= 100 ? "text-pink-500 fill-pink-500 animate-pulse" : "text-pink-400"} />
-                <span className={`font-bold ${affection >= 100 ? "text-pink-400" : "text-white"}`}>親密度: {affection}</span>
-            </div>
-         </div>
+      {/* ★修正: マニュアルが開いていない(!isManualOpen)時だけ左上のUIを表示する */}
+      {!isManualOpen && (
+        <div className="absolute top-4 left-4 z-[50] flex flex-col gap-2">
+           {/* ステータスボックス */}
+           <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-white text-xs flex flex-col gap-1 shadow-lg">
+              <div className="flex items-center gap-2">
+                  <span className="text-yellow-400 font-bold">★ {points} pt</span>
+                  <span className="text-gray-400">({currentPlan})</span>
+              </div>
+              <div className="flex items-center gap-2">
+                  <Heart size={12} className={affection >= 100 ? "text-pink-500 fill-pink-500 animate-pulse" : "text-pink-400"} />
+                  <span className={`font-bold ${affection >= 100 ? "text-pink-400" : "text-white"}`}>親密度: {affection}</span>
+              </div>
+           </div>
 
-         {/* 左上メニューボタン群 */}
-         <div className="flex flex-col md:flex-row items-start gap-2 mt-1">
-            <button 
-                type="button"
-                onClick={() => setShowShop(!showShop)}
-                className="p-3 bg-gray-900/80 text-blue-400 hover:text-white hover:bg-blue-600 rounded-full border border-white/20 shadow-lg transition-all"
-                title="プラン変更"
-            >
-                <ShoppingCart size={24} />
-            </button>
+           {/* 左上メニューボタン群 */}
+           <div className="flex flex-col md:flex-row items-start gap-2 mt-1">
+              <button 
+                  type="button"
+                  onClick={() => setShowShop(!showShop)}
+                  className="p-3 bg-gray-900/80 text-blue-400 hover:text-white hover:bg-blue-600 rounded-full border border-white/20 shadow-lg transition-all"
+                  title="プラン変更"
+              >
+                  <ShoppingCart size={24} />
+              </button>
 
-            <button 
-                type="button"
-                onClick={() => setShowCostume(!showCostume)}
-                className="p-3 bg-gray-900/80 text-pink-400 hover:text-white hover:bg-pink-600 rounded-full border border-white/20 shadow-lg transition-all"
-                title="衣装変更"
-            >
-                <Shirt size={24} />
-            </button>
-            <button 
-                type="button"
-                onClick={() => setShowGift(!showGift)}
-                className="p-3 bg-gray-900/80 text-yellow-400 hover:text-white hover:bg-yellow-600 rounded-full border border-white/20 shadow-lg transition-all"
-                title="プレゼント"
-            >
-                <Gift size={24} />
-            </button>
-            <button 
-                type="button"
-                onClick={() => signOut()}
-                className="p-3 bg-gray-900/80 text-gray-400 hover:text-red-400 hover:bg-red-900/50 rounded-full border border-white/20 shadow-lg transition-all"
-                title="ログアウト"
-            >
-                <LogOut size={24} />
-            </button>
-         </div>
-      </div>
+              <button 
+                  type="button"
+                  onClick={() => setShowCostume(!showCostume)}
+                  className="p-3 bg-gray-900/80 text-pink-400 hover:text-white hover:bg-pink-600 rounded-full border border-white/20 shadow-lg transition-all"
+                  title="衣装変更"
+              >
+                  <Shirt size={24} />
+              </button>
+              <button 
+                  type="button"
+                  onClick={() => setShowGift(!showGift)}
+                  className="p-3 bg-gray-900/80 text-yellow-400 hover:text-white hover:bg-yellow-600 rounded-full border border-white/20 shadow-lg transition-all"
+                  title="プレゼント"
+              >
+                  <Gift size={24} />
+              </button>
+              <button 
+                  type="button"
+                  onClick={() => signOut()}
+                  className="p-3 bg-gray-900/80 text-gray-400 hover:text-red-400 hover:bg-red-900/50 rounded-full border border-white/20 shadow-lg transition-all"
+                  title="ログアウト"
+              >
+                  <LogOut size={24} />
+              </button>
+           </div>
+        </div>
+      )}
 
       {/* 呼び名設定 */}
       {showSettings && (
@@ -567,8 +579,6 @@ function HomeContent() {
               >
                 <Settings size={20} />
               </button>
-              
-              {/* MusicボタンはVisualNovelDisplay側に移動したため削除しました */}
           </div>
           
           <textarea

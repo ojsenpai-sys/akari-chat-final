@@ -3,7 +3,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { BookOpen, X, Heart, Star, Sparkles, MessageCircle, Volume2, VolumeX } from 'lucide-react';
 
 // --- BGM設定 ---
-// 通常時は normal、親密度100以上のラブラブモードで love を再生
 const BGM_NORMAL = "/audio/bgm_normal.mp3";
 const BGM_LOVE = "/audio/bgm_love.mp3";
 
@@ -94,7 +93,7 @@ const SITUATION_DEFINITIONS = [
 // --- マニュアル用モーダルコンポーネント ---
 const ManualModal = ({ onClose }) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}>
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}>
       <div className="bg-white rounded-3xl w-full max-w-3xl h-[85vh] overflow-hidden shadow-2xl relative flex flex-col" onClick={e => e.stopPropagation()}>
         
         {/* ヘッダー */}
@@ -267,7 +266,8 @@ const ManualModal = ({ onClose }) => {
 };
 
 
-export default function VisualNovelDisplay({ messages, outfit = 'maid', currentPlan = 'free', affection = 0 }) {
+// ★修正: onManualChange プロップを受け取り、マニュアル開閉状態を親に通知
+export default function VisualNovelDisplay({ messages, outfit = 'maid', currentPlan = 'free', affection = 0, onManualChange }) {
   const [currentEmotion, setCurrentEmotion] = useState('normal');
   const [currentSituation, setCurrentSituation] = useState(null); 
   const [displayedText, setDisplayedText] = useState('');
@@ -288,9 +288,15 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   // プランの正規化
   const plan = currentPlan?.toUpperCase() || 'FREE';
 
+  // ★追加: マニュアルの状態が変わったら親(page.tsx)に通知する
+  useEffect(() => {
+    if (onManualChange) {
+      onManualChange(showManual);
+    }
+  }, [showManual, onManualChange]);
+
   // UI切り替え & BGM初回再生トリガー
   const handleScreenClick = () => {
-    // 最初のクリックでBGM再生を開始（ブラウザの自動再生ポリシー対策）
     if (audioRef.current && audioRef.current.paused && !isMuted) {
       audioRef.current.play().catch(e => console.log("Audio play blocked:", e));
     }
@@ -324,10 +330,8 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
 
     const audio = audioRef.current;
-    // 親密度が100以上ならLOVE、それ以外はNORMAL
     const targetSrc = isLoveMode ? BGM_LOVE : BGM_NORMAL;
 
-    // ソースが変わった場合のみ再読み込み
     if (!audio.src.includes(targetSrc)) {
         audio.src = targetSrc;
         if (!isMuted) {
@@ -335,14 +339,12 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         }
     }
 
-    // ミュート設定
     audio.muted = isMuted;
     if (!isMuted && audio.paused && audio.src) {
-        // ミュート解除時に再生再開
          audio.play().catch(e => console.log("Play failed", e));
     }
 
-  }, [isLoveMode, isMuted]); // 依存配列を isNightTime から isLoveMode に変更
+  }, [isLoveMode, isMuted]);
 
 
   // メッセージ表示ロジック
