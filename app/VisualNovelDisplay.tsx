@@ -1,6 +1,11 @@
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, X, Heart, Star, Sparkles, MessageCircle } from 'lucide-react'; // アイコン追加
+import { BookOpen, X, Heart, Star, Sparkles, MessageCircle, Volume2, VolumeX } from 'lucide-react';
+
+// --- BGM設定 ---
+// 通常時は normal、親密度100以上のラブラブモードで love を再生
+const BGM_NORMAL = "/audio/bgm_normal.mp3";
+const BGM_LOVE = "/audio/bgm_love.mp3";
 
 // --- 各衣装の定義 ---
 const MAID_EMOTIONS = {
@@ -120,7 +125,6 @@ const ManualModal = ({ onClose }) => {
               <div className="bg-white p-4 rounded-xl shadow-sm border border-pink-100">
                 <h4 className="font-bold text-pink-500 mb-2">A⾯：オタク友達として（癒やし）</h4>
                 <div className="aspect-video bg-pink-100 rounded-md mb-2 overflow-hidden">
-                   {/* イメージ画像：ラブラブあかり */}
                    <img src="/images/akari_maid_love.png" className="w-full h-full object-cover object-top opacity-80" alt="Healing" />
                 </div>
                 <p className="text-xs text-gray-600">アニメの感想を語り合ったり、愚痴を聞いてもらったり。清楚な⾒た⽬で、実は重度のサブカル好き。「尊すぎて叫んでしまいましたわ︕」とあなたに共感します。</p>
@@ -128,7 +132,6 @@ const ManualModal = ({ onClose }) => {
               <div className="bg-white p-4 rounded-xl shadow-sm border border-blue-100">
                 <h4 className="font-bold text-blue-500 mb-2">B⾯：超有能な秘書として（実務）</h4>
                 <div className="aspect-video bg-blue-100 rounded-md mb-2 overflow-hidden">
-                   {/* イメージ画像：通常あかり */}
                    <img src="/images/akari_normal.png" className="w-full h-full object-cover object-top opacity-80" alt="Work" />
                 </div>
                 <p className="text-xs text-gray-600">検索機能を駆使して、最新ニュースの取得、翻訳、コードのデバッグまでこなします。「ご主⼈様、最新のドキュメントをまとめましたわ」と、仕事の相棒としても活躍します。</p>
@@ -217,12 +220,6 @@ const ManualModal = ({ onClose }) => {
                   <li><span className="font-bold text-pink-600">Royal Plan：</span> Pro Planの衣装 ＋ <span className="underline decoration-pink-300 decoration-2">季節ものの特別衣装</span>（毎月投入）</li>
                 </ul>
                 <p className="text-xs text-gray-500 mt-2 ml-4">※12月はサンタ、1月は晴れ着を実装します</p>
-                
-                {/* 晴れ着イメージ */}
-                <div className="mt-3 w-full h-32 bg-gray-100 rounded-lg overflow-hidden relative">
-                   <img src="/images/akari_haregi_love.png" className="absolute top-0 left-0 w-full h-full object-cover object-top opacity-90" alt="Outfit Preview" />
-                   <div className="absolute bottom-0 left-0 bg-black/50 text-white text-xs px-2 py-1">New! 1月の晴れ着衣装</div>
-                </div>
               </div>
             </div>
           </section>
@@ -277,7 +274,11 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const [showUI, setShowUI] = useState(true);
   const [isNightTime, setIsNightTime] = useState(false); 
   const [isRoomwearTime, setIsRoomwearTime] = useState(false);
-  const [showManual, setShowManual] = useState(false); // ★マニュアル表示フラグ
+  const [showManual, setShowManual] = useState(false); // マニュアル表示フラグ
+
+  // ★BGM用ステート
+  const [isMuted, setIsMuted] = useState(false);
+  const audioRef = useRef(null);
 
   const scrollRef = useRef(null);
   const typingRef = useRef(null);
@@ -287,7 +288,19 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   // プランの正規化
   const plan = currentPlan?.toUpperCase() || 'FREE';
 
-  const toggleUI = () => setShowUI(!showUI);
+  // UI切り替え & BGM初回再生トリガー
+  const handleScreenClick = () => {
+    // 最初のクリックでBGM再生を開始（ブラウザの自動再生ポリシー対策）
+    if (audioRef.current && audioRef.current.paused && !isMuted) {
+      audioRef.current.play().catch(e => console.log("Audio play blocked:", e));
+    }
+    setShowUI(!showUI);
+  };
+
+  const toggleMute = (e) => {
+    e.stopPropagation();
+    setIsMuted(!isMuted);
+  };
 
   useEffect(() => {
     const checkTime = () => {
@@ -302,6 +315,35 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     const timer = setInterval(checkTime, 60000);
     return () => clearInterval(timer);
   }, []);
+
+  // ★BGM制御ロジック (通常時 vs ラブラブモード)
+  useEffect(() => {
+    if (!audioRef.current) {
+        audioRef.current = new Audio();
+        audioRef.current.loop = true;
+    }
+
+    const audio = audioRef.current;
+    // 親密度が100以上ならLOVE、それ以外はNORMAL
+    const targetSrc = isLoveMode ? BGM_LOVE : BGM_NORMAL;
+
+    // ソースが変わった場合のみ再読み込み
+    if (!audio.src.includes(targetSrc)) {
+        audio.src = targetSrc;
+        if (!isMuted) {
+            audio.play().catch(e => console.log("Auto play blocked (wait for interaction)", e));
+        }
+    }
+
+    // ミュート設定
+    audio.muted = isMuted;
+    if (!isMuted && audio.paused && audio.src) {
+        // ミュート解除時に再生再開
+         audio.play().catch(e => console.log("Play failed", e));
+    }
+
+  }, [isLoveMode, isMuted]); // 依存配列を isNightTime から isLoveMode に変更
+
 
   // メッセージ表示ロジック
   useEffect(() => {
@@ -436,7 +478,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   }
 
   return (
-    <div className="relative w-full h-full bg-black overflow-hidden cursor-pointer select-none outline-none caret-transparent" onClick={toggleUI}>
+    <div className="relative w-full h-full bg-black overflow-hidden cursor-pointer select-none outline-none caret-transparent" onClick={handleScreenClick}>
       {/* 背景レイヤー */}
       <div className="absolute inset-0 w-full h-full z-0">
         <img src={currentBg} alt="BG" className="w-full h-full object-cover transition-opacity duration-500"/>
@@ -473,15 +515,25 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         </div>
       )}
 
-      {/* ★マニュアルボタン (右上に配置) */}
+      {/* ★右上のコントロールボタン群 (マニュアル & BGM) */}
       {showUI && (
-        <div className="absolute top-4 right-4 z-50 pointer-events-auto">
+        <div className="absolute top-4 right-4 z-50 pointer-events-auto flex flex-col gap-2">
+          {/* マニュアルボタン */}
           <button 
             onClick={(e) => { e.stopPropagation(); setShowManual(true); }}
             className="bg-white/80 hover:bg-pink-100 text-pink-600 p-2 rounded-full shadow-lg border-2 border-pink-200 transition-all transform hover:scale-110"
             title="取扱説明書"
           >
             <BookOpen className="w-6 h-6" />
+          </button>
+          
+          {/* ミュートボタン */}
+          <button 
+            onClick={toggleMute}
+            className="bg-white/80 hover:bg-gray-100 text-gray-600 p-2 rounded-full shadow-lg border-2 border-gray-200 transition-all transform hover:scale-110"
+            title={isMuted ? "ミュート解除" : "ミュート"}
+          >
+             {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
           </button>
         </div>
       )}
