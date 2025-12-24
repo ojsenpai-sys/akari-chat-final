@@ -528,7 +528,8 @@ function HomeContent() {
                     {/* Royal Plan */}
                     <div className="border border-purple-500/30 bg-gradient-to-br from-gray-900 to-purple-900/20 p-4 rounded-xl relative overflow-hidden">
                         <h3 className="font-bold text-purple-400 text-lg flex items-center gap-2"><Crown size={18}/> Royalプラン</h3>
-                        <p className="text-white font-bold text-xl my-2">¥5,000 <span className="text-xs text-gray-400">/ 月</span></p>
+                        {/* ★修正箇所：価格を5000円から2980円に変更 */}
+                        <p className="text-white font-bold text-xl my-2">¥2,980 <span className="text-xs text-gray-400">/ 月</span></p>
                         <ul className="text-sm text-gray-300 space-y-1 mb-4">
                             <li>✅ 会話数・超UP（2500回/日）</li>
                             <li>✅ <span className="text-pink-400 font-bold">サンタ服・特別背景 解放</span></li>
@@ -657,14 +658,5 @@ function HomeContent() {
         </div>
       </div>
     </main>
-  );
-}
-
-// ★修正：Suspenseで全体を包むデフォルトエクスポート
-export default function Home() {
-  return (
-    <Suspense fallback={<div className="h-screen w-screen bg-black flex items-center justify-center text-white">読み込み中...</div>}>
-      <HomeContent />
-    </Suspense>
   );
 }
