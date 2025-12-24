@@ -528,7 +528,6 @@ function HomeContent() {
                     {/* Royal Plan */}
                     <div className="border border-purple-500/30 bg-gradient-to-br from-gray-900 to-purple-900/20 p-4 rounded-xl relative overflow-hidden">
                         <h3 className="font-bold text-purple-400 text-lg flex items-center gap-2"><Crown size={18}/> Royalプラン</h3>
-                        {/* ★修正箇所：価格を5000円から2980円に変更 */}
                         <p className="text-white font-bold text-xl my-2">¥2,980 <span className="text-xs text-gray-400">/ 月</span></p>
                         <ul className="text-sm text-gray-300 space-y-1 mb-4">
                             <li>✅ 会話数・超UP（2500回/日）</li>
@@ -559,53 +558,6 @@ function HomeContent() {
                         </div>
                     </div>
 
-                </div>
-            </div>
-        </div>
-      )}
-
-      {/* プレゼント画面 */}
-      {showGift && (
-        <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4">
-            <div className="bg-gray-900 border border-yellow-500/30 rounded-2xl w-full max-w-lg max-h-[80vh] flex flex-col shadow-2xl">
-                <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 rounded-t-2xl">
-                    <h2 className="text-lg font-bold text-yellow-400 flex items-center gap-2"><Gift size={20}/> あかりへプレゼント</h2>
-                    <button onClick={() => setShowGift(false)} className="text-gray-400 hover:text-white"><X size={24}/></button>
-                </div>
-                <div className="p-2 overflow-y-auto custom-scrollbar">
-                    {/* ポイント表示 */}
-                    <div className="p-4 text-center bg-gray-800/50 mb-2">
-                        <p className="text-gray-400 text-sm">所持ポイント</p>
-                        <p className="text-2xl font-bold text-yellow-400">{points} pt</p>
-                    </div>
-
-                    {currentPlan.toUpperCase() === 'FREE' ? (
-                        <div className="p-8 text-center text-gray-400">
-                            <p>プレゼント機能は有料会員（Pro/Royal）限定です。</p>
-                            <p className="text-sm mt-2">プランに参加して、あかりと仲良くなりましょう！</p>
-                        </div>
-                    ) : (
-                        <div className="grid grid-cols-1 gap-2 p-2">
-                            {GIFT_ITEMS.map((item) => (
-                                <button 
-                                    key={item.id}
-                                    onClick={() => giveGift(item)}
-                                    disabled={points < item.price}
-                                    className={`flex items-center justify-between p-3 rounded-xl border transition-all ${
-                                        points < item.price 
-                                        ? "bg-gray-800 border-gray-700 opacity-50 cursor-not-allowed" 
-                                        : "bg-gray-800/80 border-white/10 hover:bg-gray-700 hover:border-yellow-500/50 hover:shadow-lg hover:scale-[1.02]"
-                                    }`}
-                                >
-                                    <div className="text-left">
-                                        <div className="font-bold text-white">{item.name}</div>
-                                        <div className="text-xs text-pink-400">親密度 +{item.love}</div>
-                                    </div>
-                                    <div className="font-bold text-yellow-400">{item.price} pt</div>
-                                </button>
-                            ))}
-                        </div>
-                    )}
                 </div>
             </div>
         </div>
@@ -658,5 +610,14 @@ function HomeContent() {
         </div>
       </div>
     </main>
+  );
+}
+
+// ★修正：Suspenseで全体を包むデフォルトエクスポート
+export default function Home() {
+  return (
+    <Suspense fallback={<div className="h-screen w-screen bg-black flex items-center justify-center text-white">読み込み中...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
