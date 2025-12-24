@@ -27,23 +27,26 @@ model User {
   currentEvent  String?                        // 今発生中のイベント画像
 
   // ▼ 追加：新機能用ステータス
-  affection     Int       @default(0)          // 親密度（100以上でラブラブモード）
-  points        Int       @default(0)          // 所持ポイント（プレゼント購入用）
-  lastLoginAt   DateTime  @default(now())      // 最終ログイン日時（ログボ判定用）
+  affection       Int       @default(0)           // 親密度（100以上でラブラブモード）
+  points          Int       @default(0)           // 所持ポイント（プレゼント購入用）
+  lastLoginAt     DateTime  @default(now())       // 最終ログイン日時（ログボ判定用）
+
+  // ★★★ 追加：長期記憶（あかりのメモ帳） ★★★
+  memory          String?   @db.Text              
 
   // ▼ 料金プラン・課金情報
-  plan             Plan      @default(FREE)    // プラン (FREE, PRO, ROYAL)
-  subscriptionId   String?                     // StripeのサブスクID
-  stripeCustomerId String?                     // Stripeの顧客ID
-  purchasedTickets Int       @default(0)       // 追加購入した会話チケット残数
+  plan              Plan      @default(FREE)    // プラン (FREE, PRO, ROYAL)
+  subscriptionId    String?                     // StripeのサブスクID
+  stripeCustomerId  String?                     // Stripeの顧客ID
+  purchasedTickets  Int       @default(0)       // 追加購入した会話チケット残数
 
   // ▼ リレーション（紐付け）
   accounts      Account[]
   sessions      Session[]
   messages      Message[]
 
-  createdAt     DateTime  @default(now())      // 初めて会った日
-  updatedAt     DateTime  @updatedAt           // 最後に更新した日
+  createdAt     DateTime  @default(now())       // 初めて会った日
+  updatedAt     DateTime  @updatedAt            // 最後に更新した日
 }
 
 // メッセージ（会話ログ）のモデル

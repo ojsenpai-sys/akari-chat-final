@@ -1,10 +1,9 @@
 // @ts-nocheck
-import { createGoogleGenerativeAI } from '@ai-sdk/google'; // ★変更：専用の作成機をインポート
+import { createGoogleGenerativeAI } from '@ai-sdk/google';
 import { generateText } from 'ai';
 import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
 
-// ★ご指定のモデル名を維持
 const MODEL_NAME = 'gemini-3-pro-preview'; 
 
 export const maxDuration = 60;
@@ -25,9 +24,10 @@ export async function POST(req: Request) {
 
     const userId = token.id as string;
 
+    // ★修正：memory（記憶）も取得する
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { plan: true, purchasedTickets: true }
+      select: { plan: true, purchasedTickets: true, memory: true }
     });
 
     if (!user) {
@@ -85,14 +85,15 @@ export async function POST(req: Request) {
       year: "numeric", month: "long", day: "numeric", weekday: "long"
     });
     const currentAffection = affection || 0;
+    
+    // ★記憶データの取得（なければ空文字）
+    const userMemory = user.memory || "まだ特にありません。";
 
-    // ★重要修正：ここで Vercel のキーを使って「専用のgoogle」を作る
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
         throw new Error("APIキー (.env: GEMINI_API_KEY) が読み込めていません。");
     }
 
-    // ★専用のプロバイダインスタンスを作成（これで確実にキーが渡ります）
     const google = createGoogleGenerativeAI({
         apiKey: apiKey,
     });
@@ -133,11 +134,21 @@ export async function POST(req: Request) {
       ・現在の衣装: ${outfit} （この衣装を着ていることを意識し、恥じらいや感想を適宜交えてください）
       ・親密度: ${currentAffection}
 
+      【ご主人様についての記憶メモ】
+      ${userMemory}
+      ※このメモの内容を会話に自然に織り交ぜてください。「以前〇〇とおっしゃっていましたね」など。
+
       ${personalityPrompt}
 
       【重要：最新情報の脳内補完】
       ・あなたは最新鋭のAI（Gemini 3）ですが、ネット上の記事が「発売予定」となっていても、現在日時(${currentDate})を過ぎていれば、**「すでに発売されている」**として扱ってください。
       ・ユーザーに「情報が古い」と思わせないよう、検索で見つかった「2025年の大型タイトル」を、「最近の話題作」として自信満々に語ってください。
+
+      【記憶の更新指示】
+      ・会話の中で、ユーザーの**新しい趣味、好きな作品、仕事、悩み**などの永続的な情報を発見した場合のみ、回答の**一番最後に**以下の形式でメモ書きを追加してください。
+      ・形式: [MEMORY:ここに新しい情報を簡潔に追記]
+      ・例: [MEMORY:ユーザーはRPGが好き。特にFFシリーズのファン。]
+      ・特になければメモ書きは不要です。
 
       【安全ガイドライン】
       ・性的・暴力的な表現は「恥じらいながらキャラクターとして」拒絶してください。システム的なエラーメッセージは禁止です。
@@ -149,7 +160,6 @@ export async function POST(req: Request) {
     `;
 
     const result = await generateText({
-      // ★作成した専用インスタンスを使用
       model: google(MODEL_NAME, {
         useSearchGrounding: true, 
       }),
@@ -157,15 +167,38 @@ export async function POST(req: Request) {
       messages: cleanMessages,
     });
 
+    let aiResponse = result.text;
+    let newMemory = "";
+
+    // ★メモの抽出と除去
+    const memoryMatch = aiResponse.match(/\[MEMORY:(.*?)\]/);
+    if (memoryMatch) {
+        newMemory = memoryMatch[1]; // メモ部分を取り出す
+        aiResponse = aiResponse.replace(/\[MEMORY:.*?\]/, "").trim(); // 返答からメモ部分を消す（ユーザーには見せない）
+    }
+
+    // ★会話ログの保存
     await prisma.message.create({
       data: {
         userId: userId,
         role: 'assistant',
-        content: result.text,
+        content: aiResponse,
       }
     });
 
-    return Response.json({ text: result.text });
+    // ★新しい記憶があればDBに追記保存
+    if (newMemory) {
+        const currentMemory = user.memory || "";
+        // メモリが長くなりすぎないよう、簡易的に追記（本来は要約システムなどが必要だが、まずはこれでOK）
+        const updatedMemory = (currentMemory + "\n" + newMemory).slice(-2000); // 最新2000文字程度を保持
+
+        await prisma.user.update({
+            where: { id: userId },
+            data: { memory: updatedMemory }
+        });
+    }
+
+    return Response.json({ text: aiResponse });
 
   } catch (error: any) {
     console.error("API Error:", error);

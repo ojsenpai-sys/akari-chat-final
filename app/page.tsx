@@ -22,7 +22,6 @@ const GIFT_ITEMS = [
   { id: 'ring', name: '指輪', price: 5000, love: 50, reaction: '「えっ…この指輪って…そういうこと…ですかね？とても嬉しくて言葉が見つからないです…私、一生ご主人様…アナタのそばで尽くさせていただきますわ。…ねぇ、ダーリンって呼んでもいい？？」' },
 ];
 
-// ★メインロジックを別コンポーネントに分離
 function HomeContent() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
@@ -36,14 +35,14 @@ function HomeContent() {
   
   const [showSettings, setShowSettings] = useState(false);
   const [showCostume, setShowCostume] = useState(false);
-  const [showGift, setShowGift] = useState(false);
+  const [showGift, setShowGift] = useState(false); // これの表示部分が欠落していました
   const [showShop, setShowShop] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAgreed, setIsAgreed] = useState(false);
   
-  // ★追加: マニュアルが開いているかどうか
+  // マニュアルが開いているかどうか
   const [isManualOpen, setIsManualOpen] = useState(false);
 
   // 通知用
@@ -77,7 +76,6 @@ function HomeContent() {
     }
   };
 
-  // 決済完了後のメッセージ表示
   useEffect(() => {
     if (searchParams.get('success')) {
       setNotification("🎉 ありがとうございます！プランが更新されました！");
@@ -91,7 +89,6 @@ function HomeContent() {
     }
   }, [searchParams, router]);
 
-  // データ同期
   useEffect(() => {
     if (status === 'authenticated') {
       fetch('/api/user/sync')
@@ -115,7 +112,6 @@ function HomeContent() {
     }
   }, [status]);
 
-  // 初回メッセージ
   useEffect(() => {
     if (status === "authenticated" && messages.length === 0) {
        setMessages([
@@ -217,7 +213,6 @@ function HomeContent() {
         return;
       }
     }
-    // 晴れ着ロジック
     if (newOutfit === 'kimono') {
         if (plan !== 'ROYAL') {
             setMessages(prev => [...prev, { 
@@ -253,7 +248,7 @@ function HomeContent() {
       case 'bunny':
         reactionContent = `[赤面]バ、バニーガールだなんて…！こ、こんな破廉恥な格好、ご主人様の前でしかできませんわ…！`;
         break;
-      case 'kimono': // 晴れ着の反応
+      case 'kimono': 
         reactionContent = `[笑顔]あけましておめでとうございます！晴れ着に着替えました。ご主人様、どうですか？似合ってますか？`;
         break;
       case 'maid':
@@ -345,7 +340,6 @@ function HomeContent() {
           </button>
         </div>
         
-        {/* 利用規約モーダル */}
         {showTerms && (
           <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
             <div className="bg-gray-900 border border-pink-500/30 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
@@ -398,7 +392,6 @@ function HomeContent() {
         </div>
       )}
 
-      {/* ★修正: onManualChange を子コンポーネントに渡す */}
       <div className="flex-1 relative z-0">
         <VisualNovelDisplay 
             messages={messages} 
@@ -409,10 +402,8 @@ function HomeContent() {
         />
       </div>
 
-      {/* ★修正: マニュアルが開いていない(!isManualOpen)時だけ左上のUIを表示する */}
       {!isManualOpen && (
         <div className="absolute top-4 left-4 z-[50] flex flex-col gap-2">
-           {/* ステータスボックス */}
            <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-white text-xs flex flex-col gap-1 shadow-lg">
               <div className="flex items-center gap-2">
                   <span className="text-yellow-400 font-bold">★ {points} pt</span>
@@ -424,7 +415,6 @@ function HomeContent() {
               </div>
            </div>
 
-           {/* 左上メニューボタン群 */}
            <div className="flex flex-col md:flex-row items-start gap-2 mt-1">
               <button 
                   type="button"
@@ -463,7 +453,6 @@ function HomeContent() {
         </div>
       )}
 
-      {/* 呼び名設定 */}
       {showSettings && (
         <div className="absolute bottom-24 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-bottom-4">
           <h3 className="text-pink-400 font-bold mb-4">呼び方の設定</h3>
@@ -478,7 +467,32 @@ function HomeContent() {
         </div>
       )}
 
-      {/* 衣装変更画面 */}
+      {/* ★復活させたプレゼント画面 */}
+      {showGift && (
+        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-80 animate-in fade-in slide-in-from-top-4">
+          <h3 className="text-yellow-400 font-bold mb-4 flex items-center gap-2"><Gift size={18}/> プレゼントを贈る</h3>
+          <p className="text-xs text-gray-400 mb-2">ポイントを使って親密度アップ！</p>
+          <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+            {GIFT_ITEMS.map((item) => (
+              <button 
+                key={item.id}
+                onClick={() => giveGift(item)} 
+                className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-between group transition-all"
+              >
+                <div>
+                    <div className="font-bold text-white group-hover:text-yellow-200 text-sm">{item.name}</div>
+                    <div className="text-xs text-gray-400">親密度 +{item.love}</div>
+                </div>
+                <div className="text-yellow-400 font-bold text-sm">
+                    {item.price} pt
+                </div>
+              </button>
+            ))}
+          </div>
+          <button onClick={() => setShowGift(false)} className="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm">閉じる</button>
+        </div>
+      )}
+
       {showCostume && (
         <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-top-4">
           <h3 className="text-pink-400 font-bold mb-4">衣装変更（有料会員限定）</h3>
@@ -493,7 +507,6 @@ function HomeContent() {
         </div>
       )}
 
-      {/* ショップ画面 */}
       {showShop && (
         <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4">
             <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl">
@@ -502,14 +515,11 @@ function HomeContent() {
                     <button onClick={() => setShowShop(false)} className="text-gray-400 hover:text-white"><X size={24}/></button>
                 </div>
                 <div className="p-4 overflow-y-auto custom-scrollbar space-y-4">
-                    
-                    {/* 現在のプラン */}
                     <div className="bg-gray-800/50 p-4 rounded-xl border border-white/10 text-center">
                         <p className="text-gray-400 text-xs">現在のご主人様のプラン</p>
                         <p className="text-2xl font-bold text-white mt-1">{currentPlan}</p>
                     </div>
 
-                    {/* Pro Plan */}
                     <div className="border border-yellow-500/30 bg-gradient-to-br from-gray-900 to-gray-800 p-4 rounded-xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 bg-yellow-600 text-white text-[10px] px-2 py-1 rounded-bl">人気</div>
                         <h3 className="font-bold text-yellow-400 text-lg flex items-center gap-2"><Zap size={18}/> Proプラン</h3>
@@ -528,7 +538,6 @@ function HomeContent() {
                         </button>
                     </div>
 
-                    {/* Royal Plan */}
                     <div className="border border-purple-500/30 bg-gradient-to-br from-gray-900 to-purple-900/20 p-4 rounded-xl relative overflow-hidden">
                         <h3 className="font-bold text-purple-400 text-lg flex items-center gap-2"><Crown size={18}/> Royalプラン</h3>
                         <p className="text-white font-bold text-xl my-2">¥2,980 <span className="text-xs text-gray-400">/ 月</span></p>
@@ -546,7 +555,6 @@ function HomeContent() {
                         </button>
                     </div>
 
-                    {/* Ticket */}
                     <div className="border border-white/10 bg-gray-800 p-4 rounded-xl">
                         <h3 className="font-bold text-white text-md flex items-center gap-2"><FileText size={16}/> 会話チケット（+100回）</h3>
                         <p className="text-xs text-gray-400 mt-1 mb-3">プランに関わらず、本日の会話数をチャージできます。</p>
@@ -566,10 +574,8 @@ function HomeContent() {
         </div>
       )}
 
-      {/* チャット入力欄 */}
       <div className="h-auto min-h-[6rem] bg-gray-900 border-t border-white/10 p-4 flex items-center justify-center relative z-[100]">
         <div className="w-full max-w-2xl flex gap-2 items-end bg-gray-800 p-2 rounded-3xl border border-white/5 shadow-inner">
-          
           <div className="flex flex-col gap-1 mb-1">
               <button 
                 type="button"
@@ -607,7 +613,6 @@ function HomeContent() {
   );
 }
 
-// ★修正：Suspenseで全体を包むデフォルトエクスポート
 export default function Home() {
   return (
     <Suspense fallback={<div className="h-screen w-screen bg-black flex items-center justify-center text-white">読み込み中...</div>}>
