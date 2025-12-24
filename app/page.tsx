@@ -1,8 +1,8 @@
 // @ts-nocheck
 "use client";
 
-import React, { useState, useEffect, useRef, Suspense } from 'react';
-import { Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, Music, ShoppingCart, Crown, Zap } from 'lucide-react'; 
+import React, { useState, useEffect, Suspense } from 'react';
+import { Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, ShoppingCart, Crown, Zap } from 'lucide-react'; 
 import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
@@ -46,10 +46,6 @@ function HomeContent() {
   // 通知用
   const [notification, setNotification] = useState(null);
 
-  // BGM用ステート
-  const [isMusicPlaying, setIsMusicPlaying] = useState(false);
-  const audioRef = useRef(null);
-
   // サーバーと同期するステート
   const [currentOutfit, setCurrentOutfit] = useState('maid');
   const [currentPlan, setCurrentPlan] = useState('FREE'); 
@@ -91,25 +87,6 @@ function HomeContent() {
       router.replace('/');
     }
   }, [searchParams, router]);
-
-  // BGM制御
-  const toggleMusic = () => {
-    if (!audioRef.current) return;
-    if (isMusicPlaying) {
-      audioRef.current.pause();
-    } else {
-      audioRef.current.play().catch(e => console.log("再生エラー:", e));
-    }
-    setIsMusicPlaying(!isMusicPlaying);
-  };
-
-  const bgmSrc = affection >= 100 ? '/bgm/bgm_love.mp3' : '/bgm/bgm_normal.mp3';
-
-  useEffect(() => {
-    if (audioRef.current) {
-        audioRef.current.volume = 0.3; 
-    }
-  }, []);
 
   // データ同期
   useEffect(() => {
@@ -237,6 +214,19 @@ function HomeContent() {
         return;
       }
     }
+    // 晴れ着ロジックは VisualNovelDisplay 側でも制限していますが、ここでも念のため
+    if (newOutfit === 'kimono') {
+        if (plan !== 'ROYAL') {
+            setMessages(prev => [...prev, { 
+              id: Date.now().toString(), 
+              role: 'assistant', 
+              content: `[悲しみ]それはロイヤル会員さんだけの特別な衣装なので...ごめんなさい💦` 
+            }]);
+            setShowCostume(false);
+            return;
+        }
+    }
+
     try {
         await fetch('/api/user/sync', {
             method: 'POST',
@@ -259,6 +249,9 @@ function HomeContent() {
         break;
       case 'bunny':
         reactionContent = `[赤面]バ、バニーガールだなんて…！こ、こんな破廉恥な格好、ご主人様の前でしかできませんわ…！`;
+        break;
+      case 'kimono': // 晴れ着の反応
+        reactionContent = `[笑顔]あけましておめでとうございます！晴れ着に着替えました。ご主人様、どうですか？似合ってますか？`;
         break;
       case 'maid':
       default:
@@ -402,9 +395,6 @@ function HomeContent() {
         </div>
       )}
 
-      {/* オーディオタグ */}
-      <audio ref={audioRef} loop src={bgmSrc} />
-
       <div className="flex-1 relative z-0">
         <VisualNovelDisplay messages={messages} outfit={currentOutfit} currentPlan={currentPlan} affection={affection} />
       </div>
@@ -483,6 +473,7 @@ function HomeContent() {
           <div className="space-y-2">
             <button onClick={() => changeOutfit('maid')} className={`w-full text-left p-2 rounded hover:bg-white/10 ${currentOutfit === 'maid' ? 'text-pink-400 font-bold' : 'text-white'}`}>メイド服 {currentOutfit === 'maid' && '✅'}</button>
             <button onClick={() => changeOutfit('santa')} className={`w-full text-left p-2 rounded hover:bg-white/10 ${currentOutfit === 'santa' ? 'text-pink-400 font-bold' : 'text-white'}`}>サンタ服 {currentOutfit === 'santa' && '✅'} 🎄</button>
+            <button onClick={() => changeOutfit('kimono')} className={`w-full text-left p-2 rounded hover:bg-white/10 ${currentOutfit === 'kimono' ? 'text-pink-400 font-bold' : 'text-white'}`}>晴れ着 {currentOutfit === 'kimono' && '✅'} 🎍</button>
             <button onClick={() => changeOutfit('swimsuit')} className={`w-full text-left p-2 rounded hover:bg-white/10 ${currentOutfit === 'swimsuit' ? 'text-pink-400 font-bold' : 'text-white'}`}>水着 {currentOutfit === 'swimsuit' && '✅'} 👙</button>
             <button onClick={() => changeOutfit('bunny')} className={`w-full text-left p-2 rounded hover:bg-white/10 ${currentOutfit === 'bunny' ? 'text-pink-400 font-bold' : 'text-white'}`}>バニーガール {currentOutfit === 'bunny' && '✅'} 👯‍♀️</button>
           </div>
@@ -531,7 +522,7 @@ function HomeContent() {
                         <p className="text-white font-bold text-xl my-2">¥2,980 <span className="text-xs text-gray-400">/ 月</span></p>
                         <ul className="text-sm text-gray-300 space-y-1 mb-4">
                             <li>✅ 会話数・超UP（2500回/日）</li>
-                            <li>✅ <span className="text-pink-400 font-bold">サンタ服・特別背景 解放</span></li>
+                            <li>✅ <span className="text-pink-400 font-bold">サンタ服・晴れ着・特別背景 解放</span></li>
                             <li>✅ Proプランの全機能</li>
                         </ul>
                         <button 
@@ -576,15 +567,8 @@ function HomeContent() {
               >
                 <Settings size={20} />
               </button>
-
-              <button 
-                type="button"
-                onClick={toggleMusic}
-                className={`p-2 transition-colors rounded-full ${isMusicPlaying ? 'text-green-400 bg-white/10' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}
-                title="BGM ON/OFF"
-              >
-                <Music size={20} className={isMusicPlaying ? "animate-pulse" : ""} />
-              </button>
+              
+              {/* MusicボタンはVisualNovelDisplay側に移動したため削除しました */}
           </div>
           
           <textarea
