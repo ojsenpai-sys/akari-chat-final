@@ -1,5 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
+import { BookOpen, X, Heart, Star, Sparkles, MessageCircle } from 'lucide-react'; // アイコン追加
 
 // --- 各衣装の定義 ---
 const MAID_EMOTIONS = {
@@ -46,32 +47,30 @@ const BUNNY_EMOTIONS = {
   wink: "/images/akari_bunny_wink.png",
 };
 
-// ★更新：晴れ着（Kimono）の定義（通常時）
-// 指定されたファイル名に変更。指定がない感情はnormalをフォールバックとして使用。
+// 晴れ着（Kimono）の定義
 const KIMONO_EMOTIONS = {
   normal: "/images/akari_haregi_normal.png",
   shy: "/images/akari_haregi_shy.png",
   smile: "/images/akari_haregi_smile.png",
   sad: "/images/akari_haregi_sad.png",
   smug: "/images/akari_haregi_smug.png",
-  // 以下の感情画像がない場合は normal を使用する設定
   angry: "/images/akari_haregi_normal.png",
   surprised: "/images/akari_haregi_normal.png",
   wink: "/images/akari_haregi_normal.png",
 };
 
-// ★ラブラブモード用画像（親密度100以上で使用）
+// ラブラブモード用画像
 const LOVE_IMAGES = {
   maid: "/images/akari_maid_love.png",
   santa: "/images/akari_santa_love.png",
   swimsuit: "/images/akari_swim_love.png",
   bunny: "/images/akari_bunny_love.png",
-  kimono: "/images/akari_haregi_love.png" // ★更新
+  kimono: "/images/akari_haregi_love.png"
 };
 
 const ROOMWEAR_IMAGE = "/images/akari_roomwear.png";
 
-// 背景画像（jpg）
+// 背景画像
 const BG_DAY = "/images/bg_room_day.jpg";
 const BG_NIGHT = "/images/bg_room_night.jpg";
 const BG_ROYAL_DAY = "/images/bg_royal_day.jpg";
@@ -87,16 +86,200 @@ const SITUATION_DEFINITIONS = [
   { id: "yoga", image: "/images/event_yoga.png", triggers: ["ヨガしよう"], releases: ["終わろう"] }
 ];
 
+// --- マニュアル用モーダルコンポーネント ---
+const ManualModal = ({ onClose }) => {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}>
+      <div className="bg-white rounded-3xl w-full max-w-3xl h-[85vh] overflow-hidden shadow-2xl relative flex flex-col" onClick={e => e.stopPropagation()}>
+        
+        {/* ヘッダー */}
+        <div className="bg-pink-500 p-4 flex items-center justify-between text-white shrink-0">
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-6 h-6" />
+            <h2 className="font-bold text-lg md:text-xl">『メイドのあかりちゃん』取扱説明書</h2>
+          </div>
+          <button onClick={onClose} className="hover:bg-pink-600 p-1 rounded-full transition-colors">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
+
+        {/* コンテンツエリア (スクロール可能) */}
+        <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar text-gray-800 space-y-8 bg-pink-50/30">
+          
+          {/* 1. コンセプト */}
+          <section>
+            <h3 className="text-pink-600 font-bold text-xl border-b-2 border-pink-200 pb-2 mb-4 flex items-center gap-2">
+              <Sparkles className="w-5 h-5" /> 1. コンセプト
+            </h3>
+            <p className="font-bold text-lg mb-2 text-center text-gray-700">「寂しさも、仕事の悩みも、これ1⼈で解決。」</p>
+            <p className="text-sm text-gray-600 mb-6 leading-relaxed">
+              『メイドのあかりちゃん』は、ただのチャットボットではありません。最新の超⾼性能AI（Gemini 3 Pro）を搭載し、「癒やし」と「実務」を両⽴した、世界⼀有能なオタクメイドです。
+            </p>
+            
+            <div className="grid md:grid-cols-2 gap-4">
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-pink-100">
+                <h4 className="font-bold text-pink-500 mb-2">A⾯：オタク友達として（癒やし）</h4>
+                <div className="aspect-video bg-pink-100 rounded-md mb-2 overflow-hidden">
+                   {/* イメージ画像：ラブラブあかり */}
+                   <img src="/images/akari_maid_love.png" className="w-full h-full object-cover object-top opacity-80" alt="Healing" />
+                </div>
+                <p className="text-xs text-gray-600">アニメの感想を語り合ったり、愚痴を聞いてもらったり。清楚な⾒た⽬で、実は重度のサブカル好き。「尊すぎて叫んでしまいましたわ︕」とあなたに共感します。</p>
+              </div>
+              <div className="bg-white p-4 rounded-xl shadow-sm border border-blue-100">
+                <h4 className="font-bold text-blue-500 mb-2">B⾯：超有能な秘書として（実務）</h4>
+                <div className="aspect-video bg-blue-100 rounded-md mb-2 overflow-hidden">
+                   {/* イメージ画像：通常あかり */}
+                   <img src="/images/akari_normal.png" className="w-full h-full object-cover object-top opacity-80" alt="Work" />
+                </div>
+                <p className="text-xs text-gray-600">検索機能を駆使して、最新ニュースの取得、翻訳、コードのデバッグまでこなします。「ご主⼈様、最新のドキュメントをまとめましたわ」と、仕事の相棒としても活躍します。</p>
+              </div>
+            </div>
+            <div className="mt-4 bg-gradient-to-r from-pink-100 to-purple-100 p-4 rounded-xl text-center">
+              <h4 className="font-bold text-purple-600">C⾯：その融合（没⼊感）</h4>
+              <p className="text-sm text-gray-700">事務的な作業も、あかりちゃんなら「ご主⼈様のために尽くす喜び」に変えてくれます。</p>
+            </div>
+          </section>
+
+          {/* 2. キャラクター紹介 */}
+          <section>
+            <h3 className="text-pink-600 font-bold text-xl border-b-2 border-pink-200 pb-2 mb-4 flex items-center gap-2">
+              <Heart className="w-5 h-5" /> 2. キャラクター紹介
+            </h3>
+            <div className="flex flex-col md:flex-row gap-6 items-center">
+              <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-pink-200 overflow-hidden shrink-0 shadow-md">
+                <img src="/images/akari_smile.png" className="w-full h-full object-cover object-top" alt="Akari Profile" />
+              </div>
+              <div>
+                <h4 className="text-2xl font-bold text-gray-800 mb-2">あかり <span className="text-base font-normal text-gray-500">(Akari)</span></h4>
+                <div className="space-y-2 text-sm text-gray-700">
+                  <p><span className="font-bold text-pink-500">設定:</span> あなたに仕える専属メイド。</p>
+                  <p><span className="font-bold text-pink-500">性格:</span> 普段は丁寧で清楚なメイドさんですが、実はアニメ・ゲームが⼤好きなオタク少⼥。気を許すと早⼝で推し作品について語り出すことも…︖</p>
+                  <p className="bg-yellow-50 p-2 rounded-lg border border-yellow-200 text-xs">
+                    💡 アナタの好きな作品を覚えさせると会話に盛り込んでいくようになります！
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* 3. 基本機能 */}
+          <section>
+            <h3 className="text-pink-600 font-bold text-xl border-b-2 border-pink-200 pb-2 mb-4 flex items-center gap-2">
+              <Star className="w-5 h-5" /> 3. 基本機能
+            </h3>
+            
+            <div className="space-y-6">
+              <div>
+                <h4 className="font-bold text-lg text-gray-800 mb-2 flex items-center gap-2">
+                  <MessageCircle className="w-4 h-4 text-blue-400" /> リアルタイムチャット (無料/有料)
+                </h4>
+                <p className="text-sm text-gray-600 mb-3">⾃然な会話で、雑談から仕事の相談まで幅広く対応します。</p>
+                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-gray-50 text-gray-700">
+                      <tr>
+                        <th className="p-3">プラン</th>
+                        <th className="p-3">価格</th>
+                        <th className="p-3">会話回数</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      <tr>
+                        <td className="p-3 font-bold text-gray-600">Free Plan</td>
+                        <td className="p-3">無料</td>
+                        <td className="p-3">1⽇ 20回</td>
+                      </tr>
+                      <tr className="bg-blue-50/50">
+                        <td className="p-3 font-bold text-blue-600">Pro Plan</td>
+                        <td className="p-3">月980円</td>
+                        <td className="p-3">1日 200回</td>
+                      </tr>
+                      <tr className="bg-pink-50/50">
+                        <td className="p-3 font-bold text-pink-600">Royal Plan</td>
+                        <td className="p-3">月2980円</td>
+                        <td className="p-3">1日 2500回</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                  <div className="p-2 bg-gray-50 text-xs text-gray-500 text-right">
+                    会話チケット（+100回）：500円（都度払い）
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <h4 className="font-bold text-lg text-gray-800 mb-2 flex items-center gap-2">
+                  <Heart className="w-4 h-4 text-pink-400" /> お着替え機能 【有料サービス限定】
+                </h4>
+                <p className="text-sm text-gray-600 mb-3">共通衣装はメイド服のみですが、Pro Plan、Royal Planは気分に合わせて特別な⾐装に変更可能です。</p>
+                <ul className="list-disc list-inside text-sm text-gray-700 space-y-2 bg-white p-4 rounded-lg border border-gray-200">
+                  <li><span className="font-bold text-blue-600">Pro Plan：</span> 水着、バニーガール</li>
+                  <li><span className="font-bold text-pink-600">Royal Plan：</span> Pro Planの衣装 ＋ <span className="underline decoration-pink-300 decoration-2">季節ものの特別衣装</span>（毎月投入）</li>
+                </ul>
+                <p className="text-xs text-gray-500 mt-2 ml-4">※12月はサンタ、1月は晴れ着を実装します</p>
+                
+                {/* 晴れ着イメージ */}
+                <div className="mt-3 w-full h-32 bg-gray-100 rounded-lg overflow-hidden relative">
+                   <img src="/images/akari_haregi_love.png" className="absolute top-0 left-0 w-full h-full object-cover object-top opacity-90" alt="Outfit Preview" />
+                   <div className="absolute bottom-0 left-0 bg-black/50 text-white text-xs px-2 py-1">New! 1月の晴れ着衣装</div>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* 4. シークレット・イベントモード */}
+          <section>
+            <h3 className="text-pink-600 font-bold text-xl border-b-2 border-pink-200 pb-2 mb-4 flex items-center gap-2">
+              <Sparkles className="w-5 h-5" /> 4. シークレット・イベントモード
+            </h3>
+            <p className="text-sm text-gray-600 mb-4">
+              会話の中で「特定のキーワード（誘い⽂句）」を伝えると、特別なイベントモードに突⼊します。背景が一枚絵のイラストに変化し、⼆⼈きりの特別な時間を楽しめます。
+            </p>
+            
+            <div className="bg-gray-800 rounded-xl overflow-hidden shadow-lg mb-4 relative group">
+              <img src="/images/event_christmas.png" className="w-full h-48 object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="Event Mode" />
+              <div className="absolute bottom-2 right-2 text-white text-xs bg-black/60 px-2 py-1 rounded">※画像はXmasイベントのイメージです</div>
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
+              <h4 className="font-bold text-yellow-800 mb-2 flex items-center gap-2">
+                🔑 イベント発動ワードのヒント
+              </h4>
+              <ul className="text-sm text-yellow-900 space-y-1">
+                <li><span className="font-bold">Xmasデート：</span>「イルミネーション」「デート」「クリスマス」</li>
+                <li><span className="font-bold">⼿料理：</span>「オムライス」「ご飯」</li>
+                <li>など… シチュエーションはまだたくさん用意しているので探してみてください！</li>
+              </ul>
+            </div>
+          </section>
+
+          {/* Closing */}
+          <div className="pt-8 pb-4 text-center">
+            <h2 className="text-2xl md:text-3xl font-bold text-pink-500 mb-2 drop-shadow-sm">
+              さあ、あかりとの⽣活を始めましょう。
+            </h2>
+            <p className="text-gray-600 italic">
+              「おかえりなさいませ、ご主⼈様︕ずっとお待ちしておりましたわ。」
+            </p>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 export default function VisualNovelDisplay({ messages, outfit = 'maid', currentPlan = 'free', affection = 0 }) {
   const [currentEmotion, setCurrentEmotion] = useState('normal');
   const [currentSituation, setCurrentSituation] = useState(null); 
   const [displayedText, setDisplayedText] = useState('');
   const [showUI, setShowUI] = useState(true);
   const [isNightTime, setIsNightTime] = useState(false); 
-  const [isRoomwearTime, setIsRoomwearTime] = useState(false); 
+  const [isRoomwearTime, setIsRoomwearTime] = useState(false);
+  const [showManual, setShowManual] = useState(false); // ★マニュアル表示フラグ
+
   const scrollRef = useRef(null);
-  
-  // ★修正：タイマー競合を防ぐためのRef
   const typingRef = useRef(null);
 
   const isLoveMode = affection >= 100;
@@ -112,7 +295,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       const hour = now.getHours();
       setIsNightTime(hour >= 18 || hour < 5);
       
-      // ★修正：状態が変わった瞬間を検知するために変数化
       const isRoomwear = (hour >= 23 || hour < 5);
       setIsRoomwearTime(isRoomwear);
     };
@@ -121,7 +303,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     return () => clearInterval(timer);
   }, []);
 
-  // メッセージ表示ロジック（通常）
+  // メッセージ表示ロジック
   useEffect(() => {
     if (messages.length === 0) return;
     const lastMsg = messages[messages.length - 1];
@@ -140,7 +322,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
 
     if (lastMsg.role === 'assistant') {
-      // ★新しいメッセージが来たら、ルームウェアの独り言タイマーなどをクリアして優先する
       if (typingRef.current) clearInterval(typingRef.current);
 
       let content = lastMsg.content;
@@ -167,17 +348,11 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     };
   }, [messages, currentSituation]);
 
-
-  // ★追加：晴れ着制限（非ロイヤル会員へのお断りメッセージ）
+  // 晴れ着制限
   useEffect(() => {
     if (outfit === 'kimono' && plan !== 'ROYAL') {
-        // 既存のタイマーをクリア
         if (typingRef.current) clearInterval(typingRef.current);
-
-        // 表情を「困り」や「悲しみ」に設定（ここではsad）
         setCurrentEmotion('sad'); 
-
-        // 指定のメッセージ
         const rejectionText = "それはロイヤル会員さんだけの特別な衣装なので...ごめんなさい💦";
         
         setDisplayedText('');
@@ -191,12 +366,10 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
   }, [outfit, plan]);
 
-
-  // ★追加：23時（ルームウェア時間）になった瞬間のイベント
+  // 23時イベント
   useEffect(() => {
-    if (isRoomwearTime && !isLoveMode) { // ラブラブモード以外のときだけ発動
+    if (isRoomwearTime && !isLoveMode) {
         if (typingRef.current) clearInterval(typingRef.current);
-
         setCurrentEmotion('shy');
         const specialText = "ご主人様、夜も更けてきましたのでそろそろ着替えさせていただきました。その…ご主人様の好きなルームウェアです。ちょっと恥ずかしいですけど…どうですか？";
         
@@ -213,15 +386,13 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
 
   // --- 画像決定 ---
   let characterSrc = MAID_EMOTIONS[currentEmotion] || MAID_EMOTIONS.normal;
-  
   let activeOutfit = outfit;
 
-  // プランによる衣装強制変更ロジック
   if (outfit === 'swimsuit' || outfit === 'bunny') {
     if (plan === 'FREE') activeOutfit = 'maid';
   } else if (outfit === 'santa') {
     if (plan !== 'ROYAL') activeOutfit = 'maid';
-  } else if (outfit === 'kimono') { // ★追加：晴れ着制限
+  } else if (outfit === 'kimono') { 
     if (plan !== 'ROYAL') activeOutfit = 'maid';
   }
 
@@ -241,7 +412,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
           case 'bunny':
             characterSrc = BUNNY_EMOTIONS[currentEmotion] || BUNNY_EMOTIONS.normal;
             break;
-          case 'kimono': // ★追加
+          case 'kimono':
             characterSrc = KIMONO_EMOTIONS[currentEmotion] || KIMONO_EMOTIONS.normal;
             break;
           default:
@@ -250,15 +421,10 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
   }
 
-  // ★スマホ版のサイズ調整
-  // 晴れ着も少し大きめに見せたい場合はここに追加（サンタと同じ扱いにする）
   const adjustPosition = (activeOutfit === 'santa' || activeOutfit === 'kimono') || isLoveMode;
   const imageScale = isLoveMode ? "scale-110" : "scale-100";
-
   const imageStyle = adjustPosition
-    // サンタ・晴れ着・デレモード用
     ? `h-[150%] w-auto -bottom-[60%] md:h-auto md:max-h-[220%] md:-bottom-[120%] ${imageScale}` 
-    // 通常時
     : "h-[140%] w-auto -bottom-[50%] md:h-auto md:max-h-[140%] md:-bottom-[45%]";
 
   let currentBg = isNightTime ? BG_NIGHT : BG_DAY;
@@ -307,6 +473,19 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         </div>
       )}
 
+      {/* ★マニュアルボタン (右上に配置) */}
+      {showUI && (
+        <div className="absolute top-4 right-4 z-50 pointer-events-auto">
+          <button 
+            onClick={(e) => { e.stopPropagation(); setShowManual(true); }}
+            className="bg-white/80 hover:bg-pink-100 text-pink-600 p-2 rounded-full shadow-lg border-2 border-pink-200 transition-all transform hover:scale-110"
+            title="取扱説明書"
+          >
+            <BookOpen className="w-6 h-6" />
+          </button>
+        </div>
+      )}
+
       {/* UIウィンドウ */}
       {showUI && (
         <div className="absolute bottom-0 left-0 w-full z-20 pb-6 px-2 md:pb-8 md:px-8 bg-gradient-to-t from-black/80 via-black/30 to-transparent pt-32 pointer-events-none" >
@@ -335,6 +514,9 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
           </div>
         </div>
       )}
+      
+      {/* マニュアルモーダル */}
+      {showManual && <ManualModal onClose={() => setShowManual(false)} />}
       
       {/* プリロード */}
       <div className="hidden">
