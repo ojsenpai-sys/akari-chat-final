@@ -46,12 +46,27 @@ const BUNNY_EMOTIONS = {
   wink: "/images/akari_bunny_wink.png",
 };
 
+// ★更新：晴れ着（Kimono）の定義（通常時）
+// 指定されたファイル名に変更。指定がない感情はnormalをフォールバックとして使用。
+const KIMONO_EMOTIONS = {
+  normal: "/images/akari_haregi_normal.png",
+  shy: "/images/akari_haregi_shy.png",
+  smile: "/images/akari_haregi_smile.png",
+  sad: "/images/akari_haregi_sad.png",
+  smug: "/images/akari_haregi_smug.png",
+  // 以下の感情画像がない場合は normal を使用する設定
+  angry: "/images/akari_haregi_normal.png",
+  surprised: "/images/akari_haregi_normal.png",
+  wink: "/images/akari_haregi_normal.png",
+};
+
 // ★ラブラブモード用画像（親密度100以上で使用）
 const LOVE_IMAGES = {
   maid: "/images/akari_maid_love.png",
   santa: "/images/akari_santa_love.png",
   swimsuit: "/images/akari_swim_love.png",
-  bunny: "/images/akari_bunny_love.png"
+  bunny: "/images/akari_bunny_love.png",
+  kimono: "/images/akari_haregi_love.png" // ★更新
 };
 
 const ROOMWEAR_IMAGE = "/images/akari_roomwear.png";
@@ -85,6 +100,9 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const typingRef = useRef(null);
 
   const isLoveMode = affection >= 100;
+
+  // プランの正規化
+  const plan = currentPlan?.toUpperCase() || 'FREE';
 
   const toggleUI = () => setShowUI(!showUI);
 
@@ -149,14 +167,36 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     };
   }, [messages, currentSituation]);
 
-  // ★追加：23時（ルームウェア時間）になった瞬間のイベント
-  // このEffectを後に書くことで、マウント時の初期メッセージ(Welcome等)を上書きして表示できる
+
+  // ★追加：晴れ着制限（非ロイヤル会員へのお断りメッセージ）
   useEffect(() => {
-    if (isRoomwearTime && !isLoveMode) { // ラブラブモード以外のときだけ発動
-        // 既存のタイマーがあればクリア
+    if (outfit === 'kimono' && plan !== 'ROYAL') {
+        // 既存のタイマーをクリア
         if (typingRef.current) clearInterval(typingRef.current);
 
-        // 強制的に表情を「照れ」に、テキストを特別メッセージに変更
+        // 表情を「困り」や「悲しみ」に設定（ここではsad）
+        setCurrentEmotion('sad'); 
+
+        // 指定のメッセージ
+        const rejectionText = "それはロイヤル会員さんだけの特別な衣装なので...ごめんなさい💦";
+        
+        setDisplayedText('');
+        let i = 0;
+        typingRef.current = setInterval(() => {
+            setDisplayedText(rejectionText.substring(0, i + 1));
+            i++;
+            if (i >= rejectionText.length) clearInterval(typingRef.current);
+            if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+        }, 30);
+    }
+  }, [outfit, plan]);
+
+
+  // ★追加：23時（ルームウェア時間）になった瞬間のイベント
+  useEffect(() => {
+    if (isRoomwearTime && !isLoveMode) { // ラブラブモード以外のときだけ発動
+        if (typingRef.current) clearInterval(typingRef.current);
+
         setCurrentEmotion('shy');
         const specialText = "ご主人様、夜も更けてきましたのでそろそろ着替えさせていただきました。その…ご主人様の好きなルームウェアです。ちょっと恥ずかしいですけど…どうですか？";
         
@@ -169,16 +209,19 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
             if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }, 30);
     }
-  }, [isRoomwearTime]); // isRoomwearTimeがtrueになった時に発火
+  }, [isRoomwearTime]);
 
   // --- 画像決定 ---
   let characterSrc = MAID_EMOTIONS[currentEmotion] || MAID_EMOTIONS.normal;
-  const plan = currentPlan?.toUpperCase() || 'FREE';
+  
   let activeOutfit = outfit;
 
+  // プランによる衣装強制変更ロジック
   if (outfit === 'swimsuit' || outfit === 'bunny') {
     if (plan === 'FREE') activeOutfit = 'maid';
   } else if (outfit === 'santa') {
+    if (plan !== 'ROYAL') activeOutfit = 'maid';
+  } else if (outfit === 'kimono') { // ★追加：晴れ着制限
     if (plan !== 'ROYAL') activeOutfit = 'maid';
   }
 
@@ -198,18 +241,22 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
           case 'bunny':
             characterSrc = BUNNY_EMOTIONS[currentEmotion] || BUNNY_EMOTIONS.normal;
             break;
+          case 'kimono': // ★追加
+            characterSrc = KIMONO_EMOTIONS[currentEmotion] || KIMONO_EMOTIONS.normal;
+            break;
           default:
             characterSrc = MAID_EMOTIONS[currentEmotion] || MAID_EMOTIONS.normal;
         }
     }
   }
 
-  // ★スマホ版のサイズ調整（前回決定版：140% - 150%）
-  const adjustPosition = (activeOutfit === 'santa') || isLoveMode;
+  // ★スマホ版のサイズ調整
+  // 晴れ着も少し大きめに見せたい場合はここに追加（サンタと同じ扱いにする）
+  const adjustPosition = (activeOutfit === 'santa' || activeOutfit === 'kimono') || isLoveMode;
   const imageScale = isLoveMode ? "scale-110" : "scale-100";
 
   const imageStyle = adjustPosition
-    // サンタ・デレモード用
+    // サンタ・晴れ着・デレモード用
     ? `h-[150%] w-auto -bottom-[60%] md:h-auto md:max-h-[220%] md:-bottom-[120%] ${imageScale}` 
     // 通常時
     : "h-[140%] w-auto -bottom-[50%] md:h-auto md:max-h-[140%] md:-bottom-[45%]";
@@ -295,6 +342,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         {Object.values(SANTA_EMOTIONS).map(s => <img key={s} src={s} />)}
         {Object.values(SWIM_EMOTIONS).map(s => <img key={s} src={s} />)}
         {Object.values(BUNNY_EMOTIONS).map(s => <img key={s} src={s} />)}
+        {Object.values(KIMONO_EMOTIONS).map(s => <img key={s} src={s} />)}
         {Object.values(LOVE_IMAGES).map(s => <img key={s} src={s} />)}
         {SITUATION_DEFINITIONS.map(d => <img key={d.id} src={d.image} />)}
         <img src={BG_DAY} /><img src={BG_NIGHT} /><img src={ROOMWEAR_IMAGE} />
