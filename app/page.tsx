@@ -1,8 +1,8 @@
 // @ts-nocheck
 "use client";
 
-import React, { useState, useEffect, Suspense } from 'react';
-import { Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, ShoppingCart, Crown, Zap } from 'lucide-react'; 
+import React, { useState, useEffect, Suspense, useRef } from 'react';
+import { Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, ShoppingCart, Crown, Zap, Paperclip, Image as ImageIcon } from 'lucide-react'; 
 import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
@@ -35,15 +35,18 @@ function HomeContent() {
   
   const [showSettings, setShowSettings] = useState(false);
   const [showCostume, setShowCostume] = useState(false);
-  const [showGift, setShowGift] = useState(false); // これの表示部分が欠落していました
+  const [showGift, setShowGift] = useState(false);
   const [showShop, setShowShop] = useState(false);
   const [showTerms, setShowTerms] = useState(false);
   const [isComposing, setIsComposing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAgreed, setIsAgreed] = useState(false);
   
-  // マニュアルが開いているかどうか
   const [isManualOpen, setIsManualOpen] = useState(false);
+
+  // ★追加：画像添付用ステートとRef
+  const [selectedImage, setSelectedImage] = useState(null);
+  const fileInputRef = useRef(null);
 
   // 通知用
   const [notification, setNotification] = useState(null);
@@ -262,14 +265,46 @@ function HomeContent() {
     ]);
   };
 
+  // ★追加: 画像が選択されたときの処理
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // ファイルサイズ制限などを入れるならここ
+    if (file.size > 5 * 1024 * 1024) { // 5MB制限例
+        alert("画像サイズが大きすぎます（5MB以下にしてください）");
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setSelectedImage(reader.result); // Base64データをセット
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleSendMessage = async () => {
-    if (!localInput.trim() || isLoading) return;
+    // テキストも画像もない場合は送信しない
+    if ((!localInput.trim() && !selectedImage) || isLoading) return;
+    
     const content = localInput;
+    const attachment = selectedImage; // 送信する画像を退避
+
     setLocalInput(''); 
+    setSelectedImage(null); // 画像選択をクリア
     setIsLoading(true);
 
-    const userMsg = { id: Date.now().toString(), role: 'user', content: content };
-    const newHistory = [...messages, userMsg];
+    const userMsg = { 
+        id: Date.now().toString(), 
+        role: 'user', 
+        content: content,
+        // UI表示用に一時的にテキストへ変換（本格的にはVisualNovelDisplayで画像表示対応が必要ですが、今回は簡易的に）
+        // backendにはattachmentとして送ります
+    };
+    
+    // UI上の表示: 画像を送ったことを明示
+    const displayContent = content + (attachment ? " (画像を送信しました)" : "");
+    const newHistory = [...messages, { ...userMsg, content: displayContent }];
     setMessages(newHistory);
 
     try {
@@ -277,7 +312,9 @@ function HomeContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          messages: newHistory, 
+          messages: newHistory, // 過去ログ
+          currentMessage: content, // 今回のメッセージテキスト
+          attachment: attachment, // ★追加: 画像データ(Base64)
           userName: userName, 
           outfit: currentOutfit,
           plan: currentPlan,
@@ -467,7 +504,6 @@ function HomeContent() {
         </div>
       )}
 
-      {/* ★復活させたプレゼント画面 */}
       {showGift && (
         <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-80 animate-in fade-in slide-in-from-top-4">
           <h3 className="text-yellow-400 font-bold mb-4 flex items-center gap-2"><Gift size={18}/> プレゼントを贈る</h3>
@@ -574,8 +610,24 @@ function HomeContent() {
         </div>
       )}
 
+      {/* チャット入力欄 */}
       <div className="h-auto min-h-[6rem] bg-gray-900 border-t border-white/10 p-4 flex items-center justify-center relative z-[100]">
+        
+        {/* ★追加: 画像プレビューエリア */}
+        {selectedImage && (
+            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 p-2 rounded-lg shadow-xl border border-white/20 animate-in fade-in slide-in-from-bottom-2">
+                <img src={selectedImage} alt="Preview" className="h-32 object-cover rounded-md" />
+                <button 
+                    onClick={() => { setSelectedImage(null); if(fileInputRef.current) fileInputRef.current.value = ""; }}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600"
+                >
+                    <X size={14} />
+                </button>
+            </div>
+        )}
+
         <div className="w-full max-w-2xl flex gap-2 items-end bg-gray-800 p-2 rounded-3xl border border-white/5 shadow-inner">
+          
           <div className="flex flex-col gap-1 mb-1">
               <button 
                 type="button"
@@ -585,6 +637,23 @@ function HomeContent() {
               >
                 <Settings size={20} />
               </button>
+
+              {/* ★追加: 画像選択ボタン */}
+              <button 
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className={`p-2 transition-colors rounded-full ${selectedImage ? 'text-green-400 bg-white/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                title="画像を添付"
+              >
+                {selectedImage ? <ImageIcon size={20} /> : <Paperclip size={20} />}
+              </button>
+              <input 
+                type="file" 
+                ref={fileInputRef}
+                className="hidden" 
+                accept="image/*"
+                onChange={handleImageSelect}
+              />
           </div>
           
           <textarea
@@ -593,7 +662,7 @@ function HomeContent() {
             onCompositionStart={() => setIsComposing(true)}
             onCompositionEnd={() => setIsComposing(false)}
             onKeyDown={handleKeyDown}
-            placeholder={isLoading ? "あかりが考えています..." : "あかりに話しかける..."}
+            placeholder={isLoading ? "あかりが考えています..." : (selectedImage ? "画像について話す..." : "あかりに話しかける...")}
             className="flex-1 bg-transparent text-white px-4 py-3 focus:outline-none resize-none h-12 max-h-32 overflow-y-auto"
             disabled={isLoading}
             rows={1}
@@ -602,7 +671,7 @@ function HomeContent() {
           <button 
             type="button" 
             onClick={handleSendMessage} 
-            disabled={isLoading} 
+            disabled={isLoading || (!localInput.trim() && !selectedImage)} 
             className={`p-3 rounded-full text-white shadow-lg transition-colors mb-1 ${isLoading ? 'bg-gray-600' : 'bg-pink-600 hover:bg-pink-500'}`}
           >
             <Send size={20} />

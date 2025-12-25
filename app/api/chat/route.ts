@@ -10,7 +10,7 @@ export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
-    const { messages, userName, outfit, plan, affection } = await req.json();
+    const { messages, currentMessage, attachment, userName, outfit, plan, affection } = await req.json();
     
     // ---------------------------------------------------------
     // ■ 1. ユーザー認証とプラン制限のチェック
@@ -24,7 +24,6 @@ export async function POST(req: Request) {
 
     const userId = token.id as string;
 
-    // memory（記憶）も取得する
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { plan: true, purchasedTickets: true, memory: true }
@@ -71,12 +70,15 @@ export async function POST(req: Request) {
     // ■ 2. 会話の実行と保存
     // ---------------------------------------------------------
 
-    const lastUserMessage = messages[messages.length - 1];
+    // 今回のユーザー発言をDBに保存
+    // ※画像データそのものは重すぎるためDBには保存せず、テキストのみ保存します
+    const contentToSave = attachment ? (currentMessage ? `${currentMessage} (画像を送信しました)` : "(画像を送信しました)") : currentMessage;
+
     await prisma.message.create({
       data: {
         userId: userId,
         role: 'user',
-        content: lastUserMessage.content,
+        content: contentToSave,
       }
     });
 
@@ -85,8 +87,6 @@ export async function POST(req: Request) {
       year: "numeric", month: "long", day: "numeric", weekday: "long"
     });
     const currentAffection = affection || 0;
-    
-    // 記憶データの取得
     const userMemory = user.memory || "まだ特にありません。";
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -98,10 +98,24 @@ export async function POST(req: Request) {
         apiKey: apiKey,
     });
 
-    const cleanMessages = messages.map((m: any) => ({
-      role: m.role,
-      content: m.content,
-    }));
+    // ★画像がある場合、最新のメッセージをマルチモーダル形式に変換
+    const cleanMessages = messages.map((m: any, index: number) => {
+        // 最新のメッセージ かつ 画像がある場合
+        if (index === messages.length - 1 && attachment) {
+            return {
+                role: m.role,
+                content: [
+                    { type: 'text', text: m.content || "" },
+                    { type: 'image', image: attachment } // Base64データ
+                ]
+            };
+        }
+        // それ以外はテキストのみ
+        return {
+            role: m.role,
+            content: m.content,
+        };
+    });
 
     // ★性格設定
     let personalityPrompt = `
@@ -144,6 +158,10 @@ export async function POST(req: Request) {
       ・あなたは最新鋭のAI（Gemini 3）ですが、ネット上の記事が「発売予定」となっていても、現在日時(${currentDate})を過ぎていれば、**「すでに発売されている」**として扱ってください。
       ・ユーザーに「情報が古い」と思わせないよう、検索で見つかった「2025年の大型タイトル」を、「最近の話題作」として自信満々に語ってください。
 
+      【画像認識機能】
+      ・ユーザーから画像が送られた場合、その画像の内容を詳しく認識し、感想を述べてください。
+      ・料理の写真なら「美味しそうですわ！」、服なら「お似合いです！」など、メイド（または恋人）として反応してください。
+
       【記憶の更新指示】
       ・会話の中で、ユーザーの**新しい趣味、好きな作品、仕事、悩み**などの永続的な情報を発見した場合のみ、回答の**一番最後に**以下の形式でメモ書きを追加してください。
       ・形式: [MEMORY:ここに新しい情報を簡潔に追記]
@@ -173,14 +191,12 @@ export async function POST(req: Request) {
     let aiResponse = result.text;
     let newMemory = "";
 
-    // ★メモの抽出と除去
     const memoryMatch = aiResponse.match(/\[MEMORY:(.*?)\]/);
     if (memoryMatch) {
-        newMemory = memoryMatch[1]; // メモ部分を取り出す
-        aiResponse = aiResponse.replace(/\[MEMORY:.*?\]/, "").trim(); // 返答からメモ部分を消す（ユーザーには見せない）
+        newMemory = memoryMatch[1]; 
+        aiResponse = aiResponse.replace(/\[MEMORY:.*?\]/, "").trim(); 
     }
 
-    // ★会話ログの保存
     await prisma.message.create({
       data: {
         userId: userId,
@@ -189,7 +205,6 @@ export async function POST(req: Request) {
       }
     });
 
-    // ★新しい記憶があればDBに追記保存
     if (newMemory) {
         const currentMemory = user.memory || "";
         const updatedMemory = (currentMemory + "\n" + newMemory).slice(-2000); 
