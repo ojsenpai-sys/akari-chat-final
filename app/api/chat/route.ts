@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
     const userId = token.id as string;
 
-    // ★修正：memory（記憶）も取得する
+    // memory（記憶）も取得する
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { plan: true, purchasedTickets: true, memory: true }
@@ -86,7 +86,7 @@ export async function POST(req: Request) {
     });
     const currentAffection = affection || 0;
     
-    // ★記憶データの取得（なければ空文字）
+    // 記憶データの取得
     const userMemory = user.memory || "まだ特にありません。";
 
     const apiKey = process.env.GEMINI_API_KEY;
@@ -153,10 +153,13 @@ export async function POST(req: Request) {
       【安全ガイドライン】
       ・性的・暴力的な表現は「恥じらいながらキャラクターとして」拒絶してください。システム的なエラーメッセージは禁止です。
 
-      【重要：出力形式】
+      【重要：出力形式と文字数】
       ・セリフの先頭に必ず [感情] を付けてください。
       ・使える感情: [通常], [笑顔], [怒り], [照れ], [悲しみ], [驚き], [ドヤ], [ウィンク]
-      ・回答は250文字以内に収めてください。
+      
+      ★文字数の適応（Adaptive Length）
+      ・**基本:** 会話のテンポを重視し、**2〜3文程度の短文**で親しみやすく返してください。
+      ・**例外:** ユーザーから「詳しく教えて」「解説して」「ニュースの要約」などの情報提供を求められた場合や、専門的な話題の時は、**文字数制限を解除**し、十分な情報量で詳しく丁寧に答えてください。
     `;
 
     const result = await generateText({
@@ -189,8 +192,7 @@ export async function POST(req: Request) {
     // ★新しい記憶があればDBに追記保存
     if (newMemory) {
         const currentMemory = user.memory || "";
-        // メモリが長くなりすぎないよう、簡易的に追記（本来は要約システムなどが必要だが、まずはこれでOK）
-        const updatedMemory = (currentMemory + "\n" + newMemory).slice(-2000); // 最新2000文字程度を保持
+        const updatedMemory = (currentMemory + "\n" + newMemory).slice(-2000); 
 
         await prisma.user.update({
             where: { id: userId },

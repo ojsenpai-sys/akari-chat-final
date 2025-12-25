@@ -63,7 +63,7 @@ const KIMONO_EMOTIONS = {
   wink: "/images/akari_haregi_normal.png",
 };
 
-// ラブラブモード用画像
+// ラブラブモード用画像（日中など）
 const LOVE_IMAGES = {
   maid: "/images/akari_maid_love.png",
   santa: "/images/akari_santa_love.png",
@@ -72,7 +72,9 @@ const LOVE_IMAGES = {
   kimono: "/images/akari_haregi_love.png"
 };
 
-const ROOMWEAR_IMAGE = "/images/akari_roomwear.png";
+// ルームウェア画像
+const ROOMWEAR_IMAGE = "/images/akari_roomwear.png"; // 通常
+const ROOMWEAR_LOVE_IMAGE = "/images/akari_roomwear_love.png"; // ★修正：.pngに変更
 
 // 背景画像
 const BG_DAY = "/images/bg_room_day.jpg";
@@ -432,6 +434,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   let characterSrc = MAID_EMOTIONS[currentEmotion] || MAID_EMOTIONS.normal;
   let activeOutfit = outfit;
 
+  // プランによる強制メイド服戻し
   if (outfit === 'swimsuit' || outfit === 'bunny') {
     if (plan === 'FREE') activeOutfit = 'maid';
   } else if (outfit === 'santa') {
@@ -440,9 +443,18 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     if (plan !== 'ROYAL') activeOutfit = 'maid';
   }
 
-  if (isRoomwearTime && activeOutfit === 'maid' && !isLoveMode) {
-    characterSrc = ROOMWEAR_IMAGE;
+  // ★画像切り替えロジックの修正
+  // 1. 夜(23時以降) かつ メイド服(デフォルト)選択時
+  if (isRoomwearTime && activeOutfit === 'maid') {
+    if (isLoveMode) {
+        // 親密度MAXならデレデレルームウェア
+        characterSrc = ROOMWEAR_LOVE_IMAGE;
+    } else {
+        // 通常なら普通のルームウェア
+        characterSrc = ROOMWEAR_IMAGE;
+    }
   } else {
+    // 2. それ以外（日中、またはコスプレ選択中）
     if (isLoveMode) {
         characterSrc = LOVE_IMAGES[activeOutfit] || LOVE_IMAGES.maid;
     } else {
@@ -582,6 +594,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         {Object.values(LOVE_IMAGES).map(s => <img key={s} src={s} />)}
         {SITUATION_DEFINITIONS.map(d => <img key={d.id} src={d.image} />)}
         <img src={BG_DAY} /><img src={BG_NIGHT} /><img src={ROOMWEAR_IMAGE} />
+        <img src={ROOMWEAR_LOVE_IMAGE} /> {/* ★追加 */}
         <img src={BG_ROYAL_DAY} /><img src={BG_ROYAL_NIGHT} />
       </div>
     </div>
