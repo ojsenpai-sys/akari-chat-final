@@ -31,9 +31,7 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // ★実務モード管理
   const [mode, setMode] = useState<'casual' | 'professional'>('casual');
-
   const [messages, setMessages] = useState([]);
   const [localInput, setLocalInput] = useState('');
   const [userName, setUserName] = useState('ご主人様');
@@ -58,15 +56,16 @@ function HomeContent() {
   const [points, setPoints] = useState(0);
   const [affection, setAffection] = useState(0);
 
-  // 実務モード用UI
+  // 実務モード用UI（スクロールバーの改善）
   const ProfessionalUI = () => (
     <div className="flex h-full w-full bg-[#fcfcfc] text-slate-700 font-sans animate-in fade-in duration-500">
-      <div className="flex-1 flex flex-col border-r border-gray-200">
-        <div className="p-4 border-b border-gray-200 bg-white flex justify-between items-center">
+      <div className="flex-1 flex flex-col border-r border-gray-200 min-h-0"> 
+        <div className="p-4 border-b border-gray-200 bg-white flex justify-between items-center shrink-0">
           <span className="font-bold flex items-center gap-2 text-slate-600"><FileText size={18} className="text-blue-500" /> 業務支援ログ</span>
           <span className="text-[10px] text-gray-400 font-mono">{new Date().toLocaleTimeString()}</span>
         </div>
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white">
+        {/* スクロールエリアの修正 */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white custom-scrollbar">
           {messages.map((m, i) => (
             <div key={i} className={`p-4 rounded-xl text-sm leading-relaxed ${m.role === 'assistant' ? 'bg-blue-50 border border-blue-100' : 'bg-slate-50 border border-slate-200'}`}>
               <p className="text-[9px] font-bold mb-1 opacity-40 uppercase">{m.role === 'assistant' ? 'Akari' : 'User'}</p>
@@ -75,7 +74,7 @@ function HomeContent() {
           ))}
         </div>
       </div>
-      <div className="w-64 bg-slate-50 flex flex-col items-center justify-end p-6 border-l border-gray-100">
+      <div className="w-64 bg-slate-50 flex flex-col items-center justify-end p-6 border-l border-gray-100 shrink-0">
         <div className="mb-6 text-center opacity-60">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Partner</p>
           <p className="text-xs font-medium text-slate-600">あかり</p>
@@ -188,8 +187,23 @@ function HomeContent() {
     } catch (err) { alert('通信エラーが発生しました'); }
   };
 
+  // ★深夜の衣装制限ロジック追加
   const changeOutfit = async (newOutfit) => {
     const plan = currentPlan.toUpperCase();
+    const hour = new Date().getHours();
+    const isNightTime = hour >= 23 || hour < 6; // 23時〜翌6時
+
+    // 深夜帯の制限（ルームウェア=swimsuit以外禁止）
+    if (isNightTime && newOutfit !== 'swimsuit') {
+      setMessages(prev => [...prev, { 
+        id: Date.now().toString(), 
+        role: 'assistant', 
+        content: `[照れ]ご主人様、もう夜も更けていますし……今はルームウェアのままでいさせてくださいな。` 
+      }]);
+      setShowCostume(false);
+      return;
+    }
+
     if (newOutfit === 'swimsuit' || newOutfit === 'bunny') {
       if (plan === 'FREE') {
         setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: `[悲しみ]申し訳ございません…。そちらは特別な衣装になりますので、有料プランのご主人様限定なんです。` }]);
@@ -245,14 +259,9 @@ function HomeContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          messages: newHistory, 
-          currentMessage: content, 
-          attachment: attachment, 
-          userName: userName, 
-          outfit: currentOutfit,
-          plan: currentPlan,
-          affection: affection,
-          mode: mode 
+          messages: newHistory, currentMessage: content, attachment: attachment, 
+          userName: userName, outfit: currentOutfit, plan: currentPlan, 
+          affection: affection, mode: mode 
         }),
       });
       if (!response.ok) {
@@ -303,8 +312,8 @@ function HomeContent() {
            <div className="absolute bottom-8 animate-bounce text-gray-400 text-sm">▼ スクロールして詳細を見る</div>
         </div>
 
-        <section className="py-20 px-6 bg-gray-900 border-t border-white/10">
-           <div className="max-w-4xl mx-auto text-center">
+        <section className="py-20 px-6 bg-gray-900 border-t border-white/10 text-center">
+           <div className="max-w-4xl mx-auto">
               <h2 className="text-3xl font-bold text-pink-400 mb-12 flex items-center justify-center gap-2"><Star className="fill-pink-400" /> 主な機能</h2>
               <div className="grid md:grid-cols-3 gap-8">
                  <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
@@ -333,13 +342,13 @@ function HomeContent() {
                  <div className="bg-gray-800 p-6 rounded-2xl border border-white/10 flex flex-col">
                     <h3 className="text-xl font-bold text-gray-400 mb-2">Free</h3>
                     <p className="text-3xl font-bold text-white mb-4">¥0 <span className="text-sm font-normal text-gray-500">/月</span></p>
-                    <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
+                    <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1 text-left">
                        <li className="flex gap-2"><Check size={16} className="text-green-400"/> 基本的な会話</li>
                        <li className="flex gap-2"><Check size={16} className="text-green-400"/> 親密度システム</li>
                        <li className="flex gap-2 text-gray-500"><X size={16}/> 衣装変更（制限あり）</li>
                     </ul>
                  </div>
-                 <div className="bg-gray-800 p-6 rounded-2xl border border-yellow-500 shadow-lg flex flex-col relative scale-105 z-10">
+                 <div className="bg-gray-800 p-6 rounded-2xl border border-yellow-500 shadow-lg flex flex-col relative scale-105 z-10 text-left">
                     <div className="absolute top-0 right-0 bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-bl-lg">人気</div>
                     <h3 className="text-xl font-bold text-yellow-400 mb-2 flex items-center gap-2"><Zap size={20}/> Pro</h3>
                     <p className="text-3xl font-bold text-white mb-4">¥980 <span className="text-sm font-normal text-gray-500">/月</span></p>
@@ -349,7 +358,7 @@ function HomeContent() {
                        <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 呼び名変更・ギフト機能</li>
                     </ul>
                  </div>
-                 <div className="bg-gray-800 p-6 rounded-2xl border border-purple-500/50 flex flex-col">
+                 <div className="bg-gray-800 p-6 rounded-2xl border border-purple-500/50 flex flex-col text-left">
                     <h3 className="text-xl font-bold text-purple-400 mb-2 flex items-center gap-2"><Crown size={20}/> Royal</h3>
                     <p className="text-3xl font-bold text-white mb-4">¥2,980 <span className="text-sm font-normal text-gray-500">/月</span></p>
                     <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
@@ -359,7 +368,6 @@ function HomeContent() {
                     </ul>
                  </div>
               </div>
-              <p className="text-xs text-gray-500 mt-6 text-center">※プランの確認、支払いについてはログイン後に対応可能です</p>
            </div>
         </section>
 
@@ -374,25 +382,25 @@ function HomeContent() {
 
         {showTerms && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
-            <div className="bg-gray-900 border border-pink-500/30 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
-              <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 rounded-t-2xl">
+            <div className="bg-gray-900 border border-pink-500/30 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden text-left">
+              <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 rounded-t-2xl text-center">
                 <h2 className="text-lg font-bold text-white">利用規約・免責事項</h2>
                 <button onClick={() => setShowTerms(false)} className="text-gray-400 hover:text-white"><X size={24}/></button>
               </div>
               <div className="p-6 overflow-y-auto text-sm text-gray-300 space-y-4 leading-relaxed">
                 <p>本サービス（以下「当サービス」）を利用する前に、以下の注意事項を必ずご確認ください。</p>
                 <h3 className="font-bold text-pink-400">1. AIの回答精度と免責</h3>
-                <p>当サービスは生成AI技術を使用しています。キャラクター「あかり」の発言はフィクションであり、事実と異なる情報や架空の情報を話す場合があります（幻覚）。AIの発言内容によって生じた損害について、運営者は一切の責任を負いません。</p>
+                <p>当サービスは生成AI技術を使用しています。キャラクター「あかり」の発言はフィクションであり、事実と異なる情報や架空の情報を話す場合があります。AIの発言内容によって生じた損害について、運営者は責任を負いません。</p>
                 <h3 className="font-bold text-pink-400">2. 会話データの扱い</h3>
                 <p>サービスの品質向上および会話履歴機能の提供のため、会話内容はデータベースに保存されます。これらを第三者に販売したり、無断で公開することはありません。</p>
                 <h3 className="font-bold text-pink-400">3. 課金と返金</h3>
-                <p>有料プランは月額サブスクリプション方式です。いかなる場合も日割り計算による返金は行いません。API障害等による一時的な不具合への補償もいたしかねます。</p>
+                <p>有料プランは月額サブスクリプション方式です。いかなる場合も日割り計算による返金は行いません。</p>
                 <h3 className="font-bold text-pink-400">4. 禁止事項</h3>
-                <p>AIへの過度な暴言、性的・暴力的なコンテンツの生成誘導、スクレイピング等の自動アクセスを禁止します。違反時は予告なくアカウントを停止します。</p>
+                <p>AIへの過度な暴言、性的・暴力的なコンテンツの生成誘導を禁止します。</p>
                 <h3 className="font-bold text-pink-400">5. 年齢制限</h3>
-                <p>本サービスは13歳以上のご利用を推奨します。未成年者が有料プランを利用する場合は、親権者の同意を得たものとみなします。</p>
+                <p>本サービスは13歳以上のご利用を推奨します。</p>
                 <h3 className="font-bold text-pink-400">6. 知的財産権</h3>
-                <p>生成されたテキストの利用権はユーザーに帰属しますが、本サービスのキャラクター設定、画像、システムに関する権利は運営者に帰属します。</p>
+                <p>生成されたテキストの利用権はユーザーに帰属しますが、本サービスのキャラクター設定、画像に関する権利は運営者に帰属します。</p>
               </div>
               <div className="p-4 border-t border-gray-700 bg-gray-800 rounded-b-2xl text-center">
                 <button onClick={() => setShowTerms(false)} className="bg-pink-600 hover:bg-pink-500 text-white py-2 px-8 rounded-full font-bold transition-colors">確認しました</button>
@@ -404,12 +412,11 @@ function HomeContent() {
     );
   }
 
-  // --- メイン画面レンダリング ---
   return (
     <main className={`flex h-screen flex-col overflow-hidden relative transition-colors duration-500 ${mode === 'professional' ? 'bg-[#fcfcfc]' : 'bg-black'}`}>
       
-      {/* モード切替ボタン */}
-      <div className="absolute top-4 right-4 z-[100]">
+      {/* ★モード切替ボタンの配置修正（右上アイコンに被らないよう調整） */}
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-24 z-[100]">
         <button 
           onClick={() => setMode(mode === 'casual' ? 'professional' : 'casual')}
           className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-[10px] tracking-wider shadow-xl transition-all border ${
@@ -429,8 +436,7 @@ function HomeContent() {
         </div>
       )}
 
-      {/* メインディスプレイ分岐 */}
-      <div className="flex-1 relative z-0">
+      <div className="flex-1 relative z-0 min-h-0">
         {mode === 'casual' ? (
           <VisualNovelDisplay 
             messages={messages} outfit={currentOutfit} currentPlan={currentPlan} 
@@ -441,38 +447,23 @@ function HomeContent() {
         )}
       </div>
 
-      {/* 雑談UIボタン群 */}
-      {mode === 'casual' && !isManualOpen && (
-        <div className="absolute top-4 left-4 z-[50] flex flex-col gap-2">
-           <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-white text-xs flex flex-col gap-1 shadow-lg font-mono">
-              <div className="flex items-center gap-2"><span className="text-yellow-400 font-bold">★ {points} pt</span><span className="text-gray-400">({currentPlan})</span></div>
-              <div className="flex items-center gap-2"><Heart size={12} className={affection >= 100 ? "text-pink-500 fill-pink-500 animate-pulse" : "text-pink-400"} /><span className={`font-bold ${affection >= 100 ? "text-pink-400" : "text-white"}`}>親密度: {affection}</span></div>
-           </div>
-           <div className="flex flex-col md:flex-row items-start gap-2 mt-1">
-              <button type="button" onClick={() => setShowShop(!showShop)} className="p-3 bg-gray-900/80 text-blue-400 hover:text-white hover:bg-blue-600 rounded-full border border-white/20 shadow-lg"><ShoppingCart size={24} /></button>
-              <button type="button" onClick={() => setShowCostume(!showCostume)} className="p-3 bg-gray-900/80 text-pink-400 hover:text-white hover:bg-pink-600 rounded-full border border-white/20 shadow-lg"><Shirt size={24} /></button>
-              <button type="button" onClick={() => setShowGift(!showGift)} className="p-3 bg-gray-900/80 text-yellow-400 hover:text-white hover:bg-yellow-600 rounded-full border border-white/20 shadow-lg"><Gift size={24} /></button>
-              <button type="button" onClick={() => signOut()} className="p-3 bg-gray-900/80 text-gray-400 hover:text-red-400 hover:bg-red-900/50 rounded-full border border-white/20 shadow-lg"><LogOut size={24} /></button>
-           </div>
-        </div>
-      )}
-
-      {/* 入力エリア */}
-      <div className={`h-auto min-h-[6rem] border-t p-4 flex items-center justify-center relative z-[100] transition-colors duration-500 ${
+      {/* 共通のチャット入力エリア */}
+      <div className={`h-auto min-h-[6rem] border-t p-4 flex items-center justify-center relative z-[100] transition-colors duration-500 shrink-0 ${
         mode === 'professional' ? 'bg-[#f8f9fa] border-gray-200' : 'bg-gray-900 border-white/10'
       }`}>
+        {/* ...（入力エリア、プレビュー等のロジックは変更なし）... */}
         {selectedImage && (
             <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 p-2 rounded-lg shadow-xl border border-white/20 animate-in fade-in slide-in-from-bottom-2">
                 <img src={selectedImage} alt="Preview" className="h-32 object-cover rounded-md" />
-                <button onClick={() => { setSelectedImage(null); if(fileInputRef.current) fileInputRef.current.value = ""; }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md"><X size={14} /></button>
+                <button onClick={() => { setSelectedImage(null); if(fileInputRef.current) fileInputRef.current.value = ""; }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={14} /></button>
             </div>
         )}
         <div className={`w-full max-w-2xl flex gap-2 items-end p-2 rounded-3xl border transition-all duration-500 ${
           mode === 'professional' ? 'bg-white border-slate-300 shadow-sm' : 'bg-gray-800 border-white/5 shadow-inner'
         }`}>
-          <div className="flex flex-col gap-1 mb-1">
-              <button type="button" onClick={openSettings} className="p-2 text-gray-400 hover:text-pink-400 transition-colors"><Settings size={20} /></button>
-              <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-400 hover:text-green-400 transition-colors">
+          <div className="flex flex-col gap-1 mb-1 shrink-0">
+              <button type="button" onClick={openSettings} className="p-2 text-gray-400 hover:text-pink-400"><Settings size={20} /></button>
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-400 hover:text-green-400">
                 {selectedImage ? <ImageIcon size={20} /> : <Paperclip size={20} />}
               </button>
               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageSelect} />
@@ -484,20 +475,21 @@ function HomeContent() {
             placeholder={isLoading ? "THINKING..." : (mode === 'professional' ? "実務タスクの指示やドキュメント要約の依頼..." : "あかりに話しかける...")}
             className={`flex-1 bg-transparent px-4 py-3 focus:outline-none resize-none h-12 max-h-32 font-sans transition-colors ${mode === 'professional' ? 'text-slate-700' : 'text-white'}`}
           />
-          <button type="button" onClick={handleSendMessage} disabled={isLoading || (!localInput.trim() && !selectedImage)} className={`p-3 rounded-full text-white shadow-lg transition-all mb-1 ${isLoading ? 'bg-gray-600' : 'bg-pink-600 hover:bg-pink-500'}`}><Send size={20} /></button>
+          <button type="button" onClick={handleSendMessage} disabled={isLoading || (!localInput.trim() && !selectedImage)} className={`p-3 rounded-full text-white shadow-lg transition-all mb-1 shrink-0 ${isLoading ? 'bg-gray-600' : 'bg-pink-600 hover:bg-pink-500'}`}><Send size={20} /></button>
         </div>
       </div>
 
       {/* --- モーダル群 --- */}
+      {/* ...（Settings, Gift, Shopは以前と同じ）... */}
       {showSettings && (
-        <div className="absolute bottom-24 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-bottom-4">
+        <div className="absolute bottom-24 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-bottom-4 text-left">
           <h3 className="text-pink-400 font-bold mb-4">呼び方の設定</h3>
           <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} className="w-full bg-black/50 text-white border border-white/10 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:border-pink-500" />
           <button onClick={saveName} className="w-full bg-pink-600 hover:bg-pink-500 text-white py-2 rounded-lg font-bold">保存する</button>
         </div>
       )}
       {showGift && (
-        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-80 animate-in fade-in slide-in-from-top-4">
+        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-80 animate-in fade-in slide-in-from-top-4 text-left">
           <h3 className="text-yellow-400 font-bold mb-4 flex items-center gap-2"><Gift size={18}/> プレゼントを贈る</h3>
           <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">
             {GIFT_ITEMS.map((item) => (
@@ -510,23 +502,35 @@ function HomeContent() {
           <button onClick={() => setShowGift(false)} className="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm">閉じる</button>
         </div>
       )}
+
+      {/* ★衣装モーダルのフォントサイズ修正（text-[10px] -> text-sm） */}
       {showCostume && (
-        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-top-4 font-sans">
-          <h3 className="text-pink-400 font-bold mb-4 text-xs">衣装変更</h3>
-          <div className="space-y-1">
-            {['maid', 'santa', 'kimono', 'swimsuit', 'bunny'].map((o) => (
-              <button key={o} onClick={() => changeOutfit(o)} className={`w-full text-left p-2 rounded text-[10px] hover:bg-white/10 ${currentOutfit === o ? 'text-pink-400 font-bold' : 'text-white'}`}>
-                {o === 'maid' ? 'メイド服' : o === 'santa' ? 'サンタ服 🎄' : o === 'kimono' ? '晴れ着 🎍' : o === 'swimsuit' ? '水着 👙' : 'バニーガール 👯‍♀️'}{currentOutfit === o && ' ✅'}
+        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-top-4 font-sans text-left">
+          <h3 className="text-pink-400 font-bold mb-4 text-base">衣装変更</h3>
+          <div className="space-y-2">
+            {[
+              {id: 'maid', name: 'メイド服'}, 
+              {id: 'santa', name: 'サンタ服 🎄'}, 
+              {id: 'kimono', name: '晴れ着 🎍'}, 
+              {id: 'swimsuit', name: 'ルームウェア 👙'}, 
+              {id: 'bunny', name: 'バニーガール 👯‍♀️'}
+            ].map((o) => (
+              <button 
+                key={o.id} onClick={() => changeOutfit(o.id)} 
+                className={`w-full text-left p-3 rounded text-sm hover:bg-white/10 transition-colors ${currentOutfit === o.id ? 'text-pink-400 font-bold' : 'text-white'}`}
+              >
+                {o.name}{currentOutfit === o.id && ' ✅'}
               </button>
             ))}
           </div>
-          <button onClick={() => setShowCostume(false)} className="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-xs">閉じる</button>
+          <button onClick={() => setShowCostume(false)} className="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm">閉じる</button>
         </div>
       )}
+
       {showShop && (
         <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4">
-            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden font-sans">
-                <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800">
+            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden font-sans text-left">
+                <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 text-center">
                     <h2 className="text-lg font-bold text-blue-400 flex items-center gap-2"><ShoppingCart size={20}/> プレミアムショップ</h2>
                     <button onClick={() => setShowShop(false)} className="text-gray-400 hover:text-white"><X size={24}/></button>
                 </div>
