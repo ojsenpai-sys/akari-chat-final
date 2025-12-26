@@ -348,7 +348,7 @@ function HomeContent() {
     return <div className="flex h-screen items-center justify-center bg-black text-white">読み込み中...</div>;
   }
 
-  // --- ▼▼▼ Stripe審査対策：機能紹介つきランディングページ ▼▼▼ ---
+  // --- ▼▼▼ Stripe審査対策：ランディングページ ▼▼▼ ---
   if (status === "unauthenticated") {
     return (
       <div className="flex flex-col min-h-screen bg-black text-white overflow-y-auto">
@@ -406,7 +406,7 @@ function HomeContent() {
            </div>
         </section>
 
-        {/* 料金プラン（Stripe審査に重要） */}
+        {/* 料金プラン */}
         <section className="py-20 px-6 bg-black">
            <div className="max-w-4xl mx-auto">
               <h2 className="text-3xl font-bold text-white mb-12 text-center">料金プラン</h2>
@@ -443,20 +443,23 @@ function HomeContent() {
                     </ul>
                  </div>
               </div>
+              
+              {/* ▼ 注釈を追加しました ▼ */}
+              <p className="text-xs text-gray-500 mt-6 text-center">※プランの確認、支払いについてはログイン後に対応可能です</p>
            </div>
         </section>
 
-        {/* フッター（法的リンク） */}
+        {/* フッター（修正済み：別々のページへリンク） */}
         <footer className="py-8 bg-gray-900 text-center text-xs text-gray-500 border-t border-white/10">
            <div className="flex justify-center gap-6 mb-4">
               <a href="/legal" target="_blank" className="hover:text-white transition-colors">特定商取引法に基づく表記</a>
-              <a href="/legal" target="_blank" className="hover:text-white transition-colors">利用規約</a>
-              <a href="/legal" target="_blank" className="hover:text-white transition-colors">プライバシーポリシー</a>
+              <a href="/terms" target="_blank" className="hover:text-white transition-colors">利用規約</a>
+              <a href="/privacy" target="_blank" className="hover:text-white transition-colors">プライバシーポリシー</a>
            </div>
            <p>© 2025 Maid Akari Project. All rights reserved.</p>
         </footer>
 
-        {/* 規約モーダル（修正済み：第7条削除） */}
+        {/* 規約モーダル */}
         {showTerms && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
             <div className="bg-gray-900 border border-pink-500/30 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
@@ -478,7 +481,6 @@ function HomeContent() {
                 <p>本サービスは13歳以上のご利用を推奨します。未成年者が有料プランを利用する場合は、親権者の同意を得たものとみなします。</p>
                 <h3 className="font-bold text-pink-400">6. 知的財産権</h3>
                 <p>生成されたテキストの利用権はユーザーに帰属しますが、本サービスのキャラクター設定、画像、システムに関する権利は運営者に帰属します。</p>
-                {/* 第7条（特商法）は削除済み */}
               </div>
               <div className="p-4 border-t border-gray-700 bg-gray-800 rounded-b-2xl text-center">
                 <button onClick={() => setShowTerms(false)} className="bg-pink-600 hover:bg-pink-500 text-white py-2 px-8 rounded-full font-bold transition-colors">確認しました</button>
@@ -490,7 +492,7 @@ function HomeContent() {
     );
   }
 
-  // --- ▲▲▲ 修正ここまで ▲▲▲ ---
+  // ... (以下変更なし) ...
 
   return (
     <main className="flex h-screen flex-col bg-black overflow-hidden relative">
