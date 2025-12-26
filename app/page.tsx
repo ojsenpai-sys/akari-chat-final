@@ -56,7 +56,7 @@ function HomeContent() {
   const [points, setPoints] = useState(0);
   const [affection, setAffection] = useState(0);
 
-  // 実務モード用UI（修正：イラストのパスを修正）
+  // 実務モード用UI
   const ProfessionalUI = () => (
     <div className="flex h-full w-full bg-[#fcfcfc] text-slate-700 font-sans animate-in fade-in duration-500">
       <div className="flex-1 flex flex-col border-r border-gray-200 min-h-0"> 
@@ -79,11 +79,12 @@ function HomeContent() {
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Partner</p>
           <p className="text-xs font-medium text-slate-600">あかり</p>
         </div>
-        {/* イラストが表示されるようパスを修正 */}
+        {/* ★修正：イラストを現在の衣装(currentOutfit)に合わせて表示 */}
         <img 
-          src="/akari_normal.png" 
+          src={`/images/akari_${currentOutfit}_normal.png`} 
           alt="あかり" 
           className="max-h-[50vh] object-contain opacity-70 grayscale-[20%] hover:grayscale-0 transition-all duration-700" 
+          onError={(e) => { e.target.src = "/akari_normal.png"; }}
         />
       </div>
     </div>
@@ -491,7 +492,7 @@ function HomeContent() {
           mode === 'professional' ? 'bg-white border-slate-300 shadow-sm' : 'bg-gray-800 border-white/5 shadow-inner'
         }`}>
           <div className="flex flex-col gap-1 mb-1 shrink-0">
-              <button type="button" onClick={openSettings} className="p-2 text-gray-400 hover:text-pink-400"><Settings size={20} /></button>
+              <button type="button" onClick={openSettings} className="p-2 text-gray-400 hover:text-pink-400 transition-colors"><Settings size={20} /></button>
               <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-400 hover:text-green-400">
                 {selectedImage ? <ImageIcon size={20} /> : <Paperclip size={20} />}
               </button>
