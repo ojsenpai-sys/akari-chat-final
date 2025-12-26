@@ -354,7 +354,6 @@ function HomeContent() {
     return <div className="flex h-screen items-center justify-center bg-black text-white">読み込み中...</div>;
   }
 
-  // --- ▼▼▼ ここが修正ポイント：ログイン前画面 ▼▼▼ ---
   if (status === "unauthenticated") {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-black text-white gap-6 relative overflow-hidden">
@@ -377,7 +376,7 @@ function HomeContent() {
             <img src="https://www.google.com/favicon.ico" alt="G" className={`w-6 h-6 ${!isAgreed && "opacity-50"}`} /> Googleでログイン
           </button>
 
-          {/* ★★★ Stripe審査用リンク（追加部分） ★★★ */}
+          {/* ★★★ Stripe審査用リンク（ここを追加しました） ★★★ */}
           <div className="mt-8 flex gap-6 justify-center text-xs text-gray-500">
             <a href="/legal" target="_blank" rel="noopener noreferrer" className="hover:text-pink-400 underline transition-colors">
               特定商取引法に基づく表記
@@ -433,7 +432,7 @@ function HomeContent() {
     );
   }
 
-  // --- ▲▲▲ 修正ここまで ▲▲▲ ---
+  // ... (以下、authenticated の表示部分は変更なし) ...
 
   return (
     <main className="flex h-screen flex-col bg-black overflow-hidden relative">
