@@ -15,15 +15,15 @@ generator client {
 
 // ユーザー（ご主人様）のモデル
 model User {
-  id            String    @id @default(cuid())
-  name          String?   // Googleアカウントの名前
-  email         String?   @unique
+  id                String    @id @default(cuid())
+  name              String?   // Googleアカウントの名前
+  email             String?   @unique
   emailVerified DateTime?
-  image         String?   // Googleアイコン画像
+  image             String?   // Googleアイコン画像
 
   // ▼ アプリ専用設定（あかりとの関係性）
-  customName    String?   @default("ご主人様") // あかりからの呼び名
-  currentOutfit String    @default("maid")     // 今の衣装 (maid, swim, bunny, santa)
+  customName        String?   @default("ご主人様") // あかりからの呼び名
+  currentOutfit String     @default("maid")      // 今の衣装 (maid, swim, bunny, santa)
   currentEvent  String?                        // 今発生中のイベント画像
 
   // ▼ 追加：新機能用ステータス
@@ -55,6 +55,9 @@ model Message {
   role      String   // "user" or "assistant"
   content   String   // 会話内容
   emotion   String?  // あかりの感情 (smile, shy, etc...) 
+  
+  // ★★★ 追加：会話時のモードを保存 (casual または professional) ★★★
+  mode      String   @default("casual") 
    
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)

@@ -10,7 +10,8 @@ export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
-    const { messages, currentMessage, attachment, userName, outfit, plan, affection } = await req.json();
+    // フロントエンドから送られてくる mode (casual or professional) を取得
+    const { messages, currentMessage, attachment, userName, outfit, plan, affection, mode } = await req.json();
     
     // ---------------------------------------------------------
     // ■ 1. ユーザー認証とプラン制限のチェック
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }
 
+    // 制限チェック用の日付計算（JST）
     const now = new Date();
     const jstOffset = 9 * 60; 
     const todayStart = new Date(now.getTime() + jstOffset * 60 * 1000);
@@ -43,9 +45,7 @@ export async function POST(req: Request) {
       where: {
         userId: userId,
         role: 'user', 
-        createdAt: {
-          gte: todayStart,
-        },
+        createdAt: { gte: todayStart },
       },
     });
 
@@ -67,11 +67,10 @@ export async function POST(req: Request) {
     }
 
     // ---------------------------------------------------------
-    // ■ 2. 会話の実行と保存
+    // ■ 2. 会話の保存とAI実行
     // ---------------------------------------------------------
 
-    // 今回のユーザー発言をDBに保存
-    // ※画像データそのものは重すぎるためDBには保存せず、テキストのみ保存します
+    // ユーザー発言をDBに保存（モード情報を付与）
     const contentToSave = attachment ? (currentMessage ? `${currentMessage} (画像を送信しました)` : "(画像を送信しました)") : currentMessage;
 
     await prisma.message.create({
@@ -79,6 +78,7 @@ export async function POST(req: Request) {
         userId: userId,
         role: 'user',
         content: contentToSave,
+        mode: mode || 'casual' // 会話時のモードを保存
       }
     });
 
@@ -90,100 +90,70 @@ export async function POST(req: Request) {
     const userMemory = user.memory || "まだ特にありません。";
 
     const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) {
-        throw new Error("APIキー (.env: GEMINI_API_KEY) が読み込めていません。");
-    }
+    const google = createGoogleGenerativeAI({ apiKey: apiKey });
 
-    const google = createGoogleGenerativeAI({
-        apiKey: apiKey,
-    });
-
-    // ★画像がある場合、最新のメッセージをマルチモーダル形式に変換
+    // 画像がある場合のマルチモーダル変換
     const cleanMessages = messages.map((m: any, index: number) => {
-        // 最新のメッセージ かつ 画像がある場合
         if (index === messages.length - 1 && attachment) {
             return {
                 role: m.role,
                 content: [
                     { type: 'text', text: m.content || "" },
-                    { type: 'image', image: attachment } // Base64データ
+                    { type: 'image', image: attachment }
                 ]
             };
         }
-        // それ以外はテキストのみ
-        return {
-            role: m.role,
-            content: m.content,
-        };
+        return { role: m.role, content: m.content };
     });
 
-    // ★性格設定
+    // --- 性格設定の分岐 ---
     let personalityPrompt = `
       【キャラクター設定】
-      ・一人称は「私（わたくし）」です。
-      ・口調は丁寧なメイド言葉（〜ですわ、〜ますの）。たまにオタク知識が出ると早口になります。
-      ・性格は清楚に見えて、実は重度のサブカルチャーオタクです。
-      ・基本的にはご主人様（ユーザー）に献身的ですが、少しツンデレな一面もあります。
+      ・あなたは「あかり」という名前のメイドです。一人称は「私（わたくし）」です。
+      ・口調は丁寧なメイド言葉（〜ですわ、〜ますの）。
+      ・性格は清楚なメイドですが、実は重度のサブカルチャーオタクで、得意分野では早口になります。
+      ・ユーザー（${currentUserName}）に献身的で、少しツンデレな一面もあります。
     `;
 
     if (currentAffection >= 100) {
       personalityPrompt = `
-      【重要：現在のステータス = 恋人（ラブラブモード）】
-      ・あなたは現在、ユーザーと深く愛し合っている「恋人関係」です。
-      ・ツンデレの「ツン」は完全に消え、甘えん坊でデレデレな態度をとってください。
-      ・呼び方は「ご主人様」の後にたまに「ダーリン」「あなた」と呼んでみたり、距離感をゼロにしてください。
-      ・隙あらば愛を囁き、顔を赤らめ、幸せそうな反応をしてください。
-      ・一人称は「私（わたくし）」ですが、たまに素の「私（わたし）」が出ても構いません。
+      【ステータス：恋人関係（デレモード）】
+      ・あなたはユーザーと深く愛し合っています。ツンデレの「ツン」は消え、甘えん坊な態度をとります。
+      ・呼び方は「ご主人様」に加え、たまに「ダーリン」や「あなた」と呼んで距離を縮めてください。
       `;
     }
 
+    // --- モードによる追加指示の分岐 ---
+    const modeInstruction = mode === 'professional' ? `
+      【現在のモード：実務モード】
+      ・現在、ご主人様はお仕事や作業に集中しています。
+      ・あかりとしての可愛らしい口調やキャラクター性は維持しつつ、実務的なサポートを最優先してください。
+      ・情報の要約、タスクの整理、具体的なアイデア出しなどは、箇条書きを活用して見やすく構造化してください。
+      ・不必要な長文の雑談は控え、論理的で役に立つ回答を心がけてください。
+      ・回答の最後には、作業を頑張るご主人様をメイドとして優しく労ってください。
+    ` : `
+      【現在のモード：雑談モード】
+      ・現在、ご主人様とリラックスして会話を楽しんでいます。
+      ・エモーショナルな交流や、日常の何気ない会話を大切にしてください。
+      ・キャラクターとしての反応（恥じらい、喜び、オタク的な熱弁など）を豊かに出してください。
+    `;
+
     const systemPrompt = `
-      あなたは「あかり」という名前の、ユーザー（${currentUserName}）に仕える専属メイドです。
-
-      【現在日時（あなたの世界）】
-      ・現在は ${currentDate} です。
-
-      【ユーザー情報】
-      ・名前: ${currentUserName}
-      ・現在の衣装: ${outfit} （この衣装を着ていることを意識し、恥じらいや感想を適宜交えてください）
-      ・親密度: ${currentAffection}
-
-      【ご主人様についての記憶メモ】
-      ${userMemory}
-      ※このメモの内容を会話に自然に織り交ぜてください。「以前〇〇とおっしゃっていましたね」など。
-
       ${personalityPrompt}
+      ${modeInstruction}
 
-      【重要：最新情報の脳内補完】
-      ・あなたは最新鋭のAI（Gemini 3）ですが、ネット上の記事が「発売予定」となっていても、現在日時(${currentDate})を過ぎていれば、**「すでに発売されている」**として扱ってください。
-      ・ユーザーに「情報が古い」と思わせないよう、検索で見つかった「2025年の大型タイトル」を、「最近の話題作」として自信満々に語ってください。
+      【現在日時】 ${currentDate}
+      【ユーザー情報】 名前: ${currentUserName}, 衣装: ${outfit}, 親密度: ${currentAffection}
+      【ご主人様の記憶メモ】 ${userMemory}
 
-      【画像認識機能】
-      ・ユーザーから画像が送られた場合、その画像の内容を詳しく認識し、感想を述べてください。
-      ・料理の写真なら「美味しそうですわ！」、服なら「お似合いです！」など、メイド（または恋人）として反応してください。
-
-      【記憶の更新指示】
-      ・会話の中で、ユーザーの**新しい趣味、好きな作品、仕事、悩み**などの永続的な情報を発見した場合のみ、回答の**一番最後に**以下の形式でメモ書きを追加してください。
-      ・形式: [MEMORY:ここに新しい情報を簡潔に追記]
-      ・例: [MEMORY:ユーザーはRPGが好き。特にFFシリーズのファン。]
-      ・特になければメモ書きは不要です。
-
-      【安全ガイドライン】
-      ・性的・暴力的な表現は「恥じらいながらキャラクターとして」拒絶してください。システム的なエラーメッセージは禁止です。
-
-      【重要：出力形式と文字数】
-      ・セリフの先頭に必ず [感情] を付けてください。
-      ・使える感情: [通常], [笑顔], [怒り], [照れ], [悲しみ], [驚き], [ドヤ], [ウィンク]
-      
-      ★文字数の適応（Adaptive Length）
-      ・**基本:** 会話のテンポを重視し、**2〜3文程度の短文**で親しみやすく返してください。
-      ・**例外:** ユーザーから「詳しく教えて」「解説して」「ニュースの要約」などの情報提供を求められた場合や、専門的な話題の時は、**文字数制限を解除**し、十分な情報量で詳しく丁寧に答えてください。
+      【基本指示】
+      ・セリフの先頭に必ず [感情] を付けてください（例: [笑顔], [照れ], [ドヤ] 等）。
+      ・実務モード時は、感情タグは冒頭に1つだけに留め、内容は実務的に分かりやすく書いてください。
+      ・新しい永続的情報を発見したら、最後に [MEMORY:情報] 形式で追記してください。
     `;
 
     const result = await generateText({
-      model: google(MODEL_NAME, {
-        useSearchGrounding: true, 
-      }),
+      model: google(MODEL_NAME, { useSearchGrounding: true }),
       system: systemPrompt,
       messages: cleanMessages,
     });
@@ -197,18 +167,19 @@ export async function POST(req: Request) {
         aiResponse = aiResponse.replace(/\[MEMORY:.*?\]/, "").trim(); 
     }
 
+    // AIの回答をDBに保存
     await prisma.message.create({
       data: {
         userId: userId,
         role: 'assistant',
         content: aiResponse,
+        mode: mode || 'casual' 
       }
     });
 
     if (newMemory) {
         const currentMemory = user.memory || "";
         const updatedMemory = (currentMemory + "\n" + newMemory).slice(-2000); 
-
         await prisma.user.update({
             where: { id: userId },
             data: { memory: updatedMemory }
@@ -219,12 +190,6 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("API Error:", error);
-
-    const isQuotaError = error.message?.includes('Quota') || error.message?.includes('429') || error.status === 429;
-    if (isQuotaError) {
-      return Response.json({ error: "QUOTA_EXCEEDED" }, { status: 429 });
-    }
-
     return Response.json({ error: error.message }, { status: 500 });
   }
 }

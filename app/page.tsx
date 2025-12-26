@@ -2,7 +2,11 @@
 "use client";
 
 import React, { useState, useEffect, Suspense, useRef } from 'react';
-import { Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, ShoppingCart, Crown, Zap, Paperclip, Image as ImageIcon, Check, Star } from 'lucide-react'; 
+import { 
+  Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, 
+  ShoppingCart, Crown, Zap, Paperclip, Image as ImageIcon, 
+  Check, Star, Layout 
+} from 'lucide-react'; 
 import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
@@ -27,9 +31,11 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
+  // ★実務モード管理
+  const [mode, setMode] = useState<'casual' | 'professional'>('casual');
+
   const [messages, setMessages] = useState([]);
   const [localInput, setLocalInput] = useState('');
-  
   const [userName, setUserName] = useState('ご主人様');
   const [tempName, setTempName] = useState('');
   
@@ -41,23 +47,48 @@ function HomeContent() {
   const [isComposing, setIsComposing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isAgreed, setIsAgreed] = useState(false);
-  
   const [isManualOpen, setIsManualOpen] = useState(false);
 
-  // ★追加：画像添付用ステートとRef
   const [selectedImage, setSelectedImage] = useState(null);
   const fileInputRef = useRef(null);
-
-  // 通知用
   const [notification, setNotification] = useState(null);
 
-  // サーバーと同期するステート
   const [currentOutfit, setCurrentOutfit] = useState('maid');
   const [currentPlan, setCurrentPlan] = useState('FREE'); 
   const [points, setPoints] = useState(0);
   const [affection, setAffection] = useState(0);
 
-  // Stripe決済処理
+  // 実務モード用UI
+  const ProfessionalUI = () => (
+    <div className="flex h-full w-full bg-[#fcfcfc] text-slate-700 font-sans animate-in fade-in duration-500">
+      <div className="flex-1 flex flex-col border-r border-gray-200">
+        <div className="p-4 border-b border-gray-200 bg-white flex justify-between items-center">
+          <span className="font-bold flex items-center gap-2 text-slate-600"><FileText size={18} className="text-blue-500" /> 業務支援ログ</span>
+          <span className="text-[10px] text-gray-400 font-mono">{new Date().toLocaleTimeString()}</span>
+        </div>
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white">
+          {messages.map((m, i) => (
+            <div key={i} className={`p-4 rounded-xl text-sm leading-relaxed ${m.role === 'assistant' ? 'bg-blue-50 border border-blue-100' : 'bg-slate-50 border border-slate-200'}`}>
+              <p className="text-[9px] font-bold mb-1 opacity-40 uppercase">{m.role === 'assistant' ? 'Akari' : 'User'}</p>
+              <p className="whitespace-pre-wrap">{m.content.replace(/\[.*?\]/g, '')}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+      <div className="w-64 bg-slate-50 flex flex-col items-center justify-end p-6 border-l border-gray-100">
+        <div className="mb-6 text-center opacity-60">
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Partner</p>
+          <p className="text-xs font-medium text-slate-600">あかり</p>
+        </div>
+        <img 
+          src={`/images/akari_${currentOutfit}_normal.png`} 
+          alt="あかり" 
+          className="max-h-[50vh] object-contain opacity-70 grayscale-[20%] hover:grayscale-0 transition-all duration-700" 
+        />
+      </div>
+    </div>
+  );
+
   const handleCheckout = async (plan) => {
     try {
       const res = await fetch('/api/stripe/checkout', {
@@ -66,17 +97,9 @@ function HomeContent() {
         body: JSON.stringify({ plan }),
       });
       const data = await res.json();
-      
-      if (data.error) {
-        alert("エラー: " + data.error);
-        return;
-      }
-      if (data.url) {
-        window.location.href = data.url; 
-      }
-    } catch (err) {
-      alert("通信エラーが発生しました");
-    }
+      if (data.error) { alert("エラー: " + data.error); return; }
+      if (data.url) { window.location.href = data.url; }
+    } catch (err) { alert("通信エラーが発生しました"); }
   };
 
   useEffect(() => {
@@ -97,14 +120,12 @@ function HomeContent() {
       fetch('/api/user/sync')
         .then((res) => res.json())
         .then((data) => {
-          if (data.error) {
-            console.error('Sync Error:', data.error);
-          } else {
+          if (data.error) { console.error('Sync Error:', data.error); }
+          else {
             setPoints(data.points);
             setAffection(data.affection);
             setCurrentPlan(data.plan);
             setCurrentOutfit(data.currentOutfit);
-
             if (data.bonusMessage) {
               setNotification(data.bonusMessage);
               setTimeout(() => setNotification(null), 5000); 
@@ -127,10 +148,7 @@ function HomeContent() {
     }
   }, [status, messages.length, userName]);
 
-  const openSettings = () => {
-    setTempName(userName); 
-    setShowSettings(!showSettings);
-  };
+  const openSettings = () => { setTempName(userName); setShowSettings(!showSettings); };
 
   const saveName = () => {
     const plan = currentPlan.toUpperCase();
@@ -138,11 +156,7 @@ function HomeContent() {
       setShowSettings(false);
       setMessages(prev => [
         ...prev, 
-        { 
-          id: Date.now().toString(), 
-          role: 'assistant', 
-          content: `[悲しみ]申し訳ございません…。お名前の変更は、有料プラン（プロ・ロイヤル）のご主人様だけの特典なんです。今のまま「${userName}」と呼ばせてくださいね。` 
-        }
+        { id: Date.now().toString(), role: 'assistant', content: `[悲しみ]申し訳ございません…。お名前の変更は、有料プラン（プロ・ロイヤル）のご主人様だけの特典なんです。今のまま「${userName}」と呼ばせてくださいね。` }
       ]);
       return; 
     }
@@ -155,152 +169,77 @@ function HomeContent() {
   };
 
   const giveGift = async (item) => {
-    if (points < item.price) {
-        alert("ポイントが足りません！");
-        return;
-    }
+    if (points < item.price) { alert("ポイントが足りません！"); return; }
     try {
         const res = await fetch('/api/user/gift', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                cost: item.price,
-                affectionGain: item.love
-            }),
+            body: JSON.stringify({ cost: item.price, affectionGain: item.love }),
         });
         const data = await res.json();
-        if (!res.ok) {
-            alert(data.error || 'エラーが発生しました');
-            return;
-        }
+        if (!res.ok) { alert(data.error || 'エラーが発生しました'); return; }
         setPoints(data.points);
         setAffection(data.affection);
         setShowGift(false);
-
         const isLoveModeNow = data.affection >= 100;
         let reactionText = item.reaction;
-        if (!reactionText.startsWith('[')) {
-            reactionText = (isLoveModeNow ? "[照れ]" : "[笑顔]") + reactionText;
-        }
-        setMessages(prev => [
-            ...prev, 
-            { id: Date.now().toString(), role: 'assistant', content: reactionText }
-        ]);
-    } catch (err) {
-        console.error(err);
-        alert('通信エラーが発生しました');
-    }
+        if (!reactionText.startsWith('[')) { reactionText = (isLoveModeNow ? "[照れ]" : "[笑顔]") + reactionText; }
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: reactionText }]);
+    } catch (err) { alert('通信エラーが発生しました'); }
   };
 
   const changeOutfit = async (newOutfit) => {
     const plan = currentPlan.toUpperCase();
     if (newOutfit === 'swimsuit' || newOutfit === 'bunny') {
       if (plan === 'FREE') {
-        setMessages(prev => [...prev, { 
-          id: Date.now().toString(), 
-          role: 'assistant', 
-          content: `[悲しみ]申し訳ございません…。そちらは特別な衣装になりますので、有料プランのご主人様限定なんです。` 
-        }]);
-        setShowCostume(false);
-        return;
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: `[悲しみ]申し訳ございません…。そちらは特別な衣装になりますので、有料プランのご主人様限定なんです。` }]);
+        setShowCostume(false); return;
       }
     }
-    if (newOutfit === 'santa') {
+    if (newOutfit === 'santa' || newOutfit === 'kimono') {
       if (plan !== 'ROYAL') {
-        setMessages(prev => [...prev, { 
-          id: Date.now().toString(), 
-          role: 'assistant', 
-          content: `[照れ]ごめんなさい…。サンタ服はロイヤルプランのご主人様だけの、秘密の衣装なんです。` 
-        }]);
-        setShowCostume(false);
-        return;
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: `[照れ]ごめんなさい…。それはロイヤルプランのご主人様だけの特別な衣装なんです。` }]);
+        setShowCostume(false); return;
       }
     }
-    if (newOutfit === 'kimono') {
-        if (plan !== 'ROYAL') {
-            setMessages(prev => [...prev, { 
-              id: Date.now().toString(), 
-              role: 'assistant', 
-              content: `[悲しみ]それはロイヤル会員さんだけの特別な衣装なので...ごめんなさい💦` 
-            }]);
-            setShowCostume(false);
-            return;
-        }
-    }
-
     try {
         await fetch('/api/user/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ outfit: newOutfit }),
         });
-    } catch (e) {
-        console.error('衣装保存エラー', e);
-    }
+    } catch (e) { console.error('衣装保存エラー', e); }
     setCurrentOutfit(newOutfit);
     setShowCostume(false);
-
     let reactionContent = "";
     switch (newOutfit) {
-      case 'santa':
-        reactionContent = `[照れ]あ…サンタ服、似合いますでしょうか…？ちょっとスカートが短くて恥ずかしいです…。`;
-        break;
-      case 'swimsuit':
-        reactionContent = `[照れ]み、水着ですか！？…室内ですけど…ご主人様が見たいなら…はい。`;
-        break;
-      case 'bunny':
-        reactionContent = `[赤面]バ、バニーガールだなんて…！こ、こんな破廉恥な格好、ご主人様の前でしかできませんわ…！`;
-        break;
-      case 'kimono': 
-        reactionContent = `[笑顔]あけましておめでとうございます！晴れ着に着替えました。ご主人様、どうですか？似合ってますか？`;
-        break;
-      case 'maid':
-      default:
-        reactionContent = `[笑顔]メイド服に着替えましたわ！やっぱりこれが一番落ち着きますね。`;
-        break;
+      case 'santa': reactionContent = `[照れ]あ…サンタ服、似合いますでしょうか…？ちょっとスカートが短くて恥ずかしいです…。`; break;
+      case 'swimsuit': reactionContent = `[照れ]み、水着ですか！？…室内ですけど…ご主人様が見たいなら…はい。`; break;
+      case 'bunny': reactionContent = `[赤面]バ、バニーガールだなんて…！こ、こんな破廉恥な格好、ご主人様の前でしかできませんわ…！`; break;
+      case 'kimono': reactionContent = `[笑顔]あけましておめでとうございます！晴れ着に着替えました。ご主人様、どうですか？似合ってますか？`; break;
+      default: reactionContent = `[笑顔]メイド服に着替えましたわ！やっぱりこれが一番落ち着きますね。`; break;
     }
-    setMessages(prev => [
-      ...prev, 
-      { id: Date.now().toString(), role: 'assistant', content: reactionContent }
-    ]);
+    setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: reactionContent }]);
   };
 
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    if (file.size > 5 * 1024 * 1024) { 
-        alert("画像サイズが大きすぎます（5MB以下にしてください）");
-        return;
-    }
-
+    if (file.size > 5 * 1024 * 1024) { alert("画像サイズが大きすぎます（5MB以下にしてください）"); return; }
     const reader = new FileReader();
-    reader.onloadend = () => {
-      setSelectedImage(reader.result); 
-    };
+    reader.onloadend = () => { setSelectedImage(reader.result); };
     reader.readAsDataURL(file);
   };
 
   const handleSendMessage = async () => {
     if ((!localInput.trim() && !selectedImage) || isLoading) return;
-    
     const content = localInput;
     const attachment = selectedImage; 
-
-    setLocalInput(''); 
-    setSelectedImage(null); 
-    setIsLoading(true);
-
-    const userMsg = { 
-        id: Date.now().toString(), 
-        role: 'user', 
-        content: content,
-    };
-    
+    setLocalInput(''); setSelectedImage(null); setIsLoading(true);
+    const userMsg = { id: Date.now().toString(), role: 'user', content: content };
     const displayContent = content + (attachment ? " (画像を送信しました)" : "");
     const newHistory = [...messages, { ...userMsg, content: displayContent }];
     setMessages(newHistory);
-
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -312,29 +251,21 @@ function HomeContent() {
           userName: userName, 
           outfit: currentOutfit,
           plan: currentPlan,
-          affection: affection 
+          affection: affection,
+          mode: mode 
         }),
       });
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         if (response.status === 429 || errorData.error === "QUOTA_EXCEEDED") {
-          setMessages(prev => [...prev, {
-              id: Date.now().toString(), role: 'assistant',
-              content: `[悲しみ]ご主人様、本日の会話上限に達してしまいました…。また明日お話ししましょうね！`
-            }]);
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: `[悲しみ]ご主人様、本日の会話上限に達してしまいました…。また明日お話ししましょうね！` }]);
           return;
         }
         throw new Error(errorData.error || `Error: ${response.status}`);
       }
-
       const data = await response.json();
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: data.text }]);
-    } catch (err) {
-      alert(`通信エラー: ${err.message}`);
-    } finally {
-      setIsLoading(false); 
-    }
+    } catch (err) { alert(`通信エラー: ${err.message}`); } finally { setIsLoading(false); }
   };
 
   const handleKeyDown = (e) => {
@@ -348,41 +279,30 @@ function HomeContent() {
     return <div className="flex h-screen items-center justify-center bg-black text-white">読み込み中...</div>;
   }
 
-  // --- ▼▼▼ Stripe審査対策：ランディングページ ▼▼▼ ---
+  // --- Stripe審査対策：ランディングページ ---
   if (status === "unauthenticated") {
     return (
-      <div className="flex flex-col min-h-screen bg-black text-white overflow-y-auto">
-        {/* ヒーローセクション */}
+      <div className="flex flex-col min-h-screen bg-black text-white overflow-y-auto font-sans">
         <div className="relative h-screen flex flex-col items-center justify-center p-6 text-center">
            <div className="absolute inset-0 opacity-40">
               <img src="/images/bg_room_day.jpg" className="w-full h-full object-cover blur-sm" />
            </div>
            <div className="z-10 max-w-lg w-full bg-gray-900/80 p-8 rounded-3xl border border-pink-500/30 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in duration-500">
              <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400 mb-2">メイドのあかりちゃん</h1>
-             <p className="text-gray-300 mb-8 leading-relaxed">
-               あなた専属のAIメイドとお話ししませんか？<br/>
-               いつでも優しく、あなたの帰りをお待ちしています。
-             </p>
-             
+             <p className="text-gray-300 mb-8 leading-relaxed">あなた専属のAIメイドとお話ししませんか？<br/>いつでも優しく、あなたの帰りをお待ちしています。</p>
              <div className="mb-6 flex items-center justify-center gap-2 bg-black/20 p-2 rounded-lg">
                <input type="checkbox" id="agree-check" checked={isAgreed} onChange={(e) => setIsAgreed(e.target.checked)} className="w-5 h-5 accent-pink-600 cursor-pointer" />
                <label htmlFor="agree-check" className="text-sm text-gray-300 cursor-pointer select-none">
-                 <button onClick={() => setShowTerms(true)} className="text-pink-400 underline hover:text-pink-300 mx-1">利用規約</button>
-                 に同意して開始
+                 <button onClick={() => setShowTerms(true)} className="text-pink-400 underline hover:text-pink-300 mx-1">利用規約</button>に同意して開始
                </label>
              </div>
-             
              <button onClick={() => signIn("google")} disabled={!isAgreed} className={`w-full font-bold py-4 px-6 rounded-full flex items-center justify-center gap-3 transition-all shadow-xl text-lg ${isAgreed ? "bg-white text-gray-900 hover:bg-gray-100 hover:scale-105 cursor-pointer" : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"}`}>
                <img src="https://www.google.com/favicon.ico" alt="G" className={`w-6 h-6 ${!isAgreed && "opacity-50"}`} /> Googleで始める
              </button>
            </div>
-           
-           <div className="absolute bottom-8 animate-bounce text-gray-400 text-sm">
-             ▼ スクロールして詳細を見る
-           </div>
+           <div className="absolute bottom-8 animate-bounce text-gray-400 text-sm">▼ スクロールして詳細を見る</div>
         </div>
 
-        {/* 機能紹介 */}
         <section className="py-20 px-6 bg-gray-900 border-t border-white/10">
            <div className="max-w-4xl mx-auto text-center">
               <h2 className="text-3xl font-bold text-pink-400 mb-12 flex items-center justify-center gap-2"><Star className="fill-pink-400" /> 主な機能</h2>
@@ -406,12 +326,10 @@ function HomeContent() {
            </div>
         </section>
 
-        {/* 料金プラン */}
         <section className="py-20 px-6 bg-black">
            <div className="max-w-4xl mx-auto">
               <h2 className="text-3xl font-bold text-white mb-12 text-center">料金プラン</h2>
               <div className="grid md:grid-cols-3 gap-6">
-                 {/* Free */}
                  <div className="bg-gray-800 p-6 rounded-2xl border border-white/10 flex flex-col">
                     <h3 className="text-xl font-bold text-gray-400 mb-2">Free</h3>
                     <p className="text-3xl font-bold text-white mb-4">¥0 <span className="text-sm font-normal text-gray-500">/月</span></p>
@@ -421,7 +339,6 @@ function HomeContent() {
                        <li className="flex gap-2 text-gray-500"><X size={16}/> 衣装変更（制限あり）</li>
                     </ul>
                  </div>
-                 {/* Pro */}
                  <div className="bg-gray-800 p-6 rounded-2xl border border-yellow-500 shadow-lg flex flex-col relative scale-105 z-10">
                     <div className="absolute top-0 right-0 bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-bl-lg">人気</div>
                     <h3 className="text-xl font-bold text-yellow-400 mb-2 flex items-center gap-2"><Zap size={20}/> Pro</h3>
@@ -432,7 +349,6 @@ function HomeContent() {
                        <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 呼び名変更・ギフト機能</li>
                     </ul>
                  </div>
-                 {/* Royal */}
                  <div className="bg-gray-800 p-6 rounded-2xl border border-purple-500/50 flex flex-col">
                     <h3 className="text-xl font-bold text-purple-400 mb-2 flex items-center gap-2"><Crown size={20}/> Royal</h3>
                     <p className="text-3xl font-bold text-white mb-4">¥2,980 <span className="text-sm font-normal text-gray-500">/月</span></p>
@@ -443,13 +359,10 @@ function HomeContent() {
                     </ul>
                  </div>
               </div>
-              
-              {/* ▼ 注釈を追加しました ▼ */}
               <p className="text-xs text-gray-500 mt-6 text-center">※プランの確認、支払いについてはログイン後に対応可能です</p>
            </div>
         </section>
 
-        {/* フッター（修正済み：別々のページへリンク） */}
         <footer className="py-8 bg-gray-900 text-center text-xs text-gray-500 border-t border-white/10">
            <div className="flex justify-center gap-6 mb-4">
               <a href="/legal" target="_blank" className="hover:text-white transition-colors">特定商取引法に基づく表記</a>
@@ -459,10 +372,9 @@ function HomeContent() {
            <p>© 2025 Maid Akari Project. All rights reserved.</p>
         </footer>
 
-        {/* 規約モーダル */}
         {showTerms && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
-            <div className="bg-gray-900 border border-pink-500/30 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
+            <div className="bg-gray-900 border border-pink-500/30 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden">
               <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 rounded-t-2xl">
                 <h2 className="text-lg font-bold text-white">利用規約・免責事項</h2>
                 <button onClick={() => setShowTerms(false)} className="text-gray-400 hover:text-white"><X size={24}/></button>
@@ -492,265 +404,157 @@ function HomeContent() {
     );
   }
 
-  // ... (以下変更なし) ...
-
+  // --- メイン画面レンダリング ---
   return (
-    <main className="flex h-screen flex-col bg-black overflow-hidden relative">
+    <main className={`flex h-screen flex-col overflow-hidden relative transition-colors duration-500 ${mode === 'professional' ? 'bg-[#fcfcfc]' : 'bg-black'}`}>
+      
+      {/* モード切替ボタン */}
+      <div className="absolute top-4 right-4 z-[100]">
+        <button 
+          onClick={() => setMode(mode === 'casual' ? 'professional' : 'casual')}
+          className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-[10px] tracking-wider shadow-xl transition-all border ${
+            mode === 'casual' 
+            ? 'bg-black/60 text-white border-white/20 hover:bg-pink-600/40' 
+            : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100 shadow-lg'
+          }`}
+        >
+          <Layout size={14} className={mode === 'casual' ? 'text-pink-400' : 'text-blue-500'} />
+          {mode === 'casual' ? 'PROFESSIONAL MODE' : 'BACK TO CASUAL'}
+        </button>
+      </div>
+
       {notification && (
-        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[99999] bg-pink-500 text-white px-6 py-2 rounded-full shadow-lg animate-bounce font-bold border border-white/20">
+        <div className="absolute top-20 left-1/2 -translate-x-1/2 z-[99999] bg-pink-500 text-white px-6 py-2 rounded-full shadow-lg animate-bounce font-bold border border-white/20 text-xs">
           {notification}
         </div>
       )}
 
+      {/* メインディスプレイ分岐 */}
       <div className="flex-1 relative z-0">
-        <VisualNovelDisplay 
-            messages={messages} 
-            outfit={currentOutfit} 
-            currentPlan={currentPlan} 
-            affection={affection} 
-            onManualChange={setIsManualOpen} 
-        />
+        {mode === 'casual' ? (
+          <VisualNovelDisplay 
+            messages={messages} outfit={currentOutfit} currentPlan={currentPlan} 
+            affection={affection} onManualChange={setIsManualOpen} 
+          />
+        ) : (
+          <ProfessionalUI />
+        )}
       </div>
 
-      {!isManualOpen && (
+      {/* 雑談UIボタン群 */}
+      {mode === 'casual' && !isManualOpen && (
         <div className="absolute top-4 left-4 z-[50] flex flex-col gap-2">
-           <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-white text-xs flex flex-col gap-1 shadow-lg">
-              <div className="flex items-center gap-2">
-                  <span className="text-yellow-400 font-bold">★ {points} pt</span>
-                  <span className="text-gray-400">({currentPlan})</span>
-              </div>
-              <div className="flex items-center gap-2">
-                  <Heart size={12} className={affection >= 100 ? "text-pink-500 fill-pink-500 animate-pulse" : "text-pink-400"} />
-                  <span className={`font-bold ${affection >= 100 ? "text-pink-400" : "text-white"}`}>親密度: {affection}</span>
-              </div>
+           <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-white text-xs flex flex-col gap-1 shadow-lg font-mono">
+              <div className="flex items-center gap-2"><span className="text-yellow-400 font-bold">★ {points} pt</span><span className="text-gray-400">({currentPlan})</span></div>
+              <div className="flex items-center gap-2"><Heart size={12} className={affection >= 100 ? "text-pink-500 fill-pink-500 animate-pulse" : "text-pink-400"} /><span className={`font-bold ${affection >= 100 ? "text-pink-400" : "text-white"}`}>親密度: {affection}</span></div>
            </div>
-
            <div className="flex flex-col md:flex-row items-start gap-2 mt-1">
-              <button 
-                  type="button"
-                  onClick={() => setShowShop(!showShop)}
-                  className="p-3 bg-gray-900/80 text-blue-400 hover:text-white hover:bg-blue-600 rounded-full border border-white/20 shadow-lg transition-all"
-                  title="プラン変更"
-              >
-                  <ShoppingCart size={24} />
-              </button>
-
-              <button 
-                  type="button"
-                  onClick={() => setShowCostume(!showCostume)}
-                  className="p-3 bg-gray-900/80 text-pink-400 hover:text-white hover:bg-pink-600 rounded-full border border-white/20 shadow-lg transition-all"
-                  title="衣装変更"
-              >
-                  <Shirt size={24} />
-              </button>
-              <button 
-                  type="button"
-                  onClick={() => setShowGift(!showGift)}
-                  className="p-3 bg-gray-900/80 text-yellow-400 hover:text-white hover:bg-yellow-600 rounded-full border border-white/20 shadow-lg transition-all"
-                  title="プレゼント"
-              >
-                  <Gift size={24} />
-              </button>
-              <button 
-                  type="button"
-                  onClick={() => signOut()}
-                  className="p-3 bg-gray-900/80 text-gray-400 hover:text-red-400 hover:bg-red-900/50 rounded-full border border-white/20 shadow-lg transition-all"
-                  title="ログアウト"
-              >
-                  <LogOut size={24} />
-              </button>
+              <button type="button" onClick={() => setShowShop(!showShop)} className="p-3 bg-gray-900/80 text-blue-400 hover:text-white hover:bg-blue-600 rounded-full border border-white/20 shadow-lg"><ShoppingCart size={24} /></button>
+              <button type="button" onClick={() => setShowCostume(!showCostume)} className="p-3 bg-gray-900/80 text-pink-400 hover:text-white hover:bg-pink-600 rounded-full border border-white/20 shadow-lg"><Shirt size={24} /></button>
+              <button type="button" onClick={() => setShowGift(!showGift)} className="p-3 bg-gray-900/80 text-yellow-400 hover:text-white hover:bg-yellow-600 rounded-full border border-white/20 shadow-lg"><Gift size={24} /></button>
+              <button type="button" onClick={() => signOut()} className="p-3 bg-gray-900/80 text-gray-400 hover:text-red-400 hover:bg-red-900/50 rounded-full border border-white/20 shadow-lg"><LogOut size={24} /></button>
            </div>
         </div>
       )}
 
+      {/* 入力エリア */}
+      <div className={`h-auto min-h-[6rem] border-t p-4 flex items-center justify-center relative z-[100] transition-colors duration-500 ${
+        mode === 'professional' ? 'bg-[#f8f9fa] border-gray-200' : 'bg-gray-900 border-white/10'
+      }`}>
+        {selectedImage && (
+            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 p-2 rounded-lg shadow-xl border border-white/20 animate-in fade-in slide-in-from-bottom-2">
+                <img src={selectedImage} alt="Preview" className="h-32 object-cover rounded-md" />
+                <button onClick={() => { setSelectedImage(null); if(fileInputRef.current) fileInputRef.current.value = ""; }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md"><X size={14} /></button>
+            </div>
+        )}
+        <div className={`w-full max-w-2xl flex gap-2 items-end p-2 rounded-3xl border transition-all duration-500 ${
+          mode === 'professional' ? 'bg-white border-slate-300 shadow-sm' : 'bg-gray-800 border-white/5 shadow-inner'
+        }`}>
+          <div className="flex flex-col gap-1 mb-1">
+              <button type="button" onClick={openSettings} className="p-2 text-gray-400 hover:text-pink-400 transition-colors"><Settings size={20} /></button>
+              <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 text-gray-400 hover:text-green-400 transition-colors">
+                {selectedImage ? <ImageIcon size={20} /> : <Paperclip size={20} />}
+              </button>
+              <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleImageSelect} />
+          </div>
+          <textarea
+            value={localInput} onChange={(e) => setLocalInput(e.target.value)}
+            onCompositionStart={() => setIsComposing(true)} onCompositionEnd={() => setIsComposing(false)}
+            onKeyDown={handleKeyDown} rows={1} disabled={isLoading}
+            placeholder={isLoading ? "THINKING..." : (mode === 'professional' ? "実務タスクの指示やドキュメント要約の依頼..." : "あかりに話しかける...")}
+            className={`flex-1 bg-transparent px-4 py-3 focus:outline-none resize-none h-12 max-h-32 font-sans transition-colors ${mode === 'professional' ? 'text-slate-700' : 'text-white'}`}
+          />
+          <button type="button" onClick={handleSendMessage} disabled={isLoading || (!localInput.trim() && !selectedImage)} className={`p-3 rounded-full text-white shadow-lg transition-all mb-1 ${isLoading ? 'bg-gray-600' : 'bg-pink-600 hover:bg-pink-500'}`}><Send size={20} /></button>
+        </div>
+      </div>
+
+      {/* --- モーダル群 --- */}
       {showSettings && (
         <div className="absolute bottom-24 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-bottom-4">
           <h3 className="text-pink-400 font-bold mb-4">呼び方の設定</h3>
-          <p className="text-xs text-gray-400 mb-2">※特別な呼び名は有料機能です</p>
-          <input 
-            type="text" 
-            value={tempName} 
-            onChange={(e) => setTempName(e.target.value)} 
-            className="w-full bg-black/50 text-white border border-white/10 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:border-pink-500" 
-          />
-          <button onClick={saveName} className="w-full bg-pink-600 hover:bg-pink-500 text-white py-2 rounded-lg transition-colors font-bold">保存する</button>
+          <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} className="w-full bg-black/50 text-white border border-white/10 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:border-pink-500" />
+          <button onClick={saveName} className="w-full bg-pink-600 hover:bg-pink-500 text-white py-2 rounded-lg font-bold">保存する</button>
         </div>
       )}
-
       {showGift && (
         <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-80 animate-in fade-in slide-in-from-top-4">
           <h3 className="text-yellow-400 font-bold mb-4 flex items-center gap-2"><Gift size={18}/> プレゼントを贈る</h3>
-          <p className="text-xs text-gray-400 mb-2">ポイントを使って親密度アップ！</p>
           <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">
             {GIFT_ITEMS.map((item) => (
-              <button 
-                key={item.id}
-                onClick={() => giveGift(item)} 
-                className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-between group transition-all"
-              >
-                <div>
-                    <div className="font-bold text-white group-hover:text-yellow-200 text-sm">{item.name}</div>
-                    <div className="text-xs text-gray-400">親密度 +{item.love}</div>
-                </div>
-                <div className="text-yellow-400 font-bold text-sm">
-                    {item.price} pt
-                </div>
+              <button key={item.id} onClick={() => giveGift(item)} className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-between group transition-all">
+                <div><div className="font-bold text-white group-hover:text-yellow-200 text-sm">{item.name}</div><div className="text-xs text-gray-400">親密度 +{item.love}</div></div>
+                <div className="text-yellow-400 font-bold text-sm">{item.price} pt</div>
               </button>
             ))}
           </div>
           <button onClick={() => setShowGift(false)} className="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm">閉じる</button>
         </div>
       )}
-
       {showCostume && (
-        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-top-4">
-          <h3 className="text-pink-400 font-bold mb-4">衣装変更（有料会員限定）</h3>
-          <div className="space-y-2">
-            <button onClick={() => changeOutfit('maid')} className={`w-full text-left p-2 rounded hover:bg-white/10 ${currentOutfit === 'maid' ? 'text-pink-400 font-bold' : 'text-white'}`}>メイド服 {currentOutfit === 'maid' && '✅'}</button>
-            <button onClick={() => changeOutfit('santa')} className={`w-full text-left p-2 rounded hover:bg-white/10 ${currentOutfit === 'santa' ? 'text-pink-400 font-bold' : 'text-white'}`}>サンタ服 {currentOutfit === 'santa' && '✅'} 🎄</button>
-            <button onClick={() => changeOutfit('kimono')} className={`w-full text-left p-2 rounded hover:bg-white/10 ${currentOutfit === 'kimono' ? 'text-pink-400 font-bold' : 'text-white'}`}>晴れ着 {currentOutfit === 'kimono' && '✅'} 🎍</button>
-            <button onClick={() => changeOutfit('swimsuit')} className={`w-full text-left p-2 rounded hover:bg-white/10 ${currentOutfit === 'swimsuit' ? 'text-pink-400 font-bold' : 'text-white'}`}>水着 {currentOutfit === 'swimsuit' && '✅'} 👙</button>
-            <button onClick={() => changeOutfit('bunny')} className={`w-full text-left p-2 rounded hover:bg-white/10 ${currentOutfit === 'bunny' ? 'text-pink-400 font-bold' : 'text-white'}`}>バニーガール {currentOutfit === 'bunny' && '✅'} 👯‍♀️</button>
+        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-top-4 font-sans">
+          <h3 className="text-pink-400 font-bold mb-4 text-xs">衣装変更</h3>
+          <div className="space-y-1">
+            {['maid', 'santa', 'kimono', 'swimsuit', 'bunny'].map((o) => (
+              <button key={o} onClick={() => changeOutfit(o)} className={`w-full text-left p-2 rounded text-[10px] hover:bg-white/10 ${currentOutfit === o ? 'text-pink-400 font-bold' : 'text-white'}`}>
+                {o === 'maid' ? 'メイド服' : o === 'santa' ? 'サンタ服 🎄' : o === 'kimono' ? '晴れ着 🎍' : o === 'swimsuit' ? '水着 👙' : 'バニーガール 👯‍♀️'}{currentOutfit === o && ' ✅'}
+              </button>
+            ))}
           </div>
-          <button onClick={() => setShowCostume(false)} className="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm">閉じる</button>
+          <button onClick={() => setShowCostume(false)} className="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-xs">閉じる</button>
         </div>
       )}
-
       {showShop && (
         <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4">
-            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl">
-                <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 rounded-t-2xl">
+            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden font-sans">
+                <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800">
                     <h2 className="text-lg font-bold text-blue-400 flex items-center gap-2"><ShoppingCart size={20}/> プレミアムショップ</h2>
                     <button onClick={() => setShowShop(false)} className="text-gray-400 hover:text-white"><X size={24}/></button>
                 </div>
-                <div className="p-4 overflow-y-auto custom-scrollbar space-y-4">
+                <div className="p-4 overflow-y-auto space-y-4 custom-scrollbar">
                     <div className="bg-gray-800/50 p-4 rounded-xl border border-white/10 text-center">
-                        <p className="text-gray-400 text-xs">現在のご主人様のプラン</p>
+                        <p className="text-gray-400 text-[10px] tracking-widest uppercase">Your Plan</p>
                         <p className="text-2xl font-bold text-white mt-1">{currentPlan}</p>
                     </div>
-
-                    <div className="border border-yellow-500/30 bg-gradient-to-br from-gray-900 to-gray-800 p-4 rounded-xl relative overflow-hidden">
+                    <div className="border border-yellow-500/30 bg-gray-800 p-4 rounded-xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 bg-yellow-600 text-white text-[10px] px-2 py-1 rounded-bl">人気</div>
                         <h3 className="font-bold text-yellow-400 text-lg flex items-center gap-2"><Zap size={18}/> Proプラン</h3>
                         <p className="text-white font-bold text-xl my-2">¥980 <span className="text-xs text-gray-400">/ 月</span></p>
-                        <ul className="text-sm text-gray-300 space-y-1 mb-4">
-                            <li>✅ 会話数UP（200回/日）</li>
-                            <li>✅ 水着・バニーガール衣装 解放</li>
-                            <li>✅ 呼び名変更・プレゼント機能 解放</li>
-                        </ul>
-                        <button 
-                            onClick={() => handleCheckout('PRO')}
-                            disabled={currentPlan === 'PRO' || currentPlan === 'ROYAL'}
-                            className={`w-full py-2 rounded-lg font-bold transition-all ${currentPlan === 'PRO' ? 'bg-gray-600 text-gray-400 cursor-default' : 'bg-yellow-600 hover:bg-yellow-500 text-white'}`}
-                        >
-                            {currentPlan === 'PRO' ? '契約中' : (currentPlan === 'ROYAL' ? '上位プラン契約中' : 'Proプランにする')}
-                        </button>
+                        <button onClick={() => handleCheckout('PRO')} disabled={currentPlan === 'PRO' || currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-500 text-white">Proプランにする</button>
                     </div>
-
-                    <div className="border border-purple-500/30 bg-gradient-to-br from-gray-900 to-purple-900/20 p-4 rounded-xl relative overflow-hidden">
+                    <div className="border border-purple-500/30 bg-gray-800 p-4 rounded-xl">
                         <h3 className="font-bold text-purple-400 text-lg flex items-center gap-2"><Crown size={18}/> Royalプラン</h3>
                         <p className="text-white font-bold text-xl my-2">¥2,980 <span className="text-xs text-gray-400">/ 月</span></p>
-                        <ul className="text-sm text-gray-300 space-y-1 mb-4">
-                            <li>✅ 会話数・超UP（2500回/日）</li>
-                            <li>✅ <span className="text-pink-400 font-bold">サンタ服・晴れ着・特別背景 解放</span></li>
-                            <li>✅ Proプランの全機能</li>
-                        </ul>
-                        <button 
-                            onClick={() => handleCheckout('ROYAL')}
-                            disabled={currentPlan === 'ROYAL'}
-                            className={`w-full py-2 rounded-lg font-bold transition-all ${currentPlan === 'ROYAL' ? 'bg-gray-600 text-gray-400 cursor-default' : 'bg-purple-600 hover:bg-purple-500 text-white'}`}
-                        >
-                            {currentPlan === 'ROYAL' ? '契約中' : 'Royalプランにする'}
-                        </button>
+                        <button onClick={() => handleCheckout('ROYAL')} disabled={currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-purple-600 hover:bg-purple-500 text-white">Royalプランにする</button>
                     </div>
-
-                    <div className="border border-white/10 bg-gray-800 p-4 rounded-xl">
+                    <div className="bg-gray-800 p-4 rounded-xl border border-white/10">
                         <h3 className="font-bold text-white text-md flex items-center gap-2"><FileText size={16}/> 会話チケット（+100回）</h3>
-                        <p className="text-xs text-gray-400 mt-1 mb-3">プランに関わらず、本日の会話数をチャージできます。</p>
-                        <div className="flex items-center justify-between">
-                            <span className="font-bold text-white">¥500</span>
-                            <button 
-                                onClick={() => handleCheckout('TICKET')}
-                                className="bg-gray-600 hover:bg-gray-500 text-white px-4 py-2 rounded-lg text-sm font-bold"
-                            >
-                                購入する
-                            </button>
-                        </div>
+                        <p className="text-xs text-gray-400 mt-1 mb-3">¥500</p>
+                        <button onClick={() => handleCheckout('TICKET')} className="w-full py-2 bg-gray-600 text-white rounded-lg text-sm font-bold hover:bg-gray-500 transition-colors">購入する</button>
                     </div>
-
                 </div>
             </div>
         </div>
       )}
-
-      {/* チャット入力欄 */}
-      <div className="h-auto min-h-[6rem] bg-gray-900 border-t border-white/10 p-4 flex items-center justify-center relative z-[100]">
-        
-        {/* ★追加: 画像プレビューエリア */}
-        {selectedImage && (
-            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 p-2 rounded-lg shadow-xl border border-white/20 animate-in fade-in slide-in-from-bottom-2">
-                <img src={selectedImage} alt="Preview" className="h-32 object-cover rounded-md" />
-                <button 
-                    onClick={() => { setSelectedImage(null); if(fileInputRef.current) fileInputRef.current.value = ""; }}
-                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-md hover:bg-red-600"
-                >
-                    <X size={14} />
-                </button>
-            </div>
-        )}
-
-        <div className="w-full max-w-2xl flex gap-2 items-end bg-gray-800 p-2 rounded-3xl border border-white/5 shadow-inner">
-          
-          <div className="flex flex-col gap-1 mb-1">
-              <button 
-                type="button"
-                onClick={openSettings}
-                className={`p-2 transition-colors rounded-full ${showSettings ? 'text-pink-400 bg-white/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                title="呼び名設定"
-              >
-                <Settings size={20} />
-              </button>
-
-              {/* ★追加: 画像選択ボタン */}
-              <button 
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className={`p-2 transition-colors rounded-full ${selectedImage ? 'text-green-400 bg-white/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
-                title="画像を添付"
-              >
-                {selectedImage ? <ImageIcon size={20} /> : <Paperclip size={20} />}
-              </button>
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                className="hidden" 
-                accept="image/*"
-                onChange={handleImageSelect}
-              />
-          </div>
-          
-          <textarea
-            value={localInput}
-            onChange={(e) => setLocalInput(e.target.value)}
-            onCompositionStart={() => setIsComposing(true)}
-            onCompositionEnd={() => setIsComposing(false)}
-            onKeyDown={handleKeyDown}
-            placeholder={isLoading ? "あかりが考えています..." : (selectedImage ? "画像について話す..." : "あかりに話しかける...")}
-            className="flex-1 bg-transparent text-white px-4 py-3 focus:outline-none resize-none h-12 max-h-32 overflow-y-auto"
-            disabled={isLoading}
-            rows={1}
-          />
-          
-          <button 
-            type="button" 
-            onClick={handleSendMessage} 
-            disabled={isLoading || (!localInput.trim() && !selectedImage)} 
-            className={`p-3 rounded-full text-white shadow-lg transition-colors mb-1 ${isLoading ? 'bg-gray-600' : 'bg-pink-600 hover:bg-pink-500'}`}
-          >
-            <Send size={20} />
-          </button>
-        </div>
-      </div>
     </main>
   );
 }
