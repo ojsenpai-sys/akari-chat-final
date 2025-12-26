@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useEffect, Suspense, useRef } from 'react';
-import { Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, ShoppingCart, Crown, Zap, Paperclip, Image as ImageIcon } from 'lucide-react'; 
+import { Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, ShoppingCart, Crown, Zap, Paperclip, Image as ImageIcon, Check, Star } from 'lucide-react'; 
 import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
@@ -265,44 +265,38 @@ function HomeContent() {
     ]);
   };
 
-  // ★追加: 画像が選択されたときの処理
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // ファイルサイズ制限などを入れるならここ
-    if (file.size > 5 * 1024 * 1024) { // 5MB制限例
+    if (file.size > 5 * 1024 * 1024) { 
         alert("画像サイズが大きすぎます（5MB以下にしてください）");
         return;
     }
 
     const reader = new FileReader();
     reader.onloadend = () => {
-      setSelectedImage(reader.result); // Base64データをセット
+      setSelectedImage(reader.result); 
     };
     reader.readAsDataURL(file);
   };
 
   const handleSendMessage = async () => {
-    // テキストも画像もない場合は送信しない
     if ((!localInput.trim() && !selectedImage) || isLoading) return;
     
     const content = localInput;
-    const attachment = selectedImage; // 送信する画像を退避
+    const attachment = selectedImage; 
 
     setLocalInput(''); 
-    setSelectedImage(null); // 画像選択をクリア
+    setSelectedImage(null); 
     setIsLoading(true);
 
     const userMsg = { 
         id: Date.now().toString(), 
         role: 'user', 
         content: content,
-        // UI表示用に一時的にテキストへ変換（本格的にはVisualNovelDisplayで画像表示対応が必要ですが、今回は簡易的に）
-        // backendにはattachmentとして送ります
     };
     
-    // UI上の表示: 画像を送ったことを明示
     const displayContent = content + (attachment ? " (画像を送信しました)" : "");
     const newHistory = [...messages, { ...userMsg, content: displayContent }];
     setMessages(newHistory);
@@ -312,9 +306,9 @@ function HomeContent() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          messages: newHistory, // 過去ログ
-          currentMessage: content, // 今回のメッセージテキスト
-          attachment: attachment, // ★追加: 画像データ(Base64)
+          messages: newHistory, 
+          currentMessage: content, 
+          attachment: attachment, 
           userName: userName, 
           outfit: currentOutfit,
           plan: currentPlan,
@@ -354,42 +348,117 @@ function HomeContent() {
     return <div className="flex h-screen items-center justify-center bg-black text-white">読み込み中...</div>;
   }
 
+  // --- ▼▼▼ Stripe審査対策：機能紹介つきランディングページ ▼▼▼ ---
   if (status === "unauthenticated") {
     return (
-      <div className="flex h-screen flex-col items-center justify-center bg-black text-white gap-6 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-30">
-           <img src="/images/bg_room_day.jpg" className="w-full h-full object-cover blur-sm" />
-        </div>
-        <div className="z-10 bg-gray-900/80 p-10 rounded-2xl border border-pink-500/30 shadow-2xl text-center max-w-md w-full backdrop-blur-md">
-          <h1 className="text-3xl font-bold text-pink-400 mb-2">メイドのあかりちゃん</h1>
-          <p className="text-gray-300 mb-6">あかりとお話しするには、<br/>ログインしてくださいませ。</p>
-          <div className="mb-6 flex justify-center">
-             <button onClick={() => setShowTerms(true)} className="text-sm text-pink-400 hover:text-pink-300 underline flex items-center gap-1">
-               <FileText size={14} /> 利用規約・免責事項を確認する
+      <div className="flex flex-col min-h-screen bg-black text-white overflow-y-auto">
+        {/* ヒーローセクション */}
+        <div className="relative h-screen flex flex-col items-center justify-center p-6 text-center">
+           <div className="absolute inset-0 opacity-40">
+              <img src="/images/bg_room_day.jpg" className="w-full h-full object-cover blur-sm" />
+           </div>
+           <div className="z-10 max-w-lg w-full bg-gray-900/80 p-8 rounded-3xl border border-pink-500/30 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in duration-500">
+             <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400 mb-2">メイドのあかりちゃん</h1>
+             <p className="text-gray-300 mb-8 leading-relaxed">
+               あなた専属のAIメイドとお話ししませんか？<br/>
+               いつでも優しく、あなたの帰りをお待ちしています。
+             </p>
+             
+             <div className="mb-6 flex items-center justify-center gap-2 bg-black/20 p-2 rounded-lg">
+               <input type="checkbox" id="agree-check" checked={isAgreed} onChange={(e) => setIsAgreed(e.target.checked)} className="w-5 h-5 accent-pink-600 cursor-pointer" />
+               <label htmlFor="agree-check" className="text-sm text-gray-300 cursor-pointer select-none">
+                 <button onClick={() => setShowTerms(true)} className="text-pink-400 underline hover:text-pink-300 mx-1">利用規約</button>
+                 に同意して開始
+               </label>
+             </div>
+             
+             <button onClick={() => signIn("google")} disabled={!isAgreed} className={`w-full font-bold py-4 px-6 rounded-full flex items-center justify-center gap-3 transition-all shadow-xl text-lg ${isAgreed ? "bg-white text-gray-900 hover:bg-gray-100 hover:scale-105 cursor-pointer" : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"}`}>
+               <img src="https://www.google.com/favicon.ico" alt="G" className={`w-6 h-6 ${!isAgreed && "opacity-50"}`} /> Googleで始める
              </button>
-          </div>
-          <div className="mb-6 flex items-center justify-center gap-2">
-            <input type="checkbox" id="agree-check" checked={isAgreed} onChange={(e) => setIsAgreed(e.target.checked)} className="w-5 h-5 accent-pink-600 cursor-pointer" />
-            <label htmlFor="agree-check" className="text-sm text-gray-300 cursor-pointer select-none">上記規約に同意します</label>
-          </div>
-          <button onClick={() => signIn("google")} disabled={!isAgreed} className={`w-full font-bold py-3 px-6 rounded-full flex items-center justify-center gap-3 transition-all ${isAgreed ? "bg-white text-gray-900 hover:bg-gray-100 hover:scale-105 cursor-pointer shadow-lg" : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"}`}>
-            <img src="https://www.google.com/favicon.ico" alt="G" className={`w-6 h-6 ${!isAgreed && "opacity-50"}`} /> Googleでログイン
-          </button>
-
-          {/* ★★★ Stripe審査用リンク（ここを追加しました） ★★★ */}
-          <div className="mt-8 flex gap-6 justify-center text-xs text-gray-500">
-            <a href="/legal" target="_blank" rel="noopener noreferrer" className="hover:text-pink-400 underline transition-colors">
-              特定商取引法に基づく表記
-            </a>
-            <a href="/legal" target="_blank" rel="noopener noreferrer" className="hover:text-pink-400 underline transition-colors">
-              利用規約
-            </a>
-          </div>
-
+           </div>
+           
+           <div className="absolute bottom-8 animate-bounce text-gray-400 text-sm">
+             ▼ スクロールして詳細を見る
+           </div>
         </div>
-        
+
+        {/* 機能紹介 */}
+        <section className="py-20 px-6 bg-gray-900 border-t border-white/10">
+           <div className="max-w-4xl mx-auto text-center">
+              <h2 className="text-3xl font-bold text-pink-400 mb-12 flex items-center justify-center gap-2"><Star className="fill-pink-400" /> 主な機能</h2>
+              <div className="grid md:grid-cols-3 gap-8">
+                 <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
+                    <div className="bg-pink-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-pink-400"><Send size={32}/></div>
+                    <h3 className="font-bold text-xl mb-2">自然な会話</h3>
+                    <p className="text-gray-400 text-sm">最新AIがあなたとの会話を記憶。話せば話すほど仲良くなれます。</p>
+                 </div>
+                 <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
+                    <div className="bg-yellow-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-yellow-400"><Shirt size={32}/></div>
+                    <h3 className="font-bold text-xl mb-2">着せ替え・ギフト</h3>
+                    <p className="text-gray-400 text-sm">メイド服だけじゃない？プレゼントを贈って特別な衣装に着替えさせましょう。</p>
+                 </div>
+                 <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
+                    <div className="bg-purple-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-purple-400"><ImageIcon size={32}/></div>
+                    <h3 className="font-bold text-xl mb-2">画像認識</h3>
+                    <p className="text-gray-400 text-sm">写真を見せて感想を聞いてみましょう。あなたの日常を共有できます。</p>
+                 </div>
+              </div>
+           </div>
+        </section>
+
+        {/* 料金プラン（Stripe審査に重要） */}
+        <section className="py-20 px-6 bg-black">
+           <div className="max-w-4xl mx-auto">
+              <h2 className="text-3xl font-bold text-white mb-12 text-center">料金プラン</h2>
+              <div className="grid md:grid-cols-3 gap-6">
+                 {/* Free */}
+                 <div className="bg-gray-800 p-6 rounded-2xl border border-white/10 flex flex-col">
+                    <h3 className="text-xl font-bold text-gray-400 mb-2">Free</h3>
+                    <p className="text-3xl font-bold text-white mb-4">¥0 <span className="text-sm font-normal text-gray-500">/月</span></p>
+                    <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
+                       <li className="flex gap-2"><Check size={16} className="text-green-400"/> 基本的な会話</li>
+                       <li className="flex gap-2"><Check size={16} className="text-green-400"/> 親密度システム</li>
+                       <li className="flex gap-2 text-gray-500"><X size={16}/> 衣装変更（制限あり）</li>
+                    </ul>
+                 </div>
+                 {/* Pro */}
+                 <div className="bg-gray-800 p-6 rounded-2xl border border-yellow-500 shadow-lg flex flex-col relative scale-105 z-10">
+                    <div className="absolute top-0 right-0 bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-bl-lg">人気</div>
+                    <h3 className="text-xl font-bold text-yellow-400 mb-2 flex items-center gap-2"><Zap size={20}/> Pro</h3>
+                    <p className="text-3xl font-bold text-white mb-4">¥980 <span className="text-sm font-normal text-gray-500">/月</span></p>
+                    <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
+                       <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 会話回数 大幅アップ</li>
+                       <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 水着・バニーガール解放</li>
+                       <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 呼び名変更・ギフト機能</li>
+                    </ul>
+                 </div>
+                 {/* Royal */}
+                 <div className="bg-gray-800 p-6 rounded-2xl border border-purple-500/50 flex flex-col">
+                    <h3 className="text-xl font-bold text-purple-400 mb-2 flex items-center gap-2"><Crown size={20}/> Royal</h3>
+                    <p className="text-3xl font-bold text-white mb-4">¥2,980 <span className="text-sm font-normal text-gray-500">/月</span></p>
+                    <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
+                       <li className="flex gap-2"><Check size={16} className="text-purple-400"/> 会話回数 無制限級</li>
+                       <li className="flex gap-2"><Check size={16} className="text-purple-400"/> 全衣装（サンタ・晴れ着）解放</li>
+                       <li className="flex gap-2"><Check size={16} className="text-purple-400"/> Proプランの全機能</li>
+                    </ul>
+                 </div>
+              </div>
+           </div>
+        </section>
+
+        {/* フッター（法的リンク） */}
+        <footer className="py-8 bg-gray-900 text-center text-xs text-gray-500 border-t border-white/10">
+           <div className="flex justify-center gap-6 mb-4">
+              <a href="/legal" target="_blank" className="hover:text-white transition-colors">特定商取引法に基づく表記</a>
+              <a href="/legal" target="_blank" className="hover:text-white transition-colors">利用規約</a>
+              <a href="/legal" target="_blank" className="hover:text-white transition-colors">プライバシーポリシー</a>
+           </div>
+           <p>© 2025 Maid Akari Project. All rights reserved.</p>
+        </footer>
+
+        {/* 規約モーダル（修正済み：第7条削除） */}
         {showTerms && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
             <div className="bg-gray-900 border border-pink-500/30 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl">
               <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 rounded-t-2xl">
                 <h2 className="text-lg font-bold text-white">利用規約・免責事項</h2>
@@ -409,18 +478,7 @@ function HomeContent() {
                 <p>本サービスは13歳以上のご利用を推奨します。未成年者が有料プランを利用する場合は、親権者の同意を得たものとみなします。</p>
                 <h3 className="font-bold text-pink-400">6. 知的財産権</h3>
                 <p>生成されたテキストの利用権はユーザーに帰属しますが、本サービスのキャラクター設定、画像、システムに関する権利は運営者に帰属します。</p>
-                <h3 className="font-bold text-pink-400">7. 特定商取引法に基づく表記</h3>
-                <div className="space-y-2 border-t border-gray-700 pt-2 mt-2">
-                    <p><span className="font-bold">・販売事業者:</span> 請求があり次第遅滞なく提供します</p>
-                    <p><span className="font-bold">・所在地:</span> 請求があり次第遅滞なく提供します</p>
-                    <p><span className="font-bold">・電話番号:</span> 請求があり次第遅滞なく提供します</p>
-                    <p><span className="font-bold">・お問い合わせ:</span> ojsenpai@gmail.com</p>
-                    <p><span className="font-bold">・販売価格:</span> 各プラン申込みページに記載</p>
-                    <p><span className="font-bold">・商品代金以外の必要料金:</span> サイト閲覧・利用時のインターネット接続料金</p>
-                    <p><span className="font-bold">・支払方法:</span> クレジットカード決済（Stripe）</p>
-                    <p><span className="font-bold">・引渡時期:</span> 決済完了後、即時利用可能</p>
-                    <p><span className="font-bold">・返品・キャンセル:</span> デジタルコンテンツの性質上、決済完了後の返品・返金・キャンセルはできません。</p>
-                </div>
+                {/* 第7条（特商法）は削除済み */}
               </div>
               <div className="p-4 border-t border-gray-700 bg-gray-800 rounded-b-2xl text-center">
                 <button onClick={() => setShowTerms(false)} className="bg-pink-600 hover:bg-pink-500 text-white py-2 px-8 rounded-full font-bold transition-colors">確認しました</button>
@@ -432,7 +490,7 @@ function HomeContent() {
     );
   }
 
-  // ... (以下、authenticated の表示部分は変更なし) ...
+  // --- ▲▲▲ 修正ここまで ▲▲▲ ---
 
   return (
     <main className="flex h-screen flex-col bg-black overflow-hidden relative">
