@@ -354,6 +354,7 @@ function HomeContent() {
     return <div className="flex h-screen items-center justify-center bg-black text-white">読み込み中...</div>;
   }
 
+  // --- ▼▼▼ ここが修正ポイント：ログイン前画面 ▼▼▼ ---
   if (status === "unauthenticated") {
     return (
       <div className="flex h-screen flex-col items-center justify-center bg-black text-white gap-6 relative overflow-hidden">
@@ -375,6 +376,17 @@ function HomeContent() {
           <button onClick={() => signIn("google")} disabled={!isAgreed} className={`w-full font-bold py-3 px-6 rounded-full flex items-center justify-center gap-3 transition-all ${isAgreed ? "bg-white text-gray-900 hover:bg-gray-100 hover:scale-105 cursor-pointer shadow-lg" : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"}`}>
             <img src="https://www.google.com/favicon.ico" alt="G" className={`w-6 h-6 ${!isAgreed && "opacity-50"}`} /> Googleでログイン
           </button>
+
+          {/* ★★★ Stripe審査用リンク（追加部分） ★★★ */}
+          <div className="mt-8 flex gap-6 justify-center text-xs text-gray-500">
+            <a href="/legal" target="_blank" rel="noopener noreferrer" className="hover:text-pink-400 underline transition-colors">
+              特定商取引法に基づく表記
+            </a>
+            <a href="/legal" target="_blank" rel="noopener noreferrer" className="hover:text-pink-400 underline transition-colors">
+              利用規約
+            </a>
+          </div>
+
         </div>
         
         {showTerms && (
@@ -420,6 +432,8 @@ function HomeContent() {
       </div>
     );
   }
+
+  // --- ▲▲▲ 修正ここまで ▲▲▲ ---
 
   return (
     <main className="flex h-screen flex-col bg-black overflow-hidden relative">
@@ -649,7 +663,7 @@ function HomeContent() {
               </button>
               <input 
                 type="file" 
-                ref={fileInputRef}
+                ref={fileInputRef} 
                 className="hidden" 
                 accept="image/*"
                 onChange={handleImageSelect}
