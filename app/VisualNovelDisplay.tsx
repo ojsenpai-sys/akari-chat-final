@@ -268,6 +268,9 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const [isRoomwearTime, setIsRoomwearTime] = useState(false);
   const [showManual, setShowManual] = useState(false);
 
+  // ★修正：バグ防止用の「しおり（メッセージID）」を記録するためのメモ
+  const lastProcessedMessageId = useRef(null);
+
   const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef(null);
 
@@ -328,10 +331,12 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
   }, [isLoveMode, isMuted]);
 
+  // ★修正：メッセージ表示ロジック（再レンダリング時のリセットを防ぐ）
   useEffect(() => {
     if (messages.length === 0) return;
     const lastMsg = messages[messages.length - 1];
 
+    // イベント判定は常に実行
     if (lastMsg.role === 'user') {
       const text = lastMsg.content;
       const nextSituation = SITUATION_DEFINITIONS.find(def => 
@@ -345,7 +350,16 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       }
     }
 
+    // ★重要：メッセージが「本当に新しいID」の時だけタイピングを開始する
     if (lastMsg.role === 'assistant') {
+      // すでにこのIDのメッセージを表示中であれば、タイピングをやり直さない（ここでリセットバグを防ぐ）
+      if (lastProcessedMessageId.current === lastMsg.id) {
+        return; 
+      }
+      
+      // 新しいメッセージとしてIDを記録
+      lastProcessedMessageId.current = lastMsg.id;
+
       if (typingRef.current) clearInterval(typingRef.current);
 
       let content = lastMsg.content;
@@ -367,20 +381,14 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       }, 30);
     } 
     return () => { if (typingRef.current) clearInterval(typingRef.current); };
-  }, [messages, currentSituation]);
+  }, [messages, currentSituation]); // 依存配列は維持しつつ内部でIDチェック
 
   useEffect(() => {
     if (outfit === 'kimono' && plan !== 'ROYAL') {
         if (typingRef.current) clearInterval(typingRef.current);
         setCurrentEmotion('sad'); 
         const rejectionText = "それはロイヤル会員さんだけの特別な衣装なので...ごめんなさい💦";
-        setDisplayedText('');
-        let i = 0;
-        typingRef.current = setInterval(() => {
-            setDisplayedText(rejectionText.substring(0, i + 1));
-            i++;
-            if (i >= rejectionText.length) clearInterval(typingRef.current);
-        }, 30);
+        setDisplayedText(rejectionText); // 即座に反映
     }
   }, [outfit, plan]);
 
@@ -389,13 +397,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         if (typingRef.current) clearInterval(typingRef.current);
         setCurrentEmotion('shy');
         const specialText = "ご主人様、夜も更けてきましたのでそろそろ着替えさせていただきました。その…ご主人様の好きなルームウェアです。ちょっと恥ずかしいですけど…どうですか？";
-        setDisplayedText('');
-        let i = 0;
-        typingRef.current = setInterval(() => {
-            setDisplayedText(specialText.substring(0, i + 1));
-            i++;
-            if (i >= specialText.length) clearInterval(typingRef.current);
-        }, 30);
+        setDisplayedText(specialText); // 即座に反映
     }
   }, [isRoomwearTime]);
 
@@ -466,7 +468,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         </div>
       )}
 
-      {/* ★修正箇所：UIウィンドウ（パディングと高さを削減してコンパクト化） */}
       {showUI && (
         <div className="absolute bottom-0 left-0 w-full z-20 pb-6 px-2 md:pb-8 md:px-8 bg-gradient-to-t from-black/80 via-black/30 to-transparent pt-32 pointer-events-none" >
           <div 
@@ -481,7 +482,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
               {isLoveMode && <span className="text-xs text-white bg-pink-600/80 px-2 py-0.5 rounded-full border border-white/20 animate-pulse shadow-sm">❤ Love ❤</span>}
               {currentSituation && <span className="text-xs text-gray-300 bg-gray-800/80 px-2 py-0.5 rounded-full border border-white/20">イベント中</span>}
             </div>
-            {/* 高さを h-32 から h-24 に削り、約1行分コンパクトに */}
             <div 
               ref={scrollRef} 
               className="text-white text-base md:text-xl leading-relaxed h-24 overflow-y-auto pr-2 custom-scrollbar select-text caret-auto drop-shadow-sm font-medium"
