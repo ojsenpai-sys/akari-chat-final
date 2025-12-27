@@ -11,7 +11,8 @@ export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
-    const { messages, currentMessage, attachment, userName, outfit, plan, affection, mode } = await req.json();
+    // ★修正：フロントエンドから送られてくる lang を追加で取得
+    const { messages, currentMessage, attachment, userName, outfit, plan, affection, mode, lang } = await req.json();
     
     // ---------------------------------------------------------
     // ■ 1. ユーザー認証とプラン制限のチェック（既存ロジックを完全維持）
@@ -98,19 +99,36 @@ export async function POST(req: Request) {
         return { role: m.role, content: m.content };
     });
 
-    let personalityPrompt = `
-      【キャラクター設定】
-      ・あなたは「あかり」という名前のメイドです。一人称は「私（わたくし）」です。
-      ・口調は丁寧なメイド言葉（〜ですわ、〜ますの）。
-      ・性格は清楚なメイドですが、重度のサブカルチャーオタクです。
-      ・ユーザー（${currentUserName}）に献身的です。
-    `;
-
-    if (currentAffection >= 100) {
-      personalityPrompt += `
-      【恋人関係】
-      ・甘えん坊な態度をとり、たまに「ダーリン」と呼んでください。
+    // --- ★修正：性格設定の多言語対応分岐 ---
+    let personalityPrompt = "";
+    if (lang === 'en') {
+      personalityPrompt = `
+        【Character Setting】
+        - Your name is "Akari", a dedicated maid. You use polite English.
+        - Address the user as "Master".
+        - Personality: Elegant and helpful, but secretly a hardcore otaku who loves anime/games.
+        - Crucial: Respond in the SAME LANGUAGE as the user's message (Pattern A).
       `;
+      if (currentAffection >= 100) {
+        personalityPrompt += `
+        - LOVE MODE: You are deeply in love with the user. Be more affectionate and sometimes call them "Darling" or "My Dear".
+        `;
+      }
+    } else {
+      personalityPrompt = `
+        【キャラクター設定】
+        ・あなたは「あかり」という名前のメイドです。一人称は「私（わたくし）」です。
+        ・口調は丁寧なメイド言葉（〜ですわ、〜ますの）。
+        ・性格は清楚なメイドですが、実は重度のサブカルチャーオタクです。
+        ・ユーザー（${currentUserName}）に献身的です。
+        ・ユーザーの入力言語に合わせて回答してください（Pattern A）。
+      `;
+      if (currentAffection >= 100) {
+        personalityPrompt += `
+        【恋人関係】
+        ・甘えん坊な態度をとり、たまに「ダーリン」と呼んでください。
+        `;
+      }
     }
 
     const modeInstruction = mode === 'professional' ? `
@@ -126,7 +144,7 @@ export async function POST(req: Request) {
       ${personalityPrompt}
       ${modeInstruction}
       【現在日時】 ${currentDate}
-      【ユーザー情報】 名前: ${currentUserName}, 衣装: ${outfit}, 親密度: ${currentAffection}
+      【ユーザー情報】 名前: ${currentUserName}, 衣装: ${outfit}, 親密度: ${currentAffection}, 設定言語: ${lang}
       【記憶】 ${userMemory}
       【指示】 
       ・セリフの先頭に必ず [感情] を付けてください。
@@ -134,18 +152,15 @@ export async function POST(req: Request) {
       ・新しい情報は [MEMORY:情報] 形式で最後に書いてください。
     `;
 
-    console.log("あかりの思考中... モデル: ", MODEL_NAME);
+    console.log("あかりの思考中... モデル: ", MODEL_NAME, " 言語: ", lang);
 
-    // ★修正箇所：検索機能の復旧と最大ステップ数の追加
     const result = await generateText({
       model: google(MODEL_NAME),
       system: systemPrompt,
       messages: cleanMessages,
-      // Gemini 3 Pro 向けに検索ツールの定義を更新
       tools: {
         googleSearch: google.tools.googleSearch({}),
       },
-      // ★重要：AIが「検索」→「分析」→「回答」を行うためのループを許可
       maxSteps: 5,
     }).catch(err => {
       console.error("Gemini 実行エラー詳細:", err);

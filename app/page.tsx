@@ -11,7 +11,7 @@ import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
 
-// ★翻訳用マスタデータ（ここを編集するだけで言語を増やせます）
+// ★翻訳用マスタデータ
 const TRANSLATIONS = {
   ja: {
     title: "メイドのあかりちゃん",
@@ -95,9 +95,23 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // ★修正：言語設定の状態を追加
+  // ★修正：言語設定の状態管理（LocalStorage対応）
   const [lang, setLang] = useState('ja');
   const t = TRANSLATIONS[lang];
+
+  // ★追加：言語切り替えと保存を行う関数
+  const handleLangChange = (newLang) => {
+    setLang(newLang);
+    localStorage.setItem('akari_lang', newLang);
+  };
+
+  // ★追加：起動時にLocalStorageから言語を読み込む
+  useEffect(() => {
+    const savedLang = localStorage.getItem('akari_lang');
+    if (savedLang && TRANSLATIONS[savedLang]) {
+      setLang(savedLang);
+    }
+  }, []);
 
   const [mode, setMode] = useState<'casual' | 'professional'>('casual');
   const [messages, setMessages] = useState([]);
@@ -124,7 +138,7 @@ function HomeContent() {
   const [points, setPoints] = useState(0);
   const [affection, setAffection] = useState(0);
 
-  // モード切り替え時の挨拶（多言語対応）
+  // モード切り替え時の挨拶（維持）
   useEffect(() => {
     if (mode === 'professional') {
       const introMsg = {
@@ -234,9 +248,7 @@ function HomeContent() {
         setPoints(data.points);
         setAffection(data.affection);
         setShowGift(false);
-        const isLoveModeNow = data.affection >= 100;
-        let reactionText = item.reaction;
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: reactionText, mode: 'casual' }]);
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: item.reaction, mode: 'casual' }]);
     } catch (err) { alert('Communication Error'); }
   };
 
@@ -244,12 +256,10 @@ function HomeContent() {
     const plan = currentPlan.toUpperCase();
     const hour = new Date().getHours();
     const isNightTime = hour >= 23 || hour < 6; 
-
     if (isNightTime && newOutfit !== 'swimsuit') {
       setShowCostume(false);
       return;
     }
-
     if (newOutfit === 'swimsuit' || newOutfit === 'bunny') {
       if (plan === 'FREE') {
         setShowCostume(false); return;
@@ -296,7 +306,8 @@ function HomeContent() {
         body: JSON.stringify({ 
           messages: newHistory, currentMessage: content, attachment: attachment, 
           userName: userName, outfit: currentOutfit, plan: currentPlan, 
-          affection: affection, mode: mode 
+          affection: affection, mode: mode,
+          lang: lang // ★修正：言語設定をAI側に送るように追加
         }),
       });
       if (!response.ok) {
@@ -332,10 +343,10 @@ function HomeContent() {
                <img src="/images/bg_room_day.jpg" className="w-full h-full object-cover blur-sm" />
             </div>
 
-            {/* ★修正：言語切り替えボタンを右上に配置 */}
+            {/* ★修正：handleLangChangeを使用するように変更 */}
             <div className="absolute top-6 right-6 z-20 flex bg-gray-900/60 rounded-full p-1 border border-white/20">
-               <button onClick={() => setLang('ja')} className={`px-4 py-1 rounded-full text-xs font-bold transition-all ${lang === 'ja' ? 'bg-pink-600 text-white' : 'text-gray-400'}`}>JP</button>
-               <button onClick={() => setLang('en')} className={`px-4 py-1 rounded-full text-xs font-bold transition-all ${lang === 'en' ? 'bg-pink-600 text-white' : 'text-gray-400'}`}>EN</button>
+               <button onClick={() => handleLangChange('ja')} className={`px-4 py-1 rounded-full text-xs font-bold transition-all ${lang === 'ja' ? 'bg-pink-600 text-white' : 'text-gray-400'}`}>JP</button>
+               <button onClick={() => handleLangChange('en')} className={`px-4 py-1 rounded-full text-xs font-bold transition-all ${lang === 'en' ? 'bg-pink-600 text-white' : 'text-gray-400'}`}>EN</button>
             </div>
 
             <div className="z-10 max-w-lg w-full bg-gray-900/80 p-8 rounded-3xl border border-pink-500/30 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in duration-500">
@@ -383,7 +394,6 @@ function HomeContent() {
   return (
     <main className={`flex h-screen flex-col overflow-hidden relative transition-colors duration-500 ${mode === 'professional' ? 'bg-[#fcfcfc]' : 'bg-black'}`}>
       
-      {/* モード切替ボタン（モバイル対応位置） */}
       <div className="absolute top-[140px] right-4 md:top-4 md:right-24 z-[100]">
         <button 
           onClick={() => setMode(mode === 'casual' ? 'professional' : 'casual')}
@@ -405,7 +415,6 @@ function HomeContent() {
 
       {mode === 'casual' && !isManualOpen && (
         <div className="absolute top-4 left-4 z-[200] flex flex-col gap-4">
-           {/* ステータス表示（オレンジ太字） */}
            <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-xs flex flex-col gap-1 shadow-lg font-mono">
               <div className="text-orange-400 font-bold">★ {points} {lang === 'ja' ? 'pt' : 'pts'} ({currentPlan})</div>
               <div className="flex items-center gap-2 text-orange-400 font-bold"><Heart size={12} className="text-pink-400" /> {t.affection}: {affection}</div>
@@ -433,7 +442,6 @@ function HomeContent() {
             affection={affection} onManualChange={setIsManualOpen} 
           />
         ) : (
-          /* ★修正：ProfessionalUIを関数ではなく直接記述。画像点滅防止策維持。 */
           <div className="flex h-full w-full bg-[#fcfcfc] text-slate-700 font-sans animate-in fade-in duration-500 overflow-hidden">
             <div className="flex-1 flex flex-col border-r border-gray-200 min-h-0"> 
               <div className="p-4 border-b border-gray-200 bg-white flex justify-between items-center shrink-0">
@@ -469,12 +477,6 @@ function HomeContent() {
       <div className={`h-auto min-h-[6rem] border-t p-4 flex items-center justify-center relative z-[100] transition-colors duration-500 shrink-0 ${
         mode === 'professional' ? 'bg-[#f8f9fa] border-gray-200' : 'bg-gray-900 border-white/10'
       }`}>
-        {selectedImage && (
-            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 p-2 rounded-lg shadow-xl border border-white/20 animate-in fade-in slide-in-from-bottom-2">
-                <img src={selectedImage} alt="Preview" className="h-32 object-cover rounded-md" />
-                <button onClick={() => { setSelectedImage(null); if(fileInputRef.current) fileInputRef.current.value = ""; }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={14} /></button>
-            </div>
-        )}
         <div className={`w-full max-w-2xl flex gap-2 items-end p-2 rounded-3xl border transition-all duration-500 ${
           mode === 'professional' ? 'bg-white border-slate-300 shadow-sm' : 'bg-gray-800 border-white/5 shadow-inner'
         }`}>
@@ -496,11 +498,11 @@ function HomeContent() {
         </div>
       </div>
 
-      {/* モーダル群（一部翻訳適用） */}
+      {/* モーダル群 */}
       {showSettings && (
         <div className="absolute bottom-24 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 text-left">
           <h3 className="text-pink-400 font-bold mb-4">{t.settings}</h3>
-          <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} className="w-full bg-black/50 text-white border border-white/10 rounded-lg px-3 py-2 mb-4" />
+          <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} className="w-full bg-black/50 text-white border border-white/10 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:border-pink-500" />
           <button onClick={saveName} className="w-full bg-pink-600 hover:bg-pink-500 text-white py-2 rounded-lg font-bold">{t.save}</button>
         </div>
       )}
@@ -551,7 +553,6 @@ function HomeContent() {
                         <p className="text-gray-400 text-[10px] tracking-widest uppercase">Your Plan</p>
                         <p className="text-2xl font-bold text-white mt-1">{currentPlan}</p>
                     </div>
-                    {/* 各プラン等の翻訳表示は必要に応じてTRANSLATIONSに追加できますが、現状のロジックは維持 */}
                     <div className="border border-yellow-500/30 bg-gray-800 p-4 rounded-xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 bg-yellow-600 text-white text-[10px] px-2 py-1 rounded-bl">Popular</div>
                         <h3 className="font-bold text-yellow-400 text-lg flex items-center gap-2"><Zap size={18}/> Pro Plan</h3>
