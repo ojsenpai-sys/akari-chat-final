@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     const { messages, currentMessage, attachment, userName, outfit, plan, affection, mode } = await req.json();
     
     // ---------------------------------------------------------
-    // ■ 1. ユーザー認証とプラン制限のチェック
+    // ■ 1. ユーザー認証とプラン制限のチェック（既存ロジックを完全維持）
     // ---------------------------------------------------------
     const token = await getToken({ req });
     if (!token || !token.id) {
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     }
 
     // ---------------------------------------------------------
-    // ■ 2. 会話の保存とAI実行
+    // ■ 2. 会話の保存とAI実行（全仕様を維持）
     // ---------------------------------------------------------
     const contentToSave = attachment ? (currentMessage ? `${currentMessage} (画像を送信しました)` : "(画像を送信しました)") : currentMessage;
 
@@ -85,7 +85,6 @@ export async function POST(req: Request) {
     const apiKey = process.env.GEMINI_API_KEY;
     const google = createGoogleGenerativeAI({ apiKey: apiKey });
 
-    // AIに渡すメッセージの整理
     const cleanMessages = messages.map((m: any, index: number) => {
         if (index === messages.length - 1 && attachment) {
             return {
@@ -99,7 +98,6 @@ export async function POST(req: Request) {
         return { role: m.role, content: m.content };
     });
 
-    // プロンプト設定
     let personalityPrompt = `
       【キャラクター設定】
       ・あなたは「あかり」という名前のメイドです。一人称は「私（わたくし）」です。
@@ -130,29 +128,32 @@ export async function POST(req: Request) {
       【現在日時】 ${currentDate}
       【ユーザー情報】 名前: ${currentUserName}, 衣装: ${outfit}, 親密度: ${currentAffection}
       【記憶】 ${userMemory}
-      【指示】 セリフの先頭に必ず [感情] を付け、新しい情報は [MEMORY:情報] 形式で最後に書いてください。
+      【指示】 
+      ・セリフの先頭に必ず [感情] を付けてください。
+      ・最新情報、ニュース、天気などについては Google 検索ツールを使用して調べてください。
+      ・新しい情報は [MEMORY:情報] 形式で最後に書いてください。
     `;
 
-    // ★修正箇所：AI実行部分
-    // エラーが起きた際、どこで止まったか把握しやすくしています
-    console.log("AI呼び出し開始: ", MODEL_NAME);
+    console.log("あかりの思考中... モデル: ", MODEL_NAME);
 
+    // ★修正箇所：検索機能の復旧と最大ステップ数の追加
     const result = await generateText({
       model: google(MODEL_NAME),
       system: systemPrompt,
       messages: cleanMessages,
-      // ★検索ツール設定
+      // Gemini 3 Pro 向けに検索ツールの定義を更新
       tools: {
-        googleSearchRetrieval: {},
+        googleSearch: google.tools.googleSearch({}),
       },
+      // ★重要：AIが「検索」→「分析」→「回答」を行うためのループを許可
+      maxSteps: 5,
     }).catch(err => {
-      // AIの呼び出し自体でエラーが出た場合、詳細をターミナルに出す
-      console.error("Gemini API呼び出しエラー:", err);
+      console.error("Gemini 実行エラー詳細:", err);
       throw err;
     });
 
     let aiResponse = result.text;
-    console.log("AIからの応答受領");
+    console.log("あかりが回答を生成しました");
 
     let newMemory = "";
     const memoryMatch = aiResponse.match(/\[MEMORY:(.*?)\]/);
@@ -183,10 +184,9 @@ export async function POST(req: Request) {
     return Response.json({ text: aiResponse });
 
   } catch (error: any) {
-    // ★エラーが起きた場合に、原因をターミナルに表示する
     console.error("【致命的エラー】api/chat/route.ts:", error);
     return Response.json({ 
-      error: "AIが応答できませんでした。ターミナルのエラーログを確認してください。", 
+      error: "AIが応答できませんでした。ターミナルを確認してください。", 
       details: error.message 
     }, { status: 500 });
   }
