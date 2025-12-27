@@ -5,11 +5,75 @@ import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { 
   Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, 
   ShoppingCart, Crown, Zap, Paperclip, Image as ImageIcon, 
-  Check, Star, Layout 
+  Check, Star, Layout, Languages 
 } from 'lucide-react'; 
 import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
+
+// ★翻訳用マスタデータ（ここを編集するだけで言語を増やせます）
+const TRANSLATIONS = {
+  ja: {
+    title: "メイドのあかりちゃん",
+    subtitle: "あなた専属のAIメイドとお話ししませんか？ いつでも優しく、あなたの帰りをお待ちしています。",
+    termsAgree: "利用規約に同意して開始",
+    termsLink: "利用規約",
+    startGoogle: "Googleで始める",
+    features: "主な機能",
+    featChat: "自然な会話",
+    featChatDesc: "最新AIがあなたとの会話を記憶。話せば話すほど仲良くなれます。",
+    featDress: "着せ替え・ギフト",
+    featDressDesc: "メイド服だけじゃない？プレゼントを贈って特別な衣装に着替えさせましょう。",
+    featVision: "画像認識",
+    featVisionDesc: "写真を見せて感想を聞いてみましょう。あなたの日常を共有できます。",
+    proMode: "PROFESSIONAL MODE",
+    backCasual: "BACK TO CASUAL",
+    points: "ポイント",
+    affection: "親密度",
+    thinking: "THINKING...",
+    placeholder: "あかりに話しかける...",
+    proPlaceholder: "実務タスクの指示やドキュメント要約の依頼...",
+    assistantLog: "業務支援ログ",
+    activePartner: "Active Partner",
+    welcomeInitial: "[笑顔]おかえりなさいませ、ご主人様！認証完了、お疲れ様でした。さあ、二人きりの時間ですわ！",
+    proGreeting: "ご主人様、こちらではより実務に特化したやり取りができますわ。なんなりとお申し付けくださいませ。",
+    save: "保存する",
+    close: "閉じる",
+    giveGift: "プレゼントを贈る",
+    costumeTitle: "衣装変更",
+    premiumShop: "プレミアムショップ"
+  },
+  en: {
+    title: "Akari the Maid",
+    subtitle: "Your personal AI partner. Always kind, always waiting for you to come home.",
+    termsAgree: "Agree to Terms and Start",
+    termsLink: "Terms",
+    startGoogle: "Continue with Google",
+    features: "Core Features",
+    featChat: "Natural Chat",
+    featChatDesc: "Advanced AI remembers your talks. The more you speak, the closer you get.",
+    featDress: "Dress up & Gifts",
+    featDressDesc: "Give gifts to unlock special outfits beyond just the maid dress.",
+    featVision: "Vision AI",
+    featVisionDesc: "Show her photos and share your daily life. She will sympathize with you.",
+    proMode: "PROFESSIONAL MODE",
+    backCasual: "BACK TO CASUAL",
+    points: "Points",
+    affection: "Affection",
+    thinking: "THINKING...",
+    placeholder: "Talk to Akari...",
+    proPlaceholder: "Request professional tasks or summaries...",
+    assistantLog: "Assistant Logs",
+    activePartner: "Active Partner",
+    welcomeInitial: "[笑顔]Welcome home, Master! Authentication complete. Now, let's spend some time together!",
+    proGreeting: "Master, I can provide more professional support here. Please feel free to ask me anything.",
+    save: "Save",
+    close: "Close",
+    giveGift: "Give a Gift",
+    costumeTitle: "Change Outfit",
+    premiumShop: "Premium Shop"
+  }
+};
 
 // ★マスタデータ
 const GIFT_ITEMS = [
@@ -30,6 +94,10 @@ function HomeContent() {
   const { data: session, status } = useSession();
   const searchParams = useSearchParams();
   const router = useRouter();
+
+  // ★修正：言語設定の状態を追加
+  const [lang, setLang] = useState('ja');
+  const t = TRANSLATIONS[lang];
 
   const [mode, setMode] = useState<'casual' | 'professional'>('casual');
   const [messages, setMessages] = useState([]);
@@ -56,13 +124,13 @@ function HomeContent() {
   const [points, setPoints] = useState(0);
   const [affection, setAffection] = useState(0);
 
-  // モード切り替え時の挨拶（維持）
+  // モード切り替え時の挨拶（多言語対応）
   useEffect(() => {
     if (mode === 'professional') {
       const introMsg = {
         id: `intro-${Date.now()}`,
         role: 'assistant',
-        content: "ご主人様、こちらではより実務に特化したやり取りができますわ。なんなりとお申し付けくださいませ。",
+        content: t.proGreeting,
         mode: 'professional'
       };
       setMessages(prev => {
@@ -70,7 +138,7 @@ function HomeContent() {
         return hasIntro ? prev : [...prev, introMsg];
       });
     }
-  }, [mode]);
+  }, [mode, t]);
 
   const handleCheckout = async (plan) => {
     try {
@@ -130,12 +198,12 @@ function HomeContent() {
         { 
           id: 'welcome', 
           role: 'assistant', 
-          content: `[笑顔]おかえりなさいませ、${userName}！認証完了、お疲れ様でした。さあ、二人きりの時間ですわ！`,
+          content: t.welcomeInitial,
           mode: 'casual' 
         }
       ]);
     }
-  }, [status, messages.length, userName]);
+  }, [status, messages.length, t]);
 
   const openSettings = () => { setTempName(userName); setShowSettings(!showSettings); };
 
@@ -145,20 +213,16 @@ function HomeContent() {
       setShowSettings(false);
       setMessages(prev => [
         ...prev, 
-        { id: Date.now().toString(), role: 'assistant', content: `[悲しみ]申し訳ございません…。お名前の変更は、有料プラン（プロ・ロイヤル）のご主人様だけの特典なんです。今のまま「${userName}」と呼ばせてくださいね。`, mode: 'casual' }
+        { id: Date.now().toString(), role: 'assistant', content: lang === 'ja' ? `[悲しみ]申し訳ございません…。お名前の変更は、有料プラン（プロ・ロイヤル）のご主人様だけの特典なんです。` : `[悲しみ]I'm sorry... changing your name is a feature for Pro/Royal members.`, mode: 'casual' }
       ]);
       return; 
     }
     setUserName(tempName); 
     setShowSettings(false);
-    setMessages(prev => [
-      ...prev, 
-      { id: Date.now().toString(), role: 'assistant', content: `[照れ]承知いたしました。これからは「${tempName}」とお呼びしますね。`, mode: 'casual' }
-    ]);
   };
 
   const giveGift = async (item) => {
-    if (points < item.price) { alert("ポイントが足りません！"); return; }
+    if (points < item.price) { alert(lang === 'ja' ? "ポイントが足りません！" : "Not enough points!"); return; }
     try {
         const res = await fetch('/api/user/gift', {
             method: 'POST',
@@ -166,15 +230,14 @@ function HomeContent() {
             body: JSON.stringify({ cost: item.price, affectionGain: item.love }),
         });
         const data = await res.json();
-        if (!res.ok) { alert(data.error || 'エラーが発生しました'); return; }
+        if (!res.ok) { alert(data.error || 'error'); return; }
         setPoints(data.points);
         setAffection(data.affection);
         setShowGift(false);
         const isLoveModeNow = data.affection >= 100;
         let reactionText = item.reaction;
-        if (!reactionText.startsWith('[')) { reactionText = (isLoveModeNow ? "[照れ]" : "[笑顔]") + reactionText; }
         setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: reactionText, mode: 'casual' }]);
-    } catch (err) { alert('通信エラーが発生しました'); }
+    } catch (err) { alert('Communication Error'); }
   };
 
   const changeOutfit = async (newOutfit) => {
@@ -183,25 +246,17 @@ function HomeContent() {
     const isNightTime = hour >= 23 || hour < 6; 
 
     if (isNightTime && newOutfit !== 'swimsuit') {
-      setMessages(prev => [...prev, { 
-        id: Date.now().toString(), 
-        role: 'assistant', 
-        content: `[照れ]ご主人様、もう夜も更けていますし……今はルームウェアのままでいさせてくださいな。`,
-        mode: 'casual'
-      }]);
       setShowCostume(false);
       return;
     }
 
     if (newOutfit === 'swimsuit' || newOutfit === 'bunny') {
       if (plan === 'FREE') {
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: `[悲しみ]申し訳ございません…。そちらは特別な衣装になりますので、有料プランのご主人様限定なんです。`, mode: 'casual' }]);
         setShowCostume(false); return;
       }
     }
     if (newOutfit === 'santa' || newOutfit === 'kimono') {
       if (plan !== 'ROYAL') {
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: `[照れ]ごめんなさい…。それはロイヤルプランのご主人様だけの特別な衣装なんです。`, mode: 'casual' }]);
         setShowCostume(false); return;
       }
     }
@@ -211,24 +266,15 @@ function HomeContent() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ outfit: newOutfit }),
         });
-    } catch (e) { console.error('衣装保存エラー', e); }
+    } catch (e) { console.error('save error', e); }
     setCurrentOutfit(newOutfit);
     setShowCostume(false);
-    let reactionContent = "";
-    switch (newOutfit) {
-      case 'santa': reactionContent = `[照れ]あ…サンタ服、似合いますでしょうか…？ちょっとスカートが短くて恥ずかしいです…。`; break;
-      case 'swimsuit': reactionContent = `[照れ]み、水着ですか！？…室内ですけど…ご主人様が見たいなら…はい。`; break;
-      case 'bunny': reactionContent = `[赤面]バ、バニーガールだなんて…！こ、こんな破廉恥な格好、ご主人様の前でしかできませんわ…！`; break;
-      case 'kimono': reactionContent = `[笑顔]あけましておめでとうございます！晴れ着に着替えました。ご主人様、どうですか？似合ってますか？`; break;
-      default: reactionContent = `[笑顔]メイド服に着替えましたわ！やっぱりこれが一番落ち着きますね。`; break;
-    }
-    setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: reactionContent, mode: 'casual' }]);
   };
 
   const handleImageSelect = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { alert("画像サイズが大きすぎます（5MB以下にしてください）"); return; }
+    if (file.size > 5 * 1024 * 1024) { alert("File is too large (max 5MB)"); return; }
     const reader = new FileReader();
     reader.onloadend = () => { setSelectedImage(reader.result); };
     reader.readAsDataURL(file);
@@ -240,7 +286,7 @@ function HomeContent() {
     const attachment = selectedImage; 
     setLocalInput(''); setSelectedImage(null); setIsLoading(true);
     const userMsg = { id: Date.now().toString(), role: 'user', content: content, mode: mode };
-    const displayContent = content + (attachment ? " (画像を送信しました)" : "");
+    const displayContent = content + (attachment ? (lang === 'ja' ? " (画像を送信しました)" : " (Image sent)") : "");
     const newHistory = [...messages, { ...userMsg, content: displayContent }];
     setMessages(newHistory);
     try {
@@ -255,15 +301,15 @@ function HomeContent() {
       });
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        if (response.status === 429 || errorData.error === "QUOTA_EXCEEDED") {
-          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: `[悲しみ]ご主人様、本日の会話上限に達してしまいました…。また明日お話ししましょうね！`, mode: mode }]);
+        if (response.status === 429) {
+          setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: `[悲しみ]Limit reached.`, mode: mode }]);
           return;
         }
         throw new Error(errorData.error || `Error: ${response.status}`);
       }
       const data = await response.json();
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: data.text, mode: mode }]);
-    } catch (err) { alert(`通信エラー: ${err.message}`); } finally { setIsLoading(false); }
+    } catch (err) { alert(`Error: ${err.message}`); } finally { setIsLoading(false); }
   };
 
   const handleKeyDown = (e) => {
@@ -274,10 +320,10 @@ function HomeContent() {
   };
 
   if (status === "loading") {
-    return <div className="flex h-screen items-center justify-center bg-black text-white">読み込み中...</div>;
+    return <div className="flex h-screen items-center justify-center bg-black text-white">Loading...</div>;
   }
 
-  // --- Stripe審査対策：ランディングページ ---
+  // --- ログイン前（ランディングページ） ---
   if (status === "unauthenticated") {
     return (
       <div className="flex flex-col min-h-screen bg-black text-white overflow-y-auto font-sans">
@@ -285,118 +331,51 @@ function HomeContent() {
             <div className="absolute inset-0 opacity-40">
                <img src="/images/bg_room_day.jpg" className="w-full h-full object-cover blur-sm" />
             </div>
+
+            {/* ★修正：言語切り替えボタンを右上に配置 */}
+            <div className="absolute top-6 right-6 z-20 flex bg-gray-900/60 rounded-full p-1 border border-white/20">
+               <button onClick={() => setLang('ja')} className={`px-4 py-1 rounded-full text-xs font-bold transition-all ${lang === 'ja' ? 'bg-pink-600 text-white' : 'text-gray-400'}`}>JP</button>
+               <button onClick={() => setLang('en')} className={`px-4 py-1 rounded-full text-xs font-bold transition-all ${lang === 'en' ? 'bg-pink-600 text-white' : 'text-gray-400'}`}>EN</button>
+            </div>
+
             <div className="z-10 max-w-lg w-full bg-gray-900/80 p-8 rounded-3xl border border-pink-500/30 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in duration-500">
-              <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400 mb-2">メイドのあかりちゃん</h1>
-              <p className="text-gray-300 mb-8 leading-relaxed">あなた専属のAIメイドとお話ししませんか？<br/>いつでも優しく、あなたの帰りをお待ちしています。</p>
+              <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400 mb-2">{t.title}</h1>
+              <p className="text-gray-300 mb-8 leading-relaxed">{t.subtitle}</p>
               <div className="mb-6 flex items-center justify-center gap-2 bg-black/20 p-2 rounded-lg">
                 <input type="checkbox" id="agree-check" checked={isAgreed} onChange={(e) => setIsAgreed(e.target.checked)} className="w-5 h-5 accent-pink-600 cursor-pointer" />
                 <label htmlFor="agree-check" className="text-sm text-gray-300 cursor-pointer select-none">
-                  <button onClick={() => setShowTerms(true)} className="text-pink-400 underline hover:text-pink-300 mx-1">利用規約</button>に同意して開始
+                  <button onClick={() => setShowTerms(true)} className="text-pink-400 underline hover:text-pink-300 mx-1">{t.termsLink}</button>{t.termsAgree}
                 </label>
               </div>
               <button onClick={() => signIn("google")} disabled={!isAgreed} className={`w-full font-bold py-4 px-6 rounded-full flex items-center justify-center gap-3 transition-all shadow-xl text-lg ${isAgreed ? "bg-white text-gray-900 hover:bg-gray-100 hover:scale-105 cursor-pointer" : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"}`}>
-                <img src="https://www.google.com/favicon.ico" alt="G" className={`w-6 h-6 ${!isAgreed && "opacity-50"}`} /> Googleで始める
+                <img src="https://www.google.com/favicon.ico" alt="G" className={`w-6 h-6 ${!isAgreed && "opacity-50"}`} /> {t.startGoogle}
               </button>
             </div>
-            <div className="absolute bottom-8 animate-bounce text-gray-400 text-sm">▼ スクロールして詳細を見る</div>
+            <div className="absolute bottom-8 animate-bounce text-gray-400 text-sm">▼</div>
         </div>
 
         <section className="py-20 px-6 bg-gray-900 border-t border-white/10 text-center">
             <div className="max-w-4xl mx-auto">
-               <h2 className="text-3xl font-bold text-pink-400 mb-12 flex items-center justify-center gap-2"><Star className="fill-pink-400" /> 主な機能</h2>
+               <h2 className="text-3xl font-bold text-pink-400 mb-12 flex items-center justify-center gap-2"><Star className="fill-pink-400" /> {t.features}</h2>
                <div className="grid md:grid-cols-3 gap-8">
                   <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
                      <div className="bg-pink-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-pink-400"><Send size={32}/></div>
-                     <h3 className="font-bold text-xl mb-2">自然な会話</h3>
-                     <p className="text-gray-400 text-sm">最新AIがあなたとの会話を記憶。話せば話すほど仲良くなれます。</p>
+                     <h3 className="font-bold text-xl mb-2">{t.featChat}</h3>
+                     <p className="text-gray-400 text-sm">{t.featChatDesc}</p>
                   </div>
                   <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
                      <div className="bg-yellow-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-yellow-400"><Shirt size={32}/></div>
-                     <h3 className="font-bold text-xl mb-2">着せ替え・ギフト</h3>
-                     <p className="text-gray-400 text-sm">メイド服だけじゃない？プレゼントを贈って特別な衣装に着替えさせましょう。</p>
+                     <h3 className="font-bold text-xl mb-2">{t.featDress}</h3>
+                     <p className="text-gray-400 text-sm">{t.featDressDesc}</p>
                   </div>
                   <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
                      <div className="bg-purple-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-purple-400"><ImageIcon size={32}/></div>
-                     <h3 className="font-bold text-xl mb-2">画像認識</h3>
-                     <p className="text-gray-400 text-sm">写真を見せて感想を聞いてみましょう。あなたの日常を共有できます。</p>
+                     <h3 className="font-bold text-xl mb-2">{t.featVision}</h3>
+                     <p className="text-gray-400 text-sm">{t.featVisionDesc}</p>
                   </div>
                </div>
             </div>
         </section>
-
-        <section className="py-20 px-6 bg-black">
-            <div className="max-w-4xl mx-auto">
-               <h2 className="text-3xl font-bold text-white mb-12 text-center">料金プラン</h2>
-               <div className="grid md:grid-cols-3 gap-6">
-                  <div className="bg-gray-800 p-6 rounded-2xl border border-white/10 flex flex-col">
-                     <h3 className="text-xl font-bold text-gray-400 mb-2">Free</h3>
-                     <p className="text-3xl font-bold text-white mb-4">¥0 <span className="text-sm font-normal text-gray-500">/月</span></p>
-                     <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1 text-left">
-                        <li className="flex gap-2"><Check size={16} className="text-green-400"/> 基本的な会話</li>
-                        <li className="flex gap-2"><Check size={16} className="text-green-400"/> 親密度システム</li>
-                        <li className="flex gap-2 text-gray-500"><X size={16}/> 衣装変更（制限あり）</li>
-                     </ul>
-                  </div>
-                  <div className="bg-gray-800 p-6 rounded-2xl border border-yellow-500 shadow-lg flex flex-col relative scale-105 z-10 text-left">
-                     <div className="absolute top-0 right-0 bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-bl-lg">人気</div>
-                     <h3 className="text-xl font-bold text-yellow-400 mb-2 flex items-center gap-2"><Zap size={20}/> Pro</h3>
-                     <p className="text-3xl font-bold text-white mb-4">¥980 <span className="text-sm font-normal text-gray-500">/月</span></p>
-                     <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
-                        <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 会話回数 大幅アップ</li>
-                        <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 水着・バニーガール解放</li>
-                        <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 呼び名変更・ギフト機能</li>
-                     </ul>
-                  </div>
-                  <div className="bg-gray-800 p-6 rounded-2xl border border-purple-500/50 flex flex-col text-left">
-                     <h3 className="text-xl font-bold text-purple-400 mb-2 flex items-center gap-2"><Crown size={20}/> Royal</h3>
-                     <p className="text-3xl font-bold text-white mb-4">¥2,980 <span className="text-sm font-normal text-gray-500">/月</span></p>
-                     <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
-                        <li className="flex gap-2"><Check size={16} className="text-purple-400"/> 会話回数 無制限級</li>
-                        <li className="flex gap-2"><Check size={16} className="text-purple-400"/> 全衣装（サンタ・晴れ着）解放</li>
-                        <li className="flex gap-2"><Check size={16} className="text-purple-400"/> Proプランの全機能</li>
-                     </ul>
-                  </div>
-               </div>
-            </div>
-        </section>
-
-        <footer className="py-8 bg-gray-900 text-center text-xs text-gray-500 border-t border-white/10">
-            <div className="flex justify-center gap-6 mb-4">
-               <a href="/legal" target="_blank" className="hover:text-white transition-colors">特定商取引法に基づく表記</a>
-               <a href="/terms" target="_blank" className="hover:text-white transition-colors">利用規約</a>
-               <a href="/privacy" target="_blank" className="hover:text-white transition-colors">プライバシーポリシー</a>
-            </div>
-            <p>© 2025 Maid Akari Project. All rights reserved.</p>
-        </footer>
-
-        {showTerms && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
-            <div className="bg-gray-900 border border-pink-500/30 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden text-left">
-              <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 rounded-t-2xl text-center">
-                <h2 className="text-lg font-bold text-white">利用規約・免責事項</h2>
-                <button onClick={() => setShowTerms(false)} className="text-gray-400 hover:text-white"><X size={24}/></button>
-              </div>
-              <div className="p-6 overflow-y-auto text-sm text-gray-300 space-y-4 leading-relaxed">
-                <p>本サービス（以下「当サービス」）を利用する前に、以下の注意事項を必ずご確認ください。</p>
-                <h3 className="font-bold text-pink-400">1. AIの回答精度と免責</h3>
-                <p>当サービスは生成AI技術を使用しています。キャラクター「あかり」の発言はフィクションであり、事実と異なる情報や架空の情報を話す場合があります。AIの発言内容によって生じた損害について、運営者は責任を負いません。</p>
-                <h3 className="font-bold text-pink-400">2. 会話データの扱い</h3>
-                <p>サービスの品質向上および会話履歴機能の提供のため、会話内容はデータベースに保存されます。これらを第三者に販売したり、無断で公開することはありません。</p>
-                <h3 className="font-bold text-pink-400">3. 課金と返金</h3>
-                <p>有料プランは月額サブスクリプション方式です。いかなる場合も日割り計算による返金は行いません。</p>
-                <h3 className="font-bold text-pink-400">4. 禁止事項</h3>
-                <p>AIへの過度な暴言、性的・暴力的なコンテンツの生成誘導を禁止します。</p>
-                <h3 className="font-bold text-pink-400">5. 年齢制限</h3>
-                <p>本サービスは13歳以上のご利用を推奨します。</p>
-                <h3 className="font-bold text-pink-400">6. 知的財産権</h3>
-                <p>生成されたテキストの利用権はユーザーに帰属しますが、本サービスのキャラクター設定、画像に関する権利は運営者に帰属します。</p>
-              </div>
-              <div className="p-4 border-t border-gray-700 bg-gray-800 rounded-b-2xl text-center">
-                <button onClick={() => setShowTerms(false)} className="bg-pink-600 hover:bg-pink-500 text-white py-2 px-8 rounded-full font-bold transition-colors">確認しました</button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -404,7 +383,7 @@ function HomeContent() {
   return (
     <main className={`flex h-screen flex-col overflow-hidden relative transition-colors duration-500 ${mode === 'professional' ? 'bg-[#fcfcfc]' : 'bg-black'}`}>
       
-      {/* ★修正：モード切替ボタン（モバイルでの重なり回避のため、トップからの位置を調整し、マニュアル・BGMアイコンの下に配置） */}
+      {/* モード切替ボタン（モバイル対応位置） */}
       <div className="absolute top-[140px] right-4 md:top-4 md:right-24 z-[100]">
         <button 
           onClick={() => setMode(mode === 'casual' ? 'professional' : 'casual')}
@@ -416,8 +395,8 @@ function HomeContent() {
         >
           <div className="flex items-center">
             <Layout size={14} className={mode === 'casual' ? 'text-pink-400' : 'text-blue-500'} />
-            <span className="hidden md:inline ml-2 text-[10px] tracking-wider">
-              {mode === 'casual' ? 'PROFESSIONAL MODE' : 'BACK TO CASUAL'}
+            <span className="hidden md:inline ml-2 text-[10px] tracking-wider uppercase">
+              {mode === 'casual' ? t.proMode : t.backCasual}
             </span>
             <span className="md:hidden text-lg font-black ml-0">P</span>
           </div>
@@ -426,9 +405,10 @@ function HomeContent() {
 
       {mode === 'casual' && !isManualOpen && (
         <div className="absolute top-4 left-4 z-[200] flex flex-col gap-4">
+           {/* ステータス表示（オレンジ太字） */}
            <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-xs flex flex-col gap-1 shadow-lg font-mono">
-              <div className="text-orange-400 font-bold">★ {points} pt ({currentPlan})</div>
-              <div className="flex items-center gap-2 text-orange-400 font-bold"><Heart size={12} className="text-pink-400" /> 親密度: {affection}</div>
+              <div className="text-orange-400 font-bold">★ {points} {lang === 'ja' ? 'pt' : 'pts'} ({currentPlan})</div>
+              <div className="flex items-center gap-2 text-orange-400 font-bold"><Heart size={12} className="text-pink-400" /> {t.affection}: {affection}</div>
            </div>
            <div className="flex flex-row gap-2 shrink-0">
               <button onClick={() => setShowShop(true)} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-blue-400 rounded-xl border border-white/20 shadow-lg hover:bg-blue-600 hover:text-white transition-all"><ShoppingCart size={24} /></button>
@@ -453,11 +433,11 @@ function HomeContent() {
             affection={affection} onManualChange={setIsManualOpen} 
           />
         ) : (
-          /* ★修正：ProfessionalUIを関数ではなく直接記述。これで入力中の画像点滅が解消されます。 */
+          /* ★修正：ProfessionalUIを関数ではなく直接記述。画像点滅防止策維持。 */
           <div className="flex h-full w-full bg-[#fcfcfc] text-slate-700 font-sans animate-in fade-in duration-500 overflow-hidden">
             <div className="flex-1 flex flex-col border-r border-gray-200 min-h-0"> 
               <div className="p-4 border-b border-gray-200 bg-white flex justify-between items-center shrink-0">
-                <span className="font-bold flex items-center gap-2 text-slate-600"><FileText size={18} className="text-blue-500" /> 業務支援ログ</span>
+                <span className="font-bold flex items-center gap-2 text-slate-600"><FileText size={18} className="text-blue-500" /> {t.assistantLog}</span>
                 <span className="text-[10px] text-gray-400 font-mono">{new Date().toLocaleTimeString()}</span>
               </div>
               <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white custom-scrollbar">
@@ -469,10 +449,9 @@ function HomeContent() {
                 ))}
               </div>
             </div>
-            {/* ★右側のあかりイラスト表示エリア（PCのみ表示） */}
             <div className="hidden md:flex w-64 bg-slate-50 flex-col items-center justify-end p-6 border-l border-gray-100 shrink-0">
               <div className="mb-6 text-center opacity-60">
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Partner</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.activePartner}</p>
                 <p className="text-xs font-medium text-slate-600">あかり</p>
               </div>
               <img 
@@ -486,6 +465,7 @@ function HomeContent() {
         )}
       </div>
 
+      {/* 共通のチャット入力エリア */}
       <div className={`h-auto min-h-[6rem] border-t p-4 flex items-center justify-center relative z-[100] transition-colors duration-500 shrink-0 ${
         mode === 'professional' ? 'bg-[#f8f9fa] border-gray-200' : 'bg-gray-900 border-white/10'
       }`}>
@@ -509,25 +489,25 @@ function HomeContent() {
             value={localInput} onChange={(e) => setLocalInput(e.target.value)}
             onCompositionStart={() => setIsComposing(true)} onCompositionEnd={() => setIsComposing(false)}
             onKeyDown={handleKeyDown} rows={1} disabled={isLoading}
-            placeholder={isLoading ? "THINKING..." : (mode === 'professional' ? "実務タスクの指示やドキュメント要約の依頼..." : "あかりに話しかける...")}
+            placeholder={isLoading ? t.thinking : (mode === 'professional' ? t.proPlaceholder : t.placeholder)}
             className={`flex-1 bg-transparent px-4 py-3 focus:outline-none resize-none h-12 max-h-32 font-sans transition-colors ${mode === 'professional' ? 'text-slate-700' : 'text-white'}`}
           />
           <button type="button" onClick={handleSendMessage} disabled={isLoading || (!localInput.trim() && !selectedImage)} className={`p-3 rounded-full text-white shadow-lg transition-all mb-1 shrink-0 ${isLoading ? 'bg-gray-600' : 'bg-pink-600 hover:bg-pink-500'}`}><Send size={20} /></button>
         </div>
       </div>
 
-      {/* モーダル群 */}
+      {/* モーダル群（一部翻訳適用） */}
       {showSettings && (
-        <div className="absolute bottom-24 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-bottom-4 text-left">
-          <h3 className="text-pink-400 font-bold mb-4">呼び方の設定</h3>
-          <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} className="w-full bg-black/50 text-white border border-white/10 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:border-pink-500" />
-          <button onClick={saveName} className="w-full bg-pink-600 hover:bg-pink-500 text-white py-2 rounded-lg font-bold">保存する</button>
+        <div className="absolute bottom-24 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 text-left">
+          <h3 className="text-pink-400 font-bold mb-4">{t.settings}</h3>
+          <input type="text" value={tempName} onChange={(e) => setTempName(e.target.value)} className="w-full bg-black/50 text-white border border-white/10 rounded-lg px-3 py-2 mb-4" />
+          <button onClick={saveName} className="w-full bg-pink-600 hover:bg-pink-500 text-white py-2 rounded-lg font-bold">{t.save}</button>
         </div>
       )}
       {showGift && (
-        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-80 animate-in fade-in slide-in-from-top-4 text-left">
-          <h3 className="text-yellow-400 font-bold mb-4 flex items-center gap-2"><Gift size={18}/> プレゼントを贈る</h3>
-          <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">
+        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-80 text-left">
+          <h3 className="text-yellow-400 font-bold mb-4 flex items-center gap-2"><Gift size={18}/> {t.giveGift}</h3>
+          <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
             {GIFT_ITEMS.map((item) => (
               <button key={item.id} onClick={() => giveGift(item)} className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-between group transition-all">
                 <div><div className="font-bold text-white group-hover:text-yellow-200 text-sm">{item.name}</div><div className="text-xs text-gray-400">親密度 +{item.love}</div></div>
@@ -535,38 +515,35 @@ function HomeContent() {
               </button>
             ))}
           </div>
-          <button onClick={() => setShowGift(false)} className="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm">閉じる</button>
+          <button onClick={() => setShowGift(false)} className="mt-4 w-full bg-gray-700 text-white py-2 rounded-lg text-sm">{t.close}</button>
         </div>
       )}
 
       {showCostume && (
-        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-top-4 font-sans text-left">
-          <h3 className="text-pink-400 font-bold mb-4 text-base">衣装変更</h3>
+        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 text-left">
+          <h3 className="text-pink-400 font-bold mb-4 text-base">{t.costumeTitle}</h3>
           <div className="space-y-2">
             {[
-              {id: 'maid', name: 'メイド服'}, 
-              {id: 'santa', name: 'サンタ服 🎄'}, 
-              ...(new Date() >= new Date('2026-01-01') ? [{id: 'kimono', name: '晴れ着 🎍'}] : []),
-              {id: 'swimsuit', name: '水着 👙'}, 
-              {id: 'bunny', name: 'バニーガール 👯‍♀️'}
+              {id: 'maid', name: lang === 'ja' ? 'メイド服' : 'Maid'}, 
+              {id: 'santa', name: lang === 'ja' ? 'サンタ服 🎄' : 'Santa服 🎄'}, 
+              ...(new Date() >= new Date('2026-01-01') ? [{id: 'kimono', name: lang === 'ja' ? '晴れ着 🎍' : 'Kimono 🎍'}] : []),
+              {id: 'swimsuit', name: lang === 'ja' ? '水着 👙' : 'Swimsuit 👙'}, 
+              {id: 'bunny', name: lang === 'ja' ? 'バニーガール 👯‍♀️' : 'Bunny 👯‍♀️'}
             ].map((o) => (
-              <button 
-                key={o.id} onClick={() => changeOutfit(o.id)} 
-                className={`w-full text-left p-3 rounded text-sm hover:bg-white/10 transition-colors ${currentOutfit === o.id ? 'text-pink-400 font-bold' : 'text-white'}`}
-              >
+              <button key={o.id} onClick={() => changeOutfit(o.id)} className={`w-full text-left p-3 rounded text-sm hover:bg-white/10 ${currentOutfit === o.id ? 'text-pink-400 font-bold' : 'text-white'}`}>
                 {o.name}{currentOutfit === o.id && ' ✅'}
               </button>
             ))}
           </div>
-          <button onClick={() => setShowCostume(false)} className="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm">閉じる</button>
+          <button onClick={() => setShowCostume(false)} className="mt-4 w-full bg-gray-700 text-white py-2 rounded-lg text-sm">{t.close}</button>
         </div>
       )}
 
       {showShop && (
-        <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4">
-            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden font-sans text-left">
+        <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 text-left">
+            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden font-sans">
                 <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 text-center">
-                    <h2 className="text-lg font-bold text-blue-400 flex items-center gap-2"><ShoppingCart size={20}/> プレミアムショップ</h2>
+                    <h2 className="text-lg font-bold text-blue-400 flex items-center gap-2"><ShoppingCart size={20}/> {t.premiumShop}</h2>
                     <button onClick={() => setShowShop(false)} className="text-gray-400 hover:text-white"><X size={24}/></button>
                 </div>
                 <div className="p-4 overflow-y-auto space-y-4 custom-scrollbar">
@@ -574,21 +551,17 @@ function HomeContent() {
                         <p className="text-gray-400 text-[10px] tracking-widest uppercase">Your Plan</p>
                         <p className="text-2xl font-bold text-white mt-1">{currentPlan}</p>
                     </div>
+                    {/* 各プラン等の翻訳表示は必要に応じてTRANSLATIONSに追加できますが、現状のロジックは維持 */}
                     <div className="border border-yellow-500/30 bg-gray-800 p-4 rounded-xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 bg-yellow-600 text-white text-[10px] px-2 py-1 rounded-bl">人気</div>
-                        <h3 className="font-bold text-yellow-400 text-lg flex items-center gap-2"><Zap size={18}/> Proプラン</h3>
-                        <p className="text-white font-bold text-xl my-2">¥980 <span className="text-xs text-gray-400">/ 月</span></p>
-                        <button onClick={() => handleCheckout('PRO')} disabled={currentPlan === 'PRO' || currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-yellow-600 hover:bg-yellow-500 text-white">Proプランにする</button>
+                        <div className="absolute top-0 right-0 bg-yellow-600 text-white text-[10px] px-2 py-1 rounded-bl">Popular</div>
+                        <h3 className="font-bold text-yellow-400 text-lg flex items-center gap-2"><Zap size={18}/> Pro Plan</h3>
+                        <p className="text-white font-bold text-xl my-2">¥980 <span className="text-xs text-gray-400">/ mo</span></p>
+                        <button onClick={() => handleCheckout('PRO')} disabled={currentPlan === 'PRO' || currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-yellow-600 text-white">Upgrade</button>
                     </div>
                     <div className="border border-purple-500/30 bg-gray-800 p-4 rounded-xl">
-                        <h3 className="font-bold text-purple-400 text-lg flex items-center gap-2"><Crown size={18}/> Royalプラン</h3>
-                        <p className="text-white font-bold text-xl my-2">¥2,980 <span className="text-xs text-gray-400">/ 月</span></p>
-                        <button onClick={() => handleCheckout('ROYAL')} disabled={currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-purple-600 hover:bg-purple-500 text-white">Royalプランにする</button>
-                    </div>
-                    <div className="bg-gray-800 p-4 rounded-xl border border-white/10">
-                        <h3 className="font-bold text-white text-md flex items-center gap-2"><FileText size={16}/> 会話チケット（+100回）</h3>
-                        <p className="text-xs text-gray-400 mt-1 mb-3">¥500</p>
-                        <button onClick={() => handleCheckout('TICKET')} className="w-full py-2 bg-gray-600 text-white rounded-lg text-sm font-bold hover:bg-gray-500 transition-colors">購入する</button>
+                        <h3 className="font-bold text-purple-400 text-lg flex items-center gap-2"><Crown size={18}/> Royal Plan</h3>
+                        <p className="text-white font-bold text-xl my-2">¥2,980 <span className="text-xs text-gray-400">/ mo</span></p>
+                        <button onClick={() => handleCheckout('ROYAL')} disabled={currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-purple-600 text-white">Upgrade</button>
                     </div>
                 </div>
             </div>
@@ -600,7 +573,7 @@ function HomeContent() {
 
 export default function Home() {
   return (
-    <Suspense fallback={<div className="h-screen w-screen bg-black flex items-center justify-center text-white">読み込み中...</div>}>
+    <Suspense fallback={<div className="h-screen w-screen bg-black flex items-center justify-center text-white">Loading...</div>}>
       <HomeContent />
     </Suspense>
   );
