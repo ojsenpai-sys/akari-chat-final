@@ -11,7 +11,7 @@ import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
 
-// ★翻訳用マスタデータ（ギフトIDとキャラ名を追加）
+// ★翻訳用マスタデータ（説明書の内容を追加）
 const TRANSLATIONS = {
   ja: {
     charName: "あかり",
@@ -44,7 +44,14 @@ const TRANSLATIONS = {
     giveGift: "プレゼントを贈る",
     costumeTitle: "衣装変更",
     premiumShop: "プレミアムショップ",
-    // ギフト翻訳
+    manualTitle: "『メイドのあかりちゃん』取扱説明書",
+    conceptTitle: "1. コンセプト",
+    conceptDesc: "『メイドのあかりちゃん』は、ただのチャットボットではありません。最新の生成AIを搭載し、「癒やし」と「実務」を両立した、世界一有能なオタクメイドです。",
+    charIntroTitle: "2. キャラクター紹介",
+    charIntroDesc: "普段は丁寧で清楚なメイドさんですが、実はアニメ・ゲームが大好きなオタク少女。気を許すと早口で推し作品について語り出すことも…？",
+    basicFuncTitle: "3. 基本機能",
+    eventModeTitle: "4. シークレット・イベントモード",
+    eventModeDesc: "会話の中で「特定のキーワード」を伝えると、特別なイベントモードに突入します。背景が変化し、二人きりの特別な時間を楽しめます。",
     letter: "手紙", tea: "紅茶", shortcake: "ショートケーキ", pancake: "パンケーキ", 
     anime_dvd: "アニメDVD", game_rpg: "ゲームソフト（RPG）", game_fight: "ゲームソフト（格闘）",
     accessory: "高級アクセサリー", bag: "高級バッグ", esthe: "高級エステチケット", ring: "指輪"
@@ -80,14 +87,20 @@ const TRANSLATIONS = {
     giveGift: "Give a Gift",
     costumeTitle: "Change Outfit",
     premiumShop: "Premium Shop",
-    // ギフト翻訳
+    manualTitle: "User Manual: 'Akari the Maid'",
+    conceptTitle: "1. Concept",
+    conceptDesc: "Akari is more than just a chatbot. Powered by the latest AI, she is the world's most capable 'Otaku Maid,' balancing both emotional healing and professional support.",
+    charIntroTitle: "2. Character Profile",
+    charIntroDesc: "Usually a polite and elegant maid, she is secretly a hardcore fan of anime and games. When she opens up, she might start talking fast about her favorite series!",
+    basicFuncTitle: "3. Key Features",
+    eventModeTitle: "4. Secret Event Mode",
+    eventModeDesc: "Mentioning specific keywords will trigger special event modes. The background changes, letting you enjoy exclusive private moments together.",
     letter: "Letter", tea: "Tea", shortcake: "Shortcake", pancake: "Pancake",
     anime_dvd: "Anime DVD", game_rpg: "Game (RPG)", game_fight: "Game (Fighting)",
     accessory: "Jewelry", bag: "Luxury Bag", esthe: "Spa Ticket", ring: "Ring"
   }
 };
 
-// ★マスタデータ
 const GIFT_ITEMS = [
   { id: 'letter', name: '手紙', price: 100, love: 1, reaction: '「ご主人様、ありがとうございます。大切に読ませていただきますね」' },
   { id: 'tea', name: '紅茶', price: 100, love: 1, reaction: '「私の好きな茶葉、覚えてくれてたんですね！うれしいです。ではティータイムにしましょう！」' },
@@ -107,17 +120,14 @@ function HomeContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
 
-  // ★修正：言語設定の状態管理（LocalStorage対応）
   const [lang, setLang] = useState('ja');
   const t = TRANSLATIONS[lang];
 
-  // ★追加：言語切り替えと保存を行う関数
   const handleLangChange = (newLang) => {
     setLang(newLang);
     localStorage.setItem('akari_lang', newLang);
   };
 
-  // ★追加：起動時にLocalStorageから言語を読み込む
   useEffect(() => {
     const savedLang = localStorage.getItem('akari_lang');
     if (savedLang && TRANSLATIONS[savedLang]) {
@@ -150,7 +160,6 @@ function HomeContent() {
   const [points, setPoints] = useState(0);
   const [affection, setAffection] = useState(0);
 
-  // モード切り替え時の挨拶（多言語対応）
   useEffect(() => {
     if (mode === 'professional') {
       const introMsg = {
@@ -322,7 +331,7 @@ function HomeContent() {
           messages: newHistory, currentMessage: content, attachment: attachment, 
           userName: userName, outfit: currentOutfit, plan: currentPlan, 
           affection: affection, mode: mode,
-          lang: lang // ★修正：言語設定をAI側に送るように追加
+          lang: lang
         }),
       });
       if (!response.ok) {
@@ -349,7 +358,6 @@ function HomeContent() {
     return <div className="flex h-screen items-center justify-center bg-black text-white">Loading...</div>;
   }
 
-  // --- ログイン前（ランディングページ） ---
   if (status === "unauthenticated") {
     return (
       <div className="flex flex-col min-h-screen bg-black text-white overflow-y-auto font-sans">
@@ -358,7 +366,6 @@ function HomeContent() {
                <img src="/images/bg_room_day.jpg" className="w-full h-full object-cover blur-sm" />
             </div>
 
-            {/* ★修正：handleLangChangeを使用するように変更 */}
             <div className="absolute top-6 right-6 z-20 flex bg-gray-900/60 rounded-full p-1 border border-white/20">
                <button onClick={() => handleLangChange('ja')} className={`px-4 py-1 rounded-full text-xs font-bold transition-all ${lang === 'ja' ? 'bg-pink-600 text-white' : 'text-gray-400'}`}>JP</button>
                <button onClick={() => handleLangChange('en')} className={`px-4 py-1 rounded-full text-xs font-bold transition-all ${lang === 'en' ? 'bg-pink-600 text-white' : 'text-gray-400'}`}>EN</button>
@@ -430,7 +437,6 @@ function HomeContent() {
 
       {mode === 'casual' && !isManualOpen && (
         <div className="absolute top-4 left-4 z-[200] flex flex-col gap-4">
-           {/* ステータス表示（オレンジ太字） */}
            <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-xs flex flex-col gap-1 shadow-lg font-mono">
               <div className="text-orange-400 font-bold">★ {points} {t.pointsLabel} ({currentPlan})</div>
               <div className="flex items-center gap-2 text-orange-400 font-bold"><Heart size={12} className="text-pink-400" /> {t.affection}: {affection}</div>
@@ -456,7 +462,7 @@ function HomeContent() {
             messages={messages.filter(m => !m.mode || m.mode === 'casual')} 
             outfit={currentOutfit} currentPlan={currentPlan} 
             affection={affection} onManualChange={setIsManualOpen} 
-            charName={t.charName} // ★追加：キャラ名を動的に渡す
+            t={t} // ★修正：翻訳オブジェクトごと渡すように変更
           />
         ) : (
           <div className="flex h-full w-full bg-[#fcfcfc] text-slate-700 font-sans animate-in fade-in duration-500 overflow-hidden">
@@ -474,7 +480,6 @@ function HomeContent() {
                 ))}
               </div>
             </div>
-            {/* ★修正：イラスト横の名前表示を翻訳対応 */}
             <div className="hidden md:flex w-64 bg-slate-50 flex-col items-center justify-end p-6 border-l border-gray-100 shrink-0">
               <div className="mb-6 text-center opacity-60">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.activePartner}</p>
@@ -494,12 +499,6 @@ function HomeContent() {
       <div className={`h-auto min-h-[6rem] border-t p-4 flex items-center justify-center relative z-[100] transition-colors duration-500 shrink-0 ${
         mode === 'professional' ? 'bg-[#f8f9fa] border-gray-200' : 'bg-gray-900 border-white/10'
       }`}>
-        {selectedImage && (
-            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 p-2 rounded-lg shadow-xl border border-white/20 animate-in fade-in slide-in-from-bottom-2">
-                <img src={selectedImage} alt="Preview" className="h-32 object-cover rounded-md" />
-                <button onClick={() => { setSelectedImage(null); if(fileInputRef.current) fileInputRef.current.value = ""; }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={14} /></button>
-            </div>
-        )}
         <div className={`w-full max-w-2xl flex gap-2 items-end p-2 rounded-3xl border transition-all duration-500 ${
           mode === 'professional' ? 'bg-white border-slate-300 shadow-sm' : 'bg-gray-800 border-white/5 shadow-inner'
         }`}>
@@ -534,13 +533,12 @@ function HomeContent() {
           <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">
             {GIFT_ITEMS.map((item) => (
               <button key={item.id} onClick={() => giveGift(item)} className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-between group transition-all">
-                {/* ★修正：ギフト名を翻訳データから取得 */}
                 <div><div className="font-bold text-white group-hover:text-yellow-200 text-sm">{t[item.id] || item.name}</div><div className="text-xs text-gray-400">{t.affection} +{item.love}</div></div>
                 <div className="text-yellow-400 font-bold text-sm">{item.price} pt</div>
               </button>
             ))}
           </div>
-          <button onClick={() => setShowGift(false)} className="mt-4 w-full bg-gray-700 text-white py-2 rounded-lg text-sm">{t.close}</button>
+          <button onClick={() => setShowGift(false)} className="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm">{t.close}</button>
         </div>
       )}
 
@@ -560,7 +558,7 @@ function HomeContent() {
               </button>
             ))}
           </div>
-          <button onClick={() => setShowCostume(false)} className="mt-4 w-full bg-gray-700 text-white py-2 rounded-lg text-sm">{t.close}</button>
+          <button onClick={() => setShowCostume(false)} className="mt-4 w-full bg-gray-700 hover:bg-gray-600 text-white py-2 rounded-lg text-sm">{t.close}</button>
         </div>
       )}
 
