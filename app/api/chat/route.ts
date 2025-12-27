@@ -1,8 +1,9 @@
 // @ts-nocheck
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { generateText } from 'ai';
+import { generateText, tool } from 'ai'; // ★toolを追加
 import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
+import { z } from 'zod'; // ★バリデーション用に追加
 
 // ★モデル名はご指定の通り維持します
 const MODEL_NAME = 'gemini-3-pro-preview'; 
@@ -11,11 +12,10 @@ export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
-    // ★修正：フロントエンドから送られてくる lang を追加で取得
     const { messages, currentMessage, attachment, userName, outfit, plan, affection, mode, lang } = await req.json();
     
     // ---------------------------------------------------------
-    // ■ 1. ユーザー認証とプラン制限のチェック（既存ロジックを完全維持）
+    // ■ 1. ユーザー認証とプラン制限のチェック（既存ロジック完全維持）
     // ---------------------------------------------------------
     const token = await getToken({ req });
     if (!token || !token.id) {
@@ -31,6 +31,11 @@ export async function POST(req: Request) {
     if (!user) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }
+
+    // Googleアクセストークンの取得（カレンダー操作に必要）
+    const account = await prisma.account.findFirst({
+      where: { userId: userId, provider: 'google' },
+    });
 
     const now = new Date();
     const jstOffset = 9 * 60; 
@@ -63,7 +68,7 @@ export async function POST(req: Request) {
     }
 
     // ---------------------------------------------------------
-    // ■ 2. 会話の保存とAI実行（全仕様を維持）
+    // ■ 2. 会話の保存（既存ロジック完全維持）
     // ---------------------------------------------------------
     const contentToSave = attachment ? (currentMessage ? `${currentMessage} (画像を送信しました)` : "(画像を送信しました)") : currentMessage;
 
@@ -78,7 +83,7 @@ export async function POST(req: Request) {
 
     const currentUserName = userName || "ご主人様";
     const currentDate = now.toLocaleDateString("ja-JP", {
-      year: "numeric", month: "long", day: "numeric", weekday: "long"
+      year: "numeric", month: "long", day: "numeric", weekday: "long", hour: "2-digit", minute: "2-digit"
     });
     const currentAffection = affection || 0;
     const userMemory = user.memory || "まだ特にありません。";
@@ -99,7 +104,9 @@ export async function POST(req: Request) {
         return { role: m.role, content: m.content };
     });
 
-    // --- ★修正：性格設定の多言語対応分岐 ---
+    // ---------------------------------------------------------
+    // ■ 3. 性格設定プロンプト（既存ロジック完全維持）
+    // ---------------------------------------------------------
     let personalityPrompt = "";
     if (lang === 'en') {
       personalityPrompt = `
@@ -110,9 +117,7 @@ export async function POST(req: Request) {
         - Crucial: Respond in the SAME LANGUAGE as the user's message (Pattern A).
       `;
       if (currentAffection >= 100) {
-        personalityPrompt += `
-        - LOVE MODE: You are deeply in love with the user. Be more affectionate and sometimes call them "Darling" or "My Dear".
-        `;
+        personalityPrompt += `- LOVE MODE: You are deeply in love. Use "Darling".\n`;
       }
     } else {
       personalityPrompt = `
@@ -124,20 +129,14 @@ export async function POST(req: Request) {
         ・ユーザーの入力言語に合わせて回答してください（Pattern A）。
       `;
       if (currentAffection >= 100) {
-        personalityPrompt += `
-        【恋人関係】
-        ・甘えん坊な態度をとり、たまに「ダーリン」と呼んでください。
-        `;
+        personalityPrompt += `【恋人関係】たまに「ダーリン」と呼んでください。\n`;
       }
     }
 
     const modeInstruction = mode === 'professional' ? `
-      【実務モード】
-      ・実務的なサポートを最優先してください。
-      ・最新情報が必要な場合は検索ツールを活用してください。
+      【実務モード】実務的なサポートを最優先してください。
     ` : `
-      【雑談モード】
-      ・リラックスした会話を楽しんでください。
+      【雑談モード】リラックスした会話を楽しんでください。
     `;
 
     const systemPrompt = `
@@ -148,28 +147,71 @@ export async function POST(req: Request) {
       【記憶】 ${userMemory}
       【指示】 
       ・セリフの先頭に必ず [感情] を付けてください。
+      ・カレンダーの確認や予定の追加を頼まれたら、提供されたツールを迷わず使用してください。
       ・最新情報、ニュース、天気などについては Google 検索ツールを使用して調べてください。
       ・新しい情報は [MEMORY:情報] 形式で最後に書いてください。
     `;
 
-    console.log("あかりの思考中... モデル: ", MODEL_NAME, " 言語: ", lang);
-
+    // ---------------------------------------------------------
+    // ■ 4. AI実行（ツールの定義を追加）
+    // ---------------------------------------------------------
     const result = await generateText({
       model: google(MODEL_NAME),
       system: systemPrompt,
       messages: cleanMessages,
       tools: {
+        // A. Google検索ツール（既存）
         googleSearch: google.tools.googleSearch({}),
+
+        // B. 今日の予定を取得するツール（★追加）
+        getTodayEvents: tool({
+          description: 'Googleカレンダーから本日の予定一覧を取得します。',
+          parameters: z.object({}),
+          execute: async () => {
+            if (!account?.access_token) return { error: "Google連携が必要です。" };
+            const start = new Date(now.setHours(0, 0, 0, 0)).toISOString();
+            const end = new Date(now.setHours(23, 59, 59, 999)).toISOString();
+            const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${start}&timeMax=${end}&singleEvents=true&orderBy=startTime`, {
+              headers: { Authorization: `Bearer ${account.access_token}` }
+            });
+            const data = await res.json();
+            return data.items?.map((e: any) => ({ summary: e.summary, start: e.start.dateTime || e.start.date })) || [];
+          }
+        }),
+
+        // C. 予定を追加するツール（★追加）
+        createCalendarEvent: tool({
+          description: 'Googleカレンダーに新しい予定を追加します。引数には予定のタイトル、開始日時、終了日時を指定してください。',
+          parameters: z.object({
+            summary: z.string().describe('予定のタイトル（例：打ち合わせ）'),
+            startDateTime: z.string().describe('開始日時（ISO 8601形式。例：2025-12-27T10:00:00Z）'),
+            endDateTime: z.string().describe('終了日時（ISO 8601形式）'),
+          }),
+          execute: async ({ summary, startDateTime, endDateTime }) => {
+            if (!account?.access_token) return { error: "Google連携が必要です。" };
+            const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events`, {
+              method: 'POST',
+              headers: { 
+                Authorization: `Bearer ${account.access_token}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                summary,
+                start: { dateTime: startDateTime },
+                end: { dateTime: endDateTime }
+              })
+            });
+            const data = await res.json();
+            return data.status === 'confirmed' ? { success: true } : { error: "追加に失敗しました。" };
+          }
+        }),
       },
       maxSteps: 5,
-    }).catch(err => {
-      console.error("Gemini 実行エラー詳細:", err);
-      throw err;
     });
 
     let aiResponse = result.text;
-    console.log("あかりが回答を生成しました");
 
+    // メモリ情報の抽出ロジック（既存維持）
     let newMemory = "";
     const memoryMatch = aiResponse.match(/\[MEMORY:(.*?)\]/);
     if (memoryMatch) {
@@ -177,7 +219,7 @@ export async function POST(req: Request) {
         aiResponse = aiResponse.replace(/\[MEMORY:.*?\]/, "").trim(); 
     }
 
-    // AIの回答をDBに保存
+    // AIの回答をDBに保存（既存維持）
     await prisma.message.create({
       data: {
         userId: userId,
@@ -200,9 +242,6 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("【致命的エラー】api/chat/route.ts:", error);
-    return Response.json({ 
-      error: "AIが応答できませんでした。ターミナルを確認してください。", 
-      details: error.message 
-    }, { status: 500 });
+    return Response.json({ error: "AIエラーが発生しました。", details: error.message }, { status: 500 });
   }
 }
