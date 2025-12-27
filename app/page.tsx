@@ -56,7 +56,7 @@ function HomeContent() {
   const [points, setPoints] = useState(0);
   const [affection, setAffection] = useState(0);
 
-  // ★修正：実務モードに切り替えた時にあかりの挨拶を入れるロジックを追加
+  // モード切り替え時の挨拶（維持）
   useEffect(() => {
     if (mode === 'professional') {
       const introMsg = {
@@ -65,46 +65,12 @@ function HomeContent() {
         content: "ご主人様、こちらではより実務に特化したやり取りができますわ。なんなりとお申し付けくださいませ。",
         mode: 'professional'
       };
-      // 挨拶が重複しないようにチェックして追加
       setMessages(prev => {
         const hasIntro = prev.some(m => m.content === introMsg.content);
         return hasIntro ? prev : [...prev, introMsg];
       });
     }
   }, [mode]);
-
-  // ★修正：実務モード用UI（右側のイラスト表示を復活・調整）
-  const ProfessionalUI = () => (
-    <div className="flex h-full w-full bg-[#fcfcfc] text-slate-700 font-sans animate-in fade-in duration-500 overflow-hidden">
-      <div className="flex-1 flex flex-col border-r border-gray-200 min-h-0"> 
-        <div className="p-4 border-b border-gray-200 bg-white flex justify-between items-center shrink-0">
-          <span className="font-bold flex items-center gap-2 text-slate-600"><FileText size={18} className="text-blue-500" /> 業務支援ログ</span>
-          <span className="text-[10px] text-gray-400 font-mono">{new Date().toLocaleTimeString()}</span>
-        </div>
-        <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white custom-scrollbar">
-          {messages.filter(m => m.mode === 'professional').map((m, i) => (
-            <div key={i} className={`p-4 rounded-xl text-sm leading-relaxed ${m.role === 'assistant' ? 'bg-blue-50 border border-blue-100' : 'bg-slate-50 border border-slate-200'}`}>
-              <p className="text-[9px] font-bold mb-1 opacity-40 uppercase">{m.role === 'assistant' ? 'Akari' : 'User'}</p>
-              <p className="whitespace-pre-wrap">{m.content.replace(/\[.*?\]/g, '')}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-      {/* ★右側のあかりイラスト表示エリア（PCのみ表示） */}
-      <div className="hidden md:flex w-64 bg-slate-50 flex-col items-center justify-end p-6 border-l border-gray-100 shrink-0">
-        <div className="mb-6 text-center opacity-60">
-          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Partner</p>
-          <p className="text-xs font-medium text-slate-600">あかり</p>
-        </div>
-        <img 
-          src={`/images/akari_${currentOutfit}_normal.png`} 
-          alt="あかり" 
-          className="max-h-[50vh] object-contain opacity-70 grayscale-[20%] hover:grayscale-0 transition-all duration-700" 
-          onError={(e) => { e.target.src = "/images/akari_normal.png"; }}
-        />
-      </div>
-    </div>
-  );
 
   const handleCheckout = async (plan) => {
     try {
@@ -487,7 +453,36 @@ function HomeContent() {
             affection={affection} onManualChange={setIsManualOpen} 
           />
         ) : (
-          <ProfessionalUI />
+          /* ★修正：ProfessionalUIを関数ではなく直接記述。これで入力中の画像点滅が解消されます。 */
+          <div className="flex h-full w-full bg-[#fcfcfc] text-slate-700 font-sans animate-in fade-in duration-500 overflow-hidden">
+            <div className="flex-1 flex flex-col border-r border-gray-200 min-h-0"> 
+              <div className="p-4 border-b border-gray-200 bg-white flex justify-between items-center shrink-0">
+                <span className="font-bold flex items-center gap-2 text-slate-600"><FileText size={18} className="text-blue-500" /> 業務支援ログ</span>
+                <span className="text-[10px] text-gray-400 font-mono">{new Date().toLocaleTimeString()}</span>
+              </div>
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white custom-scrollbar">
+                {messages.filter(m => m.mode === 'professional').map((m, i) => (
+                  <div key={i} className={`p-4 rounded-xl text-sm leading-relaxed ${m.role === 'assistant' ? 'bg-blue-50 border border-blue-100' : 'bg-slate-50 border border-slate-200'}`}>
+                    <p className="text-[9px] font-bold mb-1 opacity-40 uppercase">{m.role === 'assistant' ? 'Akari' : 'User'}</p>
+                    <p className="whitespace-pre-wrap">{m.content.replace(/\[.*?\]/g, '')}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* ★右側のあかりイラスト表示エリア（PCのみ表示） */}
+            <div className="hidden md:flex w-64 bg-slate-50 flex-col items-center justify-end p-6 border-l border-gray-100 shrink-0">
+              <div className="mb-6 text-center opacity-60">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Partner</p>
+                <p className="text-xs font-medium text-slate-600">あかり</p>
+              </div>
+              <img 
+                src={`/images/akari_${currentOutfit}_normal.png`} 
+                alt="あかり" 
+                className="max-h-[50vh] object-contain opacity-70 grayscale-[20%] hover:grayscale-0 transition-all duration-700" 
+                onError={(e) => { e.target.src = "/images/akari_normal.png"; }}
+              />
+            </div>
+          </div>
         )}
       </div>
 
