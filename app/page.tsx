@@ -56,9 +56,26 @@ function HomeContent() {
   const [points, setPoints] = useState(0);
   const [affection, setAffection] = useState(0);
 
-  // 実務モード用UI
+  // ★修正：実務モードに切り替えた時にあかりの挨拶を入れるロジックを追加
+  useEffect(() => {
+    if (mode === 'professional') {
+      const introMsg = {
+        id: `intro-${Date.now()}`,
+        role: 'assistant',
+        content: "ご主人様、こちらではより実務に特化したやり取りができますわ。なんなりとお申し付けくださいませ。",
+        mode: 'professional'
+      };
+      // 挨拶が重複しないようにチェックして追加
+      setMessages(prev => {
+        const hasIntro = prev.some(m => m.content === introMsg.content);
+        return hasIntro ? prev : [...prev, introMsg];
+      });
+    }
+  }, [mode]);
+
+  // ★修正：実務モード用UI（右側のイラスト表示を復活・調整）
   const ProfessionalUI = () => (
-    <div className="flex h-full w-full bg-[#fcfcfc] text-slate-700 font-sans animate-in fade-in duration-500">
+    <div className="flex h-full w-full bg-[#fcfcfc] text-slate-700 font-sans animate-in fade-in duration-500 overflow-hidden">
       <div className="flex-1 flex flex-col border-r border-gray-200 min-h-0"> 
         <div className="p-4 border-b border-gray-200 bg-white flex justify-between items-center shrink-0">
           <span className="font-bold flex items-center gap-2 text-slate-600"><FileText size={18} className="text-blue-500" /> 業務支援ログ</span>
@@ -73,7 +90,8 @@ function HomeContent() {
           ))}
         </div>
       </div>
-      <div className="w-64 bg-slate-50 flex flex-col items-center justify-end p-6 border-l border-gray-100 shrink-0">
+      {/* ★右側のあかりイラスト表示エリア（PCのみ表示） */}
+      <div className="hidden md:flex w-64 bg-slate-50 flex-col items-center justify-end p-6 border-l border-gray-100 shrink-0">
         <div className="mb-6 text-center opacity-60">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Partner</p>
           <p className="text-xs font-medium text-slate-600">あかり</p>
@@ -82,7 +100,7 @@ function HomeContent() {
           src={`/images/akari_${currentOutfit}_normal.png`} 
           alt="あかり" 
           className="max-h-[50vh] object-contain opacity-70 grayscale-[20%] hover:grayscale-0 transition-all duration-700" 
-          onError={(e) => { e.target.src = "/akari_normal.png"; }}
+          onError={(e) => { e.target.src = "/images/akari_normal.png"; }}
         />
       </div>
     </div>
@@ -420,8 +438,8 @@ function HomeContent() {
   return (
     <main className={`flex h-screen flex-col overflow-hidden relative transition-colors duration-500 ${mode === 'professional' ? 'bg-[#fcfcfc]' : 'bg-black'}`}>
       
-      {/* ★修正：モード切替ボタン（モバイル最適化：右上に移動＆四角いPアイコン化）  */}
-      <div className="absolute top-4 right-4 md:right-24 z-[100]">
+      {/* ★修正：モード切替ボタン（モバイルでの重なり回避のため、トップからの位置を調整し、マニュアル・BGMアイコンの下に配置） */}
+      <div className="absolute top-[140px] right-4 md:top-4 md:right-24 z-[100]">
         <button 
           onClick={() => setMode(mode === 'casual' ? 'professional' : 'casual')}
           className={`flex items-center justify-center rounded-lg font-bold shadow-xl transition-all border ${
@@ -432,7 +450,6 @@ function HomeContent() {
         >
           <div className="flex items-center">
             <Layout size={14} className={mode === 'casual' ? 'text-pink-400' : 'text-blue-500'} />
-            {/* PCではテキスト、スマホではPアイコン  */}
             <span className="hidden md:inline ml-2 text-[10px] tracking-wider">
               {mode === 'casual' ? 'PROFESSIONAL MODE' : 'BACK TO CASUAL'}
             </span>
@@ -443,12 +460,10 @@ function HomeContent() {
 
       {mode === 'casual' && !isManualOpen && (
         <div className="absolute top-4 left-4 z-[200] flex flex-col gap-4">
-           {/* ★修正：ステータス表示（視認性向上のためオレンジ太字に変更）  */}
            <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-xs flex flex-col gap-1 shadow-lg font-mono">
               <div className="text-orange-400 font-bold">★ {points} pt ({currentPlan})</div>
               <div className="flex items-center gap-2 text-orange-400 font-bold"><Heart size={12} className="text-pink-400" /> 親密度: {affection}</div>
            </div>
-           {/* アイコンボタン群（横並び・正方形） */}
            <div className="flex flex-row gap-2 shrink-0">
               <button onClick={() => setShowShop(true)} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-blue-400 rounded-xl border border-white/20 shadow-lg hover:bg-blue-600 hover:text-white transition-all"><ShoppingCart size={24} /></button>
               <button onClick={() => setShowCostume(true)} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-pink-400 rounded-xl border border-white/20 shadow-lg hover:bg-pink-600 hover:text-white transition-all"><Shirt size={24} /></button>
@@ -476,7 +491,6 @@ function HomeContent() {
         )}
       </div>
 
-      {/* 共通のチャット入力エリア */}
       <div className={`h-auto min-h-[6rem] border-t p-4 flex items-center justify-center relative z-[100] transition-colors duration-500 shrink-0 ${
         mode === 'professional' ? 'bg-[#f8f9fa] border-gray-200' : 'bg-gray-900 border-white/10'
       }`}>
@@ -507,7 +521,7 @@ function HomeContent() {
         </div>
       </div>
 
-      {/* --- モーダル群 --- */}
+      {/* モーダル群 */}
       {showSettings && (
         <div className="absolute bottom-24 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-bottom-4 text-left">
           <h3 className="text-pink-400 font-bold mb-4">呼び方の設定</h3>
