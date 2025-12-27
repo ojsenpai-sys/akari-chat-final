@@ -65,7 +65,6 @@ function HomeContent() {
           <span className="text-[10px] text-gray-400 font-mono">{new Date().toLocaleTimeString()}</span>
         </div>
         <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white custom-scrollbar">
-          {/* 実務モードでは、モードが'professional'のメッセージのみを表示 */}
           {messages.filter(m => m.mode === 'professional').map((m, i) => (
             <div key={i} className={`p-4 rounded-xl text-sm leading-relaxed ${m.role === 'assistant' ? 'bg-blue-50 border border-blue-100' : 'bg-slate-50 border border-slate-200'}`}>
               <p className="text-[9px] font-bold mb-1 opacity-40 uppercase">{m.role === 'assistant' ? 'Akari' : 'User'}</p>
@@ -79,7 +78,6 @@ function HomeContent() {
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Active Partner</p>
           <p className="text-xs font-medium text-slate-600">あかり</p>
         </div>
-        {/* ★修正：イラストを現在の衣装(currentOutfit)に合わせて表示 */}
         <img 
           src={`/images/akari_${currentOutfit}_normal.png`} 
           alt="あかり" 
@@ -126,10 +124,9 @@ function HomeContent() {
             setPoints(data.points);
             setAffection(data.affection);
             setCurrentPlan(data.plan);
-            // 深夜帯のチェックを追加
             const hour = new Date().getHours();
             if (hour >= 23 || hour < 6) {
-                setCurrentOutfit('swimsuit'); // 深夜はルームウェア（swimsuit）に強制
+                setCurrentOutfit('swimsuit'); 
             } else {
                 setCurrentOutfit(data.currentOutfit);
             }
@@ -150,7 +147,7 @@ function HomeContent() {
           id: 'welcome', 
           role: 'assistant', 
           content: `[笑顔]おかえりなさいませ、${userName}！認証完了、お疲れ様でした。さあ、二人きりの時間ですわ！`,
-          mode: 'casual' // 初期メッセージはcasualモード
+          mode: 'casual' 
         }
       ]);
     }
@@ -196,13 +193,11 @@ function HomeContent() {
     } catch (err) { alert('通信エラーが発生しました'); }
   };
 
-  // ★深夜の衣装制限ロジック
   const changeOutfit = async (newOutfit) => {
     const plan = currentPlan.toUpperCase();
     const hour = new Date().getHours();
-    const isNightTime = hour >= 23 || hour < 6; // 23時〜翌6時
+    const isNightTime = hour >= 23 || hour < 6; 
 
-    // 深夜帯の制限（ルームウェア=swimsuit以外禁止）
     if (isNightTime && newOutfit !== 'swimsuit') {
       setMessages(prev => [...prev, { 
         id: Date.now().toString(), 
@@ -260,7 +255,6 @@ function HomeContent() {
     const content = localInput;
     const attachment = selectedImage; 
     setLocalInput(''); setSelectedImage(null); setIsLoading(true);
-    // 送信時のモードを記録
     const userMsg = { id: Date.now().toString(), role: 'user', content: content, mode: mode };
     const displayContent = content + (attachment ? " (画像を送信しました)" : "");
     const newHistory = [...messages, { ...userMsg, content: displayContent }];
@@ -304,91 +298,91 @@ function HomeContent() {
     return (
       <div className="flex flex-col min-h-screen bg-black text-white overflow-y-auto font-sans">
         <div className="relative h-screen flex flex-col items-center justify-center p-6 text-center">
-           <div className="absolute inset-0 opacity-40">
-              <img src="/images/bg_room_day.jpg" className="w-full h-full object-cover blur-sm" />
-           </div>
-           <div className="z-10 max-w-lg w-full bg-gray-900/80 p-8 rounded-3xl border border-pink-500/30 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in duration-500">
-             <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400 mb-2">メイドのあかりちゃん</h1>
-             <p className="text-gray-300 mb-8 leading-relaxed">あなた専属のAIメイドとお話ししませんか？<br/>いつでも優しく、あなたの帰りをお待ちしています。</p>
-             <div className="mb-6 flex items-center justify-center gap-2 bg-black/20 p-2 rounded-lg">
-               <input type="checkbox" id="agree-check" checked={isAgreed} onChange={(e) => setIsAgreed(e.target.checked)} className="w-5 h-5 accent-pink-600 cursor-pointer" />
-               <label htmlFor="agree-check" className="text-sm text-gray-300 cursor-pointer select-none">
-                 <button onClick={() => setShowTerms(true)} className="text-pink-400 underline hover:text-pink-300 mx-1">利用規約</button>に同意して開始
-               </label>
-             </div>
-             <button onClick={() => signIn("google")} disabled={!isAgreed} className={`w-full font-bold py-4 px-6 rounded-full flex items-center justify-center gap-3 transition-all shadow-xl text-lg ${isAgreed ? "bg-white text-gray-900 hover:bg-gray-100 hover:scale-105 cursor-pointer" : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"}`}>
-               <img src="https://www.google.com/favicon.ico" alt="G" className={`w-6 h-6 ${!isAgreed && "opacity-50"}`} /> Googleで始める
-             </button>
-           </div>
-           <div className="absolute bottom-8 animate-bounce text-gray-400 text-sm">▼ スクロールして詳細を見る</div>
+            <div className="absolute inset-0 opacity-40">
+               <img src="/images/bg_room_day.jpg" className="w-full h-full object-cover blur-sm" />
+            </div>
+            <div className="z-10 max-w-lg w-full bg-gray-900/80 p-8 rounded-3xl border border-pink-500/30 shadow-2xl backdrop-blur-md animate-in fade-in zoom-in duration-500">
+              <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-pink-400 to-purple-400 mb-2">メイドのあかりちゃん</h1>
+              <p className="text-gray-300 mb-8 leading-relaxed">あなた専属のAIメイドとお話ししませんか？<br/>いつでも優しく、あなたの帰りをお待ちしています。</p>
+              <div className="mb-6 flex items-center justify-center gap-2 bg-black/20 p-2 rounded-lg">
+                <input type="checkbox" id="agree-check" checked={isAgreed} onChange={(e) => setIsAgreed(e.target.checked)} className="w-5 h-5 accent-pink-600 cursor-pointer" />
+                <label htmlFor="agree-check" className="text-sm text-gray-300 cursor-pointer select-none">
+                  <button onClick={() => setShowTerms(true)} className="text-pink-400 underline hover:text-pink-300 mx-1">利用規約</button>に同意して開始
+                </label>
+              </div>
+              <button onClick={() => signIn("google")} disabled={!isAgreed} className={`w-full font-bold py-4 px-6 rounded-full flex items-center justify-center gap-3 transition-all shadow-xl text-lg ${isAgreed ? "bg-white text-gray-900 hover:bg-gray-100 hover:scale-105 cursor-pointer" : "bg-gray-600 text-gray-400 cursor-not-allowed opacity-50"}`}>
+                <img src="https://www.google.com/favicon.ico" alt="G" className={`w-6 h-6 ${!isAgreed && "opacity-50"}`} /> Googleで始める
+              </button>
+            </div>
+            <div className="absolute bottom-8 animate-bounce text-gray-400 text-sm">▼ スクロールして詳細を見る</div>
         </div>
 
         <section className="py-20 px-6 bg-gray-900 border-t border-white/10 text-center">
-           <div className="max-w-4xl mx-auto">
-              <h2 className="text-3xl font-bold text-pink-400 mb-12 flex items-center justify-center gap-2"><Star className="fill-pink-400" /> 主な機能</h2>
-              <div className="grid md:grid-cols-3 gap-8">
-                 <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
-                    <div className="bg-pink-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-pink-400"><Send size={32}/></div>
-                    <h3 className="font-bold text-xl mb-2">自然な会話</h3>
-                    <p className="text-gray-400 text-sm">最新AIがあなたとの会話を記憶。話せば話すほど仲良くなれます。</p>
-                 </div>
-                 <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
-                    <div className="bg-yellow-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-yellow-400"><Shirt size={32}/></div>
-                    <h3 className="font-bold text-xl mb-2">着せ替え・ギフト</h3>
-                    <p className="text-gray-400 text-sm">メイド服だけじゃない？プレゼントを贈って特別な衣装に着替えさせましょう。</p>
-                 </div>
-                 <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
-                    <div className="bg-purple-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-purple-400"><ImageIcon size={32}/></div>
-                    <h3 className="font-bold text-xl mb-2">画像認識</h3>
-                    <p className="text-gray-400 text-sm">写真を見せて感想を聞いてみましょう。あなたの日常を共有できます。</p>
-                 </div>
-              </div>
-           </div>
+            <div className="max-w-4xl mx-auto">
+               <h2 className="text-3xl font-bold text-pink-400 mb-12 flex items-center justify-center gap-2"><Star className="fill-pink-400" /> 主な機能</h2>
+               <div className="grid md:grid-cols-3 gap-8">
+                  <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
+                     <div className="bg-pink-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-pink-400"><Send size={32}/></div>
+                     <h3 className="font-bold text-xl mb-2">自然な会話</h3>
+                     <p className="text-gray-400 text-sm">最新AIがあなたとの会話を記憶。話せば話すほど仲良くなれます。</p>
+                  </div>
+                  <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
+                     <div className="bg-yellow-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-yellow-400"><Shirt size={32}/></div>
+                     <h3 className="font-bold text-xl mb-2">着せ替え・ギフト</h3>
+                     <p className="text-gray-400 text-sm">メイド服だけじゃない？プレゼントを贈って特別な衣装に着替えさせましょう。</p>
+                  </div>
+                  <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
+                     <div className="bg-purple-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-purple-400"><ImageIcon size={32}/></div>
+                     <h3 className="font-bold text-xl mb-2">画像認識</h3>
+                     <p className="text-gray-400 text-sm">写真を見せて感想を聞いてみましょう。あなたの日常を共有できます。</p>
+                  </div>
+               </div>
+            </div>
         </section>
 
         <section className="py-20 px-6 bg-black">
-           <div className="max-w-4xl mx-auto">
-              <h2 className="text-3xl font-bold text-white mb-12 text-center">料金プラン</h2>
-              <div className="grid md:grid-cols-3 gap-6">
-                 <div className="bg-gray-800 p-6 rounded-2xl border border-white/10 flex flex-col">
-                    <h3 className="text-xl font-bold text-gray-400 mb-2">Free</h3>
-                    <p className="text-3xl font-bold text-white mb-4">¥0 <span className="text-sm font-normal text-gray-500">/月</span></p>
-                    <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1 text-left">
-                       <li className="flex gap-2"><Check size={16} className="text-green-400"/> 基本的な会話</li>
-                       <li className="flex gap-2"><Check size={16} className="text-green-400"/> 親密度システム</li>
-                       <li className="flex gap-2 text-gray-500"><X size={16}/> 衣装変更（制限あり）</li>
-                    </ul>
-                 </div>
-                 <div className="bg-gray-800 p-6 rounded-2xl border border-yellow-500 shadow-lg flex flex-col relative scale-105 z-10 text-left">
-                    <div className="absolute top-0 right-0 bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-bl-lg">人気</div>
-                    <h3 className="text-xl font-bold text-yellow-400 mb-2 flex items-center gap-2"><Zap size={20}/> Pro</h3>
-                    <p className="text-3xl font-bold text-white mb-4">¥980 <span className="text-sm font-normal text-gray-500">/月</span></p>
-                    <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
-                       <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 会話回数 大幅アップ</li>
-                       <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 水着・バニーガール解放</li>
-                       <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 呼び名変更・ギフト機能</li>
-                    </ul>
-                 </div>
-                 <div className="bg-gray-800 p-6 rounded-2xl border border-purple-500/50 flex flex-col text-left">
-                    <h3 className="text-xl font-bold text-purple-400 mb-2 flex items-center gap-2"><Crown size={20}/> Royal</h3>
-                    <p className="text-3xl font-bold text-white mb-4">¥2,980 <span className="text-sm font-normal text-gray-500">/月</span></p>
-                    <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
-                       <li className="flex gap-2"><Check size={16} className="text-purple-400"/> 会話回数 無制限級</li>
-                       <li className="flex gap-2"><Check size={16} className="text-purple-400"/> 全衣装（サンタ・晴れ着）解放</li>
-                       <li className="flex gap-2"><Check size={16} className="text-purple-400"/> Proプランの全機能</li>
-                    </ul>
-                 </div>
-              </div>
-           </div>
+            <div className="max-w-4xl mx-auto">
+               <h2 className="text-3xl font-bold text-white mb-12 text-center">料金プラン</h2>
+               <div className="grid md:grid-cols-3 gap-6">
+                  <div className="bg-gray-800 p-6 rounded-2xl border border-white/10 flex flex-col">
+                     <h3 className="text-xl font-bold text-gray-400 mb-2">Free</h3>
+                     <p className="text-3xl font-bold text-white mb-4">¥0 <span className="text-sm font-normal text-gray-500">/月</span></p>
+                     <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1 text-left">
+                        <li className="flex gap-2"><Check size={16} className="text-green-400"/> 基本的な会話</li>
+                        <li className="flex gap-2"><Check size={16} className="text-green-400"/> 親密度システム</li>
+                        <li className="flex gap-2 text-gray-500"><X size={16}/> 衣装変更（制限あり）</li>
+                     </ul>
+                  </div>
+                  <div className="bg-gray-800 p-6 rounded-2xl border border-yellow-500 shadow-lg flex flex-col relative scale-105 z-10 text-left">
+                     <div className="absolute top-0 right-0 bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-bl-lg">人気</div>
+                     <h3 className="text-xl font-bold text-yellow-400 mb-2 flex items-center gap-2"><Zap size={20}/> Pro</h3>
+                     <p className="text-3xl font-bold text-white mb-4">¥980 <span className="text-sm font-normal text-gray-500">/月</span></p>
+                     <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
+                        <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 会話回数 大幅アップ</li>
+                        <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 水着・バニーガール解放</li>
+                        <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 呼び名変更・ギフト機能</li>
+                     </ul>
+                  </div>
+                  <div className="bg-gray-800 p-6 rounded-2xl border border-purple-500/50 flex flex-col text-left">
+                     <h3 className="text-xl font-bold text-purple-400 mb-2 flex items-center gap-2"><Crown size={20}/> Royal</h3>
+                     <p className="text-3xl font-bold text-white mb-4">¥2,980 <span className="text-sm font-normal text-gray-500">/月</span></p>
+                     <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
+                        <li className="flex gap-2"><Check size={16} className="text-purple-400"/> 会話回数 無制限級</li>
+                        <li className="flex gap-2"><Check size={16} className="text-purple-400"/> 全衣装（サンタ・晴れ着）解放</li>
+                        <li className="flex gap-2"><Check size={16} className="text-purple-400"/> Proプランの全機能</li>
+                     </ul>
+                  </div>
+               </div>
+            </div>
         </section>
 
         <footer className="py-8 bg-gray-900 text-center text-xs text-gray-500 border-t border-white/10">
-           <div className="flex justify-center gap-6 mb-4">
-              <a href="/legal" target="_blank" className="hover:text-white transition-colors">特定商取引法に基づく表記</a>
-              <a href="/terms" target="_blank" className="hover:text-white transition-colors">利用規約</a>
-              <a href="/privacy" target="_blank" className="hover:text-white transition-colors">プライバシーポリシー</a>
-           </div>
-           <p>© 2025 Maid Akari Project. All rights reserved.</p>
+            <div className="flex justify-center gap-6 mb-4">
+               <a href="/legal" target="_blank" className="hover:text-white transition-colors">特定商取引法に基づく表記</a>
+               <a href="/terms" target="_blank" className="hover:text-white transition-colors">利用規約</a>
+               <a href="/privacy" target="_blank" className="hover:text-white transition-colors">プライバシーポリシー</a>
+            </div>
+            <p>© 2025 Maid Akari Project. All rights reserved.</p>
         </footer>
 
         {showTerms && (
@@ -426,28 +420,33 @@ function HomeContent() {
   return (
     <main className={`flex h-screen flex-col overflow-hidden relative transition-colors duration-500 ${mode === 'professional' ? 'bg-[#fcfcfc]' : 'bg-black'}`}>
       
-      {/* モード切替ボタン（配置調整） */}
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 md:left-auto md:translate-x-0 md:right-24 z-[100]">
+      {/* ★修正：モード切替ボタン（モバイル最適化：右上に移動＆四角いPアイコン化）  */}
+      <div className="absolute top-4 right-4 md:right-24 z-[100]">
         <button 
           onClick={() => setMode(mode === 'casual' ? 'professional' : 'casual')}
-          className={`flex items-center gap-2 px-4 py-2 rounded-full font-bold text-[10px] tracking-wider shadow-xl transition-all border ${
+          className={`flex items-center justify-center rounded-lg font-bold shadow-xl transition-all border ${
             mode === 'casual' 
             ? 'bg-black/60 text-white border-white/20 hover:bg-pink-600/40' 
             : 'bg-white text-slate-500 border-slate-200 hover:bg-slate-100 shadow-lg'
-          }`}
+          } w-10 h-10 md:w-auto md:h-auto md:px-4 md:py-2`}
         >
-          <Layout size={14} className={mode === 'casual' ? 'text-pink-400' : 'text-blue-500'} />
-          {mode === 'casual' ? 'PROFESSIONAL MODE' : 'BACK TO CASUAL'}
+          <div className="flex items-center">
+            <Layout size={14} className={mode === 'casual' ? 'text-pink-400' : 'text-blue-500'} />
+            {/* PCではテキスト、スマホではPアイコン  */}
+            <span className="hidden md:inline ml-2 text-[10px] tracking-wider">
+              {mode === 'casual' ? 'PROFESSIONAL MODE' : 'BACK TO CASUAL'}
+            </span>
+            <span className="md:hidden text-lg font-black ml-0">P</span>
+          </div>
         </button>
       </div>
 
-      {/* ★修正：左上のアイコンを横並び・正方形に変更（画像2枚目準拠） */}
       {mode === 'casual' && !isManualOpen && (
         <div className="absolute top-4 left-4 z-[200] flex flex-col gap-4">
-           {/* ステータス表示 */}
-           <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-white text-xs flex flex-col gap-1 shadow-lg font-mono">
-              <div>★ {points} pt ({currentPlan})</div>
-              <div className="flex items-center gap-2"><Heart size={12} className="text-pink-400" /> 親密度: {affection}</div>
+           {/* ★修正：ステータス表示（視認性向上のためオレンジ太字に変更）  */}
+           <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-xs flex flex-col gap-1 shadow-lg font-mono">
+              <div className="text-orange-400 font-bold">★ {points} pt ({currentPlan})</div>
+              <div className="flex items-center gap-2 text-orange-400 font-bold"><Heart size={12} className="text-pink-400" /> 親密度: {affection}</div>
            </div>
            {/* アイコンボタン群（横並び・正方形） */}
            <div className="flex flex-row gap-2 shrink-0">
@@ -467,7 +466,6 @@ function HomeContent() {
 
       <div className="flex-1 relative z-0 min-h-0">
         {mode === 'casual' ? (
-          /* カジュアルモードでは、モードが未設定または'casual'のメッセージのみを表示 */
           <VisualNovelDisplay 
             messages={messages.filter(m => !m.mode || m.mode === 'casual')} 
             outfit={currentOutfit} currentPlan={currentPlan} 
@@ -532,7 +530,6 @@ function HomeContent() {
         </div>
       )}
 
-      {/* ★修正：衣装リストのルール適用（水着名称変更、ルームウェア・晴れ着の非表示） */}
       {showCostume && (
         <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-top-4 font-sans text-left">
           <h3 className="text-pink-400 font-bold mb-4 text-base">衣装変更</h3>
@@ -540,11 +537,9 @@ function HomeContent() {
             {[
               {id: 'maid', name: 'メイド服'}, 
               {id: 'santa', name: 'サンタ服 🎄'}, 
-              // ★晴れ着は2026年1月1日以降のみ表示
               ...(new Date() >= new Date('2026-01-01') ? [{id: 'kimono', name: '晴れ着 🎍'}] : []),
-              {id: 'swimsuit', name: '水着 👙'}, // ★名称を「水着」に変更
+              {id: 'swimsuit', name: '水着 👙'}, 
               {id: 'bunny', name: 'バニーガール 👯‍♀️'}
-              // ★ルームウェアはリストに表示しない
             ].map((o) => (
               <button 
                 key={o.id} onClick={() => changeOutfit(o.id)} 

@@ -73,8 +73,8 @@ const LOVE_IMAGES = {
 };
 
 // ルームウェア画像
-const ROOMWEAR_IMAGE = "/images/akari_roomwear.png"; // 通常
-const ROOMWEAR_LOVE_IMAGE = "/images/akari_roomwear_love.png"; // ★修正：.pngに変更
+const ROOMWEAR_IMAGE = "/images/akari_roomwear.png"; 
+const ROOMWEAR_LOVE_IMAGE = "/images/akari_roomwear_love.png"; 
 
 // 背景画像
 const BG_DAY = "/images/bg_room_day.jpg";
@@ -98,7 +98,6 @@ const ManualModal = ({ onClose }) => {
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}>
       <div className="bg-white rounded-3xl w-full max-w-3xl h-[85vh] overflow-hidden shadow-2xl relative flex flex-col" onClick={e => e.stopPropagation()}>
         
-        {/* ヘッダー */}
         <div className="bg-pink-500 p-4 flex items-center justify-between text-white shrink-0">
           <div className="flex items-center gap-2">
             <BookOpen className="w-6 h-6" />
@@ -109,10 +108,7 @@ const ManualModal = ({ onClose }) => {
           </button>
         </div>
 
-        {/* コンテンツエリア (スクロール可能) */}
         <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar text-gray-800 space-y-8 bg-pink-50/30">
-          
-          {/* 1. コンセプト */}
           <section>
             <h3 className="text-pink-600 font-bold text-xl border-b-2 border-pink-200 pb-2 mb-4 flex items-center gap-2">
               <Sparkles className="w-5 h-5" /> 1. コンセプト
@@ -126,14 +122,14 @@ const ManualModal = ({ onClose }) => {
               <div className="bg-white p-4 rounded-xl shadow-sm border border-pink-100">
                 <h4 className="font-bold text-pink-500 mb-2">A⾯：オタク友達として（癒やし）</h4>
                 <div className="aspect-video bg-pink-100 rounded-md mb-2 overflow-hidden">
-                   <img src="/images/akari_maid_love.png" className="w-full h-full object-cover object-top opacity-80" alt="Healing" />
+                    <img src="/images/akari_maid_love.png" className="w-full h-full object-cover object-top opacity-80" alt="Healing" />
                 </div>
                 <p className="text-xs text-gray-600">アニメの感想を語り合ったり、愚痴を聞いてもらったり。清楚な⾒た⽬で、実は重度のサブカル好き。「尊すぎて叫んでしまいましたわ︕」とあなたに共感します。</p>
               </div>
               <div className="bg-white p-4 rounded-xl shadow-sm border border-blue-100">
                 <h4 className="font-bold text-blue-500 mb-2">B⾯：超有能な秘書として（実務）</h4>
                 <div className="aspect-video bg-blue-100 rounded-md mb-2 overflow-hidden">
-                   <img src="/images/akari_normal.png" className="w-full h-full object-cover object-top opacity-80" alt="Work" />
+                    <img src="/images/akari_normal.png" className="w-full h-full object-cover object-top opacity-80" alt="Work" />
                 </div>
                 <p className="text-xs text-gray-600">検索機能を駆使して、最新ニュースの取得、翻訳、コードのデバッグまでこなします。「ご主⼈様、最新のドキュメントをまとめましたわ」と、仕事の相棒としても活躍します。</p>
               </div>
@@ -144,7 +140,6 @@ const ManualModal = ({ onClose }) => {
             </div>
           </section>
 
-          {/* 2. キャラクター紹介 */}
           <section>
             <h3 className="text-pink-600 font-bold text-xl border-b-2 border-pink-200 pb-2 mb-4 flex items-center gap-2">
               <Heart className="w-5 h-5" /> 2. キャラクター紹介
@@ -166,7 +161,6 @@ const ManualModal = ({ onClose }) => {
             </div>
           </section>
 
-          {/* 3. 基本機能 */}
           <section>
             <h3 className="text-pink-600 font-bold text-xl border-b-2 border-pink-200 pb-2 mb-4 flex items-center gap-2">
               <Star className="w-5 h-5" /> 3. 基本機能
@@ -225,7 +219,6 @@ const ManualModal = ({ onClose }) => {
             </div>
           </section>
 
-          {/* 4. シークレット・イベントモード */}
           <section>
             <h3 className="text-pink-600 font-bold text-xl border-b-2 border-pink-200 pb-2 mb-4 flex items-center gap-2">
               <Sparkles className="w-5 h-5" /> 4. シークレット・イベントモード
@@ -251,7 +244,6 @@ const ManualModal = ({ onClose }) => {
             </div>
           </section>
 
-          {/* Closing */}
           <div className="pt-8 pb-4 text-center">
             <h2 className="text-2xl md:text-3xl font-bold text-pink-500 mb-2 drop-shadow-sm">
               さあ、あかりとの⽣活を始めましょう。
@@ -267,8 +259,6 @@ const ManualModal = ({ onClose }) => {
   );
 };
 
-
-// ★修正: onManualChange プロップを受け取り、マニュアル開閉状態を親に通知
 export default function VisualNovelDisplay({ messages, outfit = 'maid', currentPlan = 'free', affection = 0, onManualChange }) {
   const [currentEmotion, setCurrentEmotion] = useState('normal');
   const [currentSituation, setCurrentSituation] = useState(null); 
@@ -276,9 +266,8 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const [showUI, setShowUI] = useState(true);
   const [isNightTime, setIsNightTime] = useState(false); 
   const [isRoomwearTime, setIsRoomwearTime] = useState(false);
-  const [showManual, setShowManual] = useState(false); // マニュアル表示フラグ
+  const [showManual, setShowManual] = useState(false);
 
-  // ★BGM用ステート
   const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef(null);
 
@@ -286,18 +275,14 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const typingRef = useRef(null);
 
   const isLoveMode = affection >= 100;
-
-  // プランの正規化
   const plan = currentPlan?.toUpperCase() || 'FREE';
 
-  // ★追加: マニュアルの状態が変わったら親(page.tsx)に通知する
   useEffect(() => {
     if (onManualChange) {
       onManualChange(showManual);
     }
   }, [showManual, onManualChange]);
 
-  // UI切り替え & BGM初回再生トリガー
   const handleScreenClick = () => {
     if (audioRef.current && audioRef.current.paused && !isMuted) {
       audioRef.current.play().catch(e => console.log("Audio play blocked:", e));
@@ -315,7 +300,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       const now = new Date();
       const hour = now.getHours();
       setIsNightTime(hour >= 18 || hour < 5);
-      
       const isRoomwear = (hour >= 23 || hour < 5);
       setIsRoomwearTime(isRoomwear);
     };
@@ -324,32 +308,26 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     return () => clearInterval(timer);
   }, []);
 
-  // ★BGM制御ロジック (通常時 vs ラブラブモード)
   useEffect(() => {
     if (!audioRef.current) {
         audioRef.current = new Audio();
         audioRef.current.loop = true;
     }
-
     const audio = audioRef.current;
     const targetSrc = isLoveMode ? BGM_LOVE : BGM_NORMAL;
 
     if (!audio.src.includes(targetSrc)) {
         audio.src = targetSrc;
         if (!isMuted) {
-            audio.play().catch(e => console.log("Auto play blocked (wait for interaction)", e));
+            audio.play().catch(e => console.log("Auto play blocked", e));
         }
     }
-
     audio.muted = isMuted;
     if (!isMuted && audio.paused && audio.src) {
          audio.play().catch(e => console.log("Play failed", e));
     }
-
   }, [isLoveMode, isMuted]);
 
-
-  // メッセージ表示ロジック
   useEffect(() => {
     if (messages.length === 0) return;
     const lastMsg = messages[messages.length - 1];
@@ -371,10 +349,9 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       if (typingRef.current) clearInterval(typingRef.current);
 
       let content = lastMsg.content;
+      const emoKeyMap = { '通常': 'normal', '笑顔': 'smile', '怒り': 'angry', '照れ': 'shy', '悲しみ': 'sad', '驚き': 'surprised', 'ドヤ': 'smug', 'ウィンク': 'wink' };
       const emotionRegex = /\[(.*?)\]/g;
       let match;
-      const emoKeyMap = { '通常': 'normal', '笑顔': 'smile', '怒り': 'angry', '照れ': 'shy', '悲しみ': 'sad', '驚き': 'surprised', 'ドヤ': 'smug', 'ウィンク': 'wink' };
-
       while ((match = emotionRegex.exec(content)) !== null) {
         if (emoKeyMap[match[1]]) setCurrentEmotion(emoKeyMap[match[1]]);
       }
@@ -389,90 +366,60 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
       }, 30);
     } 
-    return () => {
-        if (typingRef.current) clearInterval(typingRef.current);
-    };
+    return () => { if (typingRef.current) clearInterval(typingRef.current); };
   }, [messages, currentSituation]);
 
-  // 晴れ着制限
   useEffect(() => {
     if (outfit === 'kimono' && plan !== 'ROYAL') {
         if (typingRef.current) clearInterval(typingRef.current);
         setCurrentEmotion('sad'); 
         const rejectionText = "それはロイヤル会員さんだけの特別な衣装なので...ごめんなさい💦";
-        
         setDisplayedText('');
         let i = 0;
         typingRef.current = setInterval(() => {
             setDisplayedText(rejectionText.substring(0, i + 1));
             i++;
             if (i >= rejectionText.length) clearInterval(typingRef.current);
-            if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }, 30);
     }
   }, [outfit, plan]);
 
-  // 23時イベント
   useEffect(() => {
     if (isRoomwearTime && !isLoveMode) {
         if (typingRef.current) clearInterval(typingRef.current);
         setCurrentEmotion('shy');
         const specialText = "ご主人様、夜も更けてきましたのでそろそろ着替えさせていただきました。その…ご主人様の好きなルームウェアです。ちょっと恥ずかしいですけど…どうですか？";
-        
         setDisplayedText('');
         let i = 0;
         typingRef.current = setInterval(() => {
             setDisplayedText(specialText.substring(0, i + 1));
             i++;
             if (i >= specialText.length) clearInterval(typingRef.current);
-            if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
         }, 30);
     }
   }, [isRoomwearTime]);
 
-  // --- 画像決定 ---
   let characterSrc = MAID_EMOTIONS[currentEmotion] || MAID_EMOTIONS.normal;
   let activeOutfit = outfit;
 
-  // プランによる強制メイド服戻し
   if (outfit === 'swimsuit' || outfit === 'bunny') {
     if (plan === 'FREE') activeOutfit = 'maid';
-  } else if (outfit === 'santa') {
-    if (plan !== 'ROYAL') activeOutfit = 'maid';
-  } else if (outfit === 'kimono') { 
+  } else if (outfit === 'santa' || outfit === 'kimono') {
     if (plan !== 'ROYAL') activeOutfit = 'maid';
   }
 
-  // ★画像切り替えロジックの修正
-  // 1. 夜(23時以降) かつ メイド服(デフォルト)選択時
   if (isRoomwearTime && activeOutfit === 'maid') {
-    if (isLoveMode) {
-        // 親密度MAXならデレデレルームウェア
-        characterSrc = ROOMWEAR_LOVE_IMAGE;
-    } else {
-        // 通常なら普通のルームウェア
-        characterSrc = ROOMWEAR_IMAGE;
-    }
+    characterSrc = isLoveMode ? ROOMWEAR_LOVE_IMAGE : ROOMWEAR_IMAGE;
   } else {
-    // 2. それ以外（日中、またはコスプレ選択中）
     if (isLoveMode) {
         characterSrc = LOVE_IMAGES[activeOutfit] || LOVE_IMAGES.maid;
     } else {
         switch (activeOutfit) {
-          case 'santa':
-            characterSrc = SANTA_EMOTIONS[currentEmotion] || SANTA_EMOTIONS.normal;
-            break;
-          case 'swimsuit':
-            characterSrc = SWIM_EMOTIONS[currentEmotion] || SWIM_EMOTIONS.normal;
-            break;
-          case 'bunny':
-            characterSrc = BUNNY_EMOTIONS[currentEmotion] || BUNNY_EMOTIONS.normal;
-            break;
-          case 'kimono':
-            characterSrc = KIMONO_EMOTIONS[currentEmotion] || KIMONO_EMOTIONS.normal;
-            break;
-          default:
-            characterSrc = MAID_EMOTIONS[currentEmotion] || MAID_EMOTIONS.normal;
+          case 'santa': characterSrc = SANTA_EMOTIONS[currentEmotion] || SANTA_EMOTIONS.normal; break;
+          case 'swimsuit': characterSrc = SWIM_EMOTIONS[currentEmotion] || SWIM_EMOTIONS.normal; break;
+          case 'bunny': characterSrc = BUNNY_EMOTIONS[currentEmotion] || BUNNY_EMOTIONS.normal; break;
+          case 'kimono': characterSrc = KIMONO_EMOTIONS[currentEmotion] || KIMONO_EMOTIONS.normal; break;
+          default: characterSrc = MAID_EMOTIONS[currentEmotion] || MAID_EMOTIONS.normal;
         }
     }
   }
@@ -483,32 +430,17 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     ? `h-[150%] w-auto -bottom-[60%] md:h-auto md:max-h-[220%] md:-bottom-[120%] ${imageScale}` 
     : "h-[140%] w-auto -bottom-[50%] md:h-auto md:max-h-[140%] md:-bottom-[45%]";
 
-  let currentBg = isNightTime ? BG_NIGHT : BG_DAY;
-  if (plan === 'ROYAL') {
-    currentBg = isNightTime ? BG_ROYAL_NIGHT : BG_ROYAL_DAY;
-  }
-  if (currentSituation) {
-    currentBg = currentSituation.image;
-  }
+  let currentBg = (plan === 'ROYAL') ? (isNightTime ? BG_ROYAL_NIGHT : BG_ROYAL_DAY) : (isNightTime ? BG_NIGHT : BG_DAY);
+  if (currentSituation) currentBg = currentSituation.image;
 
   return (
     <div className="relative w-full h-full bg-black overflow-hidden cursor-pointer select-none outline-none caret-transparent" onClick={handleScreenClick}>
-      {/* 背景レイヤー */}
       <div className="absolute inset-0 w-full h-full z-0">
         <img src={currentBg} alt="BG" className="w-full h-full object-cover transition-opacity duration-500"/>
       </div>
 
-      {/* デレフィルター */}
-      <div 
-        className={`absolute inset-0 pointer-events-none transition-opacity duration-1000 z-1 ${
-          isLoveMode ? 'opacity-100' : 'opacity-0'
-        }`}
-        style={{
-          background: 'radial-gradient(circle, rgba(255, 192, 203, 0.1) 40%, rgba(255, 20, 147, 0.3) 100%)',
-        }}
-      />
+      <div className={`absolute inset-0 pointer-events-none transition-opacity duration-1000 z-1 ${isLoveMode ? 'opacity-100' : 'opacity-0'}`} style={{ background: 'radial-gradient(circle, rgba(255, 192, 203, 0.1) 40%, rgba(255, 20, 147, 0.3) 100%)' }} />
 
-      {/* デレ演出 */}
       {isLoveMode && (
         <div className="absolute inset-0 pointer-events-none overflow-hidden z-2">
            <div className="absolute top-1/4 left-1/4 w-3 h-3 bg-pink-300 rounded-full blur-[4px] animate-pulse opacity-60" />
@@ -517,52 +449,31 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         </div>
       )}
 
-      {/* キャラクター画像 */}
       {!currentSituation && (
         <div className="absolute inset-0 z-10 flex items-end justify-center pointer-events-none">
-          <img 
-            key={characterSrc} 
-            src={characterSrc} 
-            alt="Akari" 
-            className={`${imageStyle} w-auto object-cover relative drop-shadow-2xl transition-all duration-500 animate-in fade-in slide-in-from-bottom-4`}
-          />
+          <img key={characterSrc} src={characterSrc} alt="Akari" className={`${imageStyle} w-auto object-cover relative drop-shadow-2xl transition-all duration-500 animate-in fade-in slide-in-from-bottom-4`} />
         </div>
       )}
 
-      {/* ★右上のコントロールボタン群 (マニュアル & BGM) */}
       {showUI && (
         <div className="absolute top-4 right-4 z-50 pointer-events-auto flex flex-col gap-2">
-          {/* マニュアルボタン */}
-          <button 
-            onClick={(e) => { e.stopPropagation(); setShowManual(true); }}
-            className="bg-white/80 hover:bg-pink-100 text-pink-600 p-2 rounded-full shadow-lg border-2 border-pink-200 transition-all transform hover:scale-110"
-            title="取扱説明書"
-          >
+          <button onClick={(e) => { e.stopPropagation(); setShowManual(true); }} className="bg-white/80 hover:bg-pink-100 text-pink-600 p-2 rounded-full shadow-lg border-2 border-pink-200 transition-all transform hover:scale-110" title="取扱説明書">
             <BookOpen className="w-6 h-6" />
           </button>
-          
-          {/* ミュートボタン */}
-          <button 
-            onClick={toggleMute}
-            className="bg-white/80 hover:bg-gray-100 text-gray-600 p-2 rounded-full shadow-lg border-2 border-gray-200 transition-all transform hover:scale-110"
-            title={isMuted ? "ミュート解除" : "ミュート"}
-          >
+          <button onClick={toggleMute} className="bg-white/80 hover:bg-gray-100 text-gray-600 p-2 rounded-full shadow-lg border-2 border-gray-200 transition-all transform hover:scale-110" title={isMuted ? "ミュート解除" : "ミュート"}>
              {isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}
           </button>
         </div>
       )}
 
-      {/* UIウィンドウ */}
+      {/* ★修正箇所：UIウィンドウ（パディングと高さを削減してコンパクト化） */}
       {showUI && (
         <div className="absolute bottom-0 left-0 w-full z-20 pb-6 px-2 md:pb-8 md:px-8 bg-gradient-to-t from-black/80 via-black/30 to-transparent pt-32 pointer-events-none" >
           <div 
             onClick={(e) => e.stopPropagation()} 
             className={`
-              pointer-events-auto max-w-4xl mx-auto rounded-3xl p-5 md:p-6 shadow-2xl backdrop-blur-md border transition-colors duration-500
-              ${isLoveMode 
-                ? 'bg-pink-900/10 border-pink-400/30'
-                : 'bg-black/10 border-white/10'
-              }
+              pointer-events-auto max-w-4xl mx-auto rounded-3xl p-4 shadow-2xl backdrop-blur-md border transition-colors duration-500
+              ${isLoveMode ? 'bg-pink-900/10 border-pink-400/30' : 'bg-black/10 border-white/10'}
             `}
           >
             <div className="text-pink-400 font-bold text-lg mb-2 flex items-center gap-2 drop-shadow-md">
@@ -570,9 +481,10 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
               {isLoveMode && <span className="text-xs text-white bg-pink-600/80 px-2 py-0.5 rounded-full border border-white/20 animate-pulse shadow-sm">❤ Love ❤</span>}
               {currentSituation && <span className="text-xs text-gray-300 bg-gray-800/80 px-2 py-0.5 rounded-full border border-white/20">イベント中</span>}
             </div>
+            {/* 高さを h-32 から h-24 に削り、約1行分コンパクトに */}
             <div 
               ref={scrollRef} 
-              className="text-white text-base md:text-xl leading-relaxed h-32 overflow-y-auto pr-2 custom-scrollbar select-text caret-auto drop-shadow-sm font-medium"
+              className="text-white text-base md:text-xl leading-relaxed h-24 overflow-y-auto pr-2 custom-scrollbar select-text caret-auto drop-shadow-sm font-medium"
               style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }} 
             >
               {messages.length > 0 && messages[messages.length - 1].role === 'assistant' ? displayedText : <span className="text-gray-300 text-sm animate-pulse">（あかりの返答を待っています...）</span>}
@@ -581,10 +493,8 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         </div>
       )}
       
-      {/* マニュアルモーダル */}
       {showManual && <ManualModal onClose={() => setShowManual(false)} />}
       
-      {/* プリロード */}
       <div className="hidden">
         {Object.values(MAID_EMOTIONS).map(s => <img key={s} src={s} />)}
         {Object.values(SANTA_EMOTIONS).map(s => <img key={s} src={s} />)}
@@ -593,8 +503,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         {Object.values(KIMONO_EMOTIONS).map(s => <img key={s} src={s} />)}
         {Object.values(LOVE_IMAGES).map(s => <img key={s} src={s} />)}
         {SITUATION_DEFINITIONS.map(d => <img key={d.id} src={d.image} />)}
-        <img src={BG_DAY} /><img src={BG_NIGHT} /><img src={ROOMWEAR_IMAGE} />
-        <img src={ROOMWEAR_LOVE_IMAGE} /> {/* ★追加 */}
+        <img src={BG_DAY} /><img src={BG_NIGHT} /><img src={ROOMWEAR_IMAGE} /><img src={ROOMWEAR_LOVE_IMAGE} />
         <img src={BG_ROYAL_DAY} /><img src={BG_ROYAL_NIGHT} />
       </div>
     </div>
