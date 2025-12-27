@@ -259,7 +259,8 @@ const ManualModal = ({ onClose }) => {
   );
 };
 
-export default function VisualNovelDisplay({ messages, outfit = 'maid', currentPlan = 'free', affection = 0, onManualChange }) {
+// ★修正：charName プロップを引数に追加し、デフォルト値を「あかり」に設定
+export default function VisualNovelDisplay({ messages, outfit = 'maid', currentPlan = 'free', affection = 0, onManualChange, charName = 'あかり' }) {
   const [currentEmotion, setCurrentEmotion] = useState('normal');
   const [currentSituation, setCurrentSituation] = useState(null); 
   const [displayedText, setDisplayedText] = useState('');
@@ -268,7 +269,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const [isRoomwearTime, setIsRoomwearTime] = useState(false);
   const [showManual, setShowManual] = useState(false);
 
-  // ★修正：バグ防止用の「しおり（メッセージID）」を記録するためのメモ
+  // ★重要：リセット防止用のメモ（メッセージIDの記録）
   const lastProcessedMessageId = useRef(null);
 
   const [isMuted, setIsMuted] = useState(false);
@@ -331,12 +332,11 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
   }, [isLoveMode, isMuted]);
 
-  // ★修正：メッセージ表示ロジック（再レンダリング時のリセットを防ぐ）
+  // ★重要：メッセージ表示ロジック（リセット防止機能維持）
   useEffect(() => {
     if (messages.length === 0) return;
     const lastMsg = messages[messages.length - 1];
 
-    // イベント判定は常に実行
     if (lastMsg.role === 'user') {
       const text = lastMsg.content;
       const nextSituation = SITUATION_DEFINITIONS.find(def => 
@@ -350,14 +350,12 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       }
     }
 
-    // ★重要：メッセージが「本当に新しいID」の時だけタイピングを開始する
     if (lastMsg.role === 'assistant') {
-      // すでにこのIDのメッセージを表示中であれば、タイピングをやり直さない（ここでリセットバグを防ぐ）
+      // メッセージIDが変わっていないならタイピングをリセットしない（バグ防止）
       if (lastProcessedMessageId.current === lastMsg.id) {
         return; 
       }
       
-      // 新しいメッセージとしてIDを記録
       lastProcessedMessageId.current = lastMsg.id;
 
       if (typingRef.current) clearInterval(typingRef.current);
@@ -381,14 +379,14 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       }, 30);
     } 
     return () => { if (typingRef.current) clearInterval(typingRef.current); };
-  }, [messages, currentSituation]); // 依存配列は維持しつつ内部でIDチェック
+  }, [messages, currentSituation]);
 
   useEffect(() => {
     if (outfit === 'kimono' && plan !== 'ROYAL') {
         if (typingRef.current) clearInterval(typingRef.current);
         setCurrentEmotion('sad'); 
         const rejectionText = "それはロイヤル会員さんだけの特別な衣装なので...ごめんなさい💦";
-        setDisplayedText(rejectionText); // 即座に反映
+        setDisplayedText(rejectionText); 
     }
   }, [outfit, plan]);
 
@@ -397,7 +395,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         if (typingRef.current) clearInterval(typingRef.current);
         setCurrentEmotion('shy');
         const specialText = "ご主人様、夜も更けてきましたのでそろそろ着替えさせていただきました。その…ご主人様の好きなルームウェアです。ちょっと恥ずかしいですけど…どうですか？";
-        setDisplayedText(specialText); // 即座に反映
+        setDisplayedText(specialText); 
     }
   }, [isRoomwearTime]);
 
@@ -458,7 +456,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       )}
 
       {showUI && (
-        <div className="absolute top-4 right-4 z-50 pointer-events-auto flex flex-col gap-2">
+        <div className="absolute top-4 right-4 z-50 pointer-events-auto flex flex-col gap-3">
           <button onClick={(e) => { e.stopPropagation(); setShowManual(true); }} className="bg-white/80 hover:bg-pink-100 text-pink-600 p-2 rounded-full shadow-lg border-2 border-pink-200 transition-all transform hover:scale-110" title="取扱説明書">
             <BookOpen className="w-6 h-6" />
           </button>
@@ -477,8 +475,9 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
               ${isLoveMode ? 'bg-pink-900/10 border-pink-400/30' : 'bg-black/10 border-white/10'}
             `}
           >
+            {/* ★修正箇所：名前表示を charName プロップに変更。これで日・英切り替えに対応します。 */}
             <div className="text-pink-400 font-bold text-lg mb-2 flex items-center gap-2 drop-shadow-md">
-              <span>あかり</span>
+              <span>{charName}</span>
               {isLoveMode && <span className="text-xs text-white bg-pink-600/80 px-2 py-0.5 rounded-full border border-white/20 animate-pulse shadow-sm">❤ Love ❤</span>}
               {currentSituation && <span className="text-xs text-gray-300 bg-gray-800/80 px-2 py-0.5 rounded-full border border-white/20">イベント中</span>}
             </div>

@@ -11,9 +11,10 @@ import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
 
-// ★翻訳用マスタデータ
+// ★翻訳用マスタデータ（ギフトIDとキャラ名を追加）
 const TRANSLATIONS = {
   ja: {
+    charName: "あかり",
     title: "メイドのあかりちゃん",
     subtitle: "あなた専属のAIメイドとお話ししませんか？ いつでも優しく、あなたの帰りをお待ちしています。",
     termsAgree: "利用規約に同意して開始",
@@ -28,6 +29,7 @@ const TRANSLATIONS = {
     featVisionDesc: "写真を見せて感想を聞いてみましょう。あなたの日常を共有できます。",
     proMode: "PROFESSIONAL MODE",
     backCasual: "BACK TO CASUAL",
+    pointsLabel: "pt",
     points: "ポイント",
     affection: "親密度",
     thinking: "THINKING...",
@@ -41,9 +43,14 @@ const TRANSLATIONS = {
     close: "閉じる",
     giveGift: "プレゼントを贈る",
     costumeTitle: "衣装変更",
-    premiumShop: "プレミアムショップ"
+    premiumShop: "プレミアムショップ",
+    // ギフト翻訳
+    letter: "手紙", tea: "紅茶", shortcake: "ショートケーキ", pancake: "パンケーキ", 
+    anime_dvd: "アニメDVD", game_rpg: "ゲームソフト（RPG）", game_fight: "ゲームソフト（格闘）",
+    accessory: "高級アクセサリー", bag: "高級バッグ", esthe: "高級エステチケット", ring: "指輪"
   },
   en: {
+    charName: "AKARI",
     title: "Akari the Maid",
     subtitle: "Your personal AI partner. Always kind, always waiting for you to come home.",
     termsAgree: "Agree to Terms and Start",
@@ -58,6 +65,7 @@ const TRANSLATIONS = {
     featVisionDesc: "Show her photos and share your daily life. She will sympathize with you.",
     proMode: "PROFESSIONAL MODE",
     backCasual: "BACK TO CASUAL",
+    pointsLabel: "pts",
     points: "Points",
     affection: "Affection",
     thinking: "THINKING...",
@@ -71,7 +79,11 @@ const TRANSLATIONS = {
     close: "Close",
     giveGift: "Give a Gift",
     costumeTitle: "Change Outfit",
-    premiumShop: "Premium Shop"
+    premiumShop: "Premium Shop",
+    // ギフト翻訳
+    letter: "Letter", tea: "Tea", shortcake: "Shortcake", pancake: "Pancake",
+    anime_dvd: "Anime DVD", game_rpg: "Game (RPG)", game_fight: "Game (Fighting)",
+    accessory: "Jewelry", bag: "Luxury Bag", esthe: "Spa Ticket", ring: "Ring"
   }
 };
 
@@ -138,7 +150,7 @@ function HomeContent() {
   const [points, setPoints] = useState(0);
   const [affection, setAffection] = useState(0);
 
-  // モード切り替え時の挨拶（維持）
+  // モード切り替え時の挨拶（多言語対応）
   useEffect(() => {
     if (mode === 'professional') {
       const introMsg = {
@@ -248,7 +260,10 @@ function HomeContent() {
         setPoints(data.points);
         setAffection(data.affection);
         setShowGift(false);
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: item.reaction, mode: 'casual' }]);
+        const isLoveModeNow = data.affection >= 100;
+        let reactionText = item.reaction;
+        if (!reactionText.startsWith('[')) { reactionText = (isLoveModeNow ? "[照れ]" : "[笑顔]") + reactionText; }
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: reactionText, mode: 'casual' }]);
     } catch (err) { alert('Communication Error'); }
   };
 
@@ -415,8 +430,9 @@ function HomeContent() {
 
       {mode === 'casual' && !isManualOpen && (
         <div className="absolute top-4 left-4 z-[200] flex flex-col gap-4">
+           {/* ステータス表示（オレンジ太字） */}
            <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-xs flex flex-col gap-1 shadow-lg font-mono">
-              <div className="text-orange-400 font-bold">★ {points} {lang === 'ja' ? 'pt' : 'pts'} ({currentPlan})</div>
+              <div className="text-orange-400 font-bold">★ {points} {t.pointsLabel} ({currentPlan})</div>
               <div className="flex items-center gap-2 text-orange-400 font-bold"><Heart size={12} className="text-pink-400" /> {t.affection}: {affection}</div>
            </div>
            <div className="flex flex-row gap-2 shrink-0">
@@ -440,6 +456,7 @@ function HomeContent() {
             messages={messages.filter(m => !m.mode || m.mode === 'casual')} 
             outfit={currentOutfit} currentPlan={currentPlan} 
             affection={affection} onManualChange={setIsManualOpen} 
+            charName={t.charName} // ★追加：キャラ名を動的に渡す
           />
         ) : (
           <div className="flex h-full w-full bg-[#fcfcfc] text-slate-700 font-sans animate-in fade-in duration-500 overflow-hidden">
@@ -451,20 +468,21 @@ function HomeContent() {
               <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white custom-scrollbar">
                 {messages.filter(m => m.mode === 'professional').map((m, i) => (
                   <div key={i} className={`p-4 rounded-xl text-sm leading-relaxed ${m.role === 'assistant' ? 'bg-blue-50 border border-blue-100' : 'bg-slate-50 border border-slate-200'}`}>
-                    <p className="text-[9px] font-bold mb-1 opacity-40 uppercase">{m.role === 'assistant' ? 'Akari' : 'User'}</p>
+                    <p className="text-[9px] font-bold mb-1 opacity-40 uppercase">{m.role === 'assistant' ? t.charName : 'User'}</p>
                     <p className="whitespace-pre-wrap">{m.content.replace(/\[.*?\]/g, '')}</p>
                   </div>
                 ))}
               </div>
             </div>
+            {/* ★修正：イラスト横の名前表示を翻訳対応 */}
             <div className="hidden md:flex w-64 bg-slate-50 flex-col items-center justify-end p-6 border-l border-gray-100 shrink-0">
               <div className="mb-6 text-center opacity-60">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{t.activePartner}</p>
-                <p className="text-xs font-medium text-slate-600">あかり</p>
+                <p className="text-xs font-medium text-slate-600">{t.charName}</p>
               </div>
               <img 
                 src={`/images/akari_${currentOutfit}_normal.png`} 
-                alt="あかり" 
+                alt={t.charName} 
                 className="max-h-[50vh] object-contain opacity-70 grayscale-[20%] hover:grayscale-0 transition-all duration-700" 
                 onError={(e) => { e.target.src = "/images/akari_normal.png"; }}
               />
@@ -473,10 +491,15 @@ function HomeContent() {
         )}
       </div>
 
-      {/* 共通のチャット入力エリア */}
       <div className={`h-auto min-h-[6rem] border-t p-4 flex items-center justify-center relative z-[100] transition-colors duration-500 shrink-0 ${
         mode === 'professional' ? 'bg-[#f8f9fa] border-gray-200' : 'bg-gray-900 border-white/10'
       }`}>
+        {selectedImage && (
+            <div className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 bg-gray-800 p-2 rounded-lg shadow-xl border border-white/20 animate-in fade-in slide-in-from-bottom-2">
+                <img src={selectedImage} alt="Preview" className="h-32 object-cover rounded-md" />
+                <button onClick={() => { setSelectedImage(null); if(fileInputRef.current) fileInputRef.current.value = ""; }} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1"><X size={14} /></button>
+            </div>
+        )}
         <div className={`w-full max-w-2xl flex gap-2 items-end p-2 rounded-3xl border transition-all duration-500 ${
           mode === 'professional' ? 'bg-white border-slate-300 shadow-sm' : 'bg-gray-800 border-white/5 shadow-inner'
         }`}>
@@ -498,7 +521,6 @@ function HomeContent() {
         </div>
       </div>
 
-      {/* モーダル群 */}
       {showSettings && (
         <div className="absolute bottom-24 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 text-left">
           <h3 className="text-pink-400 font-bold mb-4">{t.settings}</h3>
@@ -509,10 +531,11 @@ function HomeContent() {
       {showGift && (
         <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-80 text-left">
           <h3 className="text-yellow-400 font-bold mb-4 flex items-center gap-2"><Gift size={18}/> {t.giveGift}</h3>
-          <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar">
+          <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">
             {GIFT_ITEMS.map((item) => (
               <button key={item.id} onClick={() => giveGift(item)} className="w-full text-left p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/5 flex items-center justify-between group transition-all">
-                <div><div className="font-bold text-white group-hover:text-yellow-200 text-sm">{item.name}</div><div className="text-xs text-gray-400">親密度 +{item.love}</div></div>
+                {/* ★修正：ギフト名を翻訳データから取得 */}
+                <div><div className="font-bold text-white group-hover:text-yellow-200 text-sm">{t[item.id] || item.name}</div><div className="text-xs text-gray-400">{t.affection} +{item.love}</div></div>
                 <div className="text-yellow-400 font-bold text-sm">{item.price} pt</div>
               </button>
             ))}
@@ -522,17 +545,17 @@ function HomeContent() {
       )}
 
       {showCostume && (
-        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 text-left">
+        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-72 animate-in fade-in slide-in-from-top-4 font-sans text-left">
           <h3 className="text-pink-400 font-bold mb-4 text-base">{t.costumeTitle}</h3>
           <div className="space-y-2">
             {[
-              {id: 'maid', name: lang === 'ja' ? 'メイド服' : 'Maid'}, 
-              {id: 'santa', name: lang === 'ja' ? 'サンタ服 🎄' : 'Santa服 🎄'}, 
+              {id: 'maid', name: lang === 'ja' ? 'メイド服' : 'Maid Dress'}, 
+              {id: 'santa', name: lang === 'ja' ? 'サンタ服 🎄' : 'Santa Outfit 🎄'}, 
               ...(new Date() >= new Date('2026-01-01') ? [{id: 'kimono', name: lang === 'ja' ? '晴れ着 🎍' : 'Kimono 🎍'}] : []),
               {id: 'swimsuit', name: lang === 'ja' ? '水着 👙' : 'Swimsuit 👙'}, 
-              {id: 'bunny', name: lang === 'ja' ? 'バニーガール 👯‍♀️' : 'Bunny 👯‍♀️'}
+              {id: 'bunny', name: lang === 'ja' ? 'バニーガール 👯‍♀️' : 'Bunny Girl 👯‍♀️'}
             ].map((o) => (
-              <button key={o.id} onClick={() => changeOutfit(o.id)} className={`w-full text-left p-3 rounded text-sm hover:bg-white/10 ${currentOutfit === o.id ? 'text-pink-400 font-bold' : 'text-white'}`}>
+              <button key={o.id} onClick={() => changeOutfit(o.id)} className={`w-full text-left p-3 rounded text-sm hover:bg-white/10 transition-colors ${currentOutfit === o.id ? 'text-pink-400 font-bold' : 'text-white'}`}>
                 {o.name}{currentOutfit === o.id && ' ✅'}
               </button>
             ))}
@@ -550,7 +573,7 @@ function HomeContent() {
                 </div>
                 <div className="p-4 overflow-y-auto space-y-4 custom-scrollbar">
                     <div className="bg-gray-800/50 p-4 rounded-xl border border-white/10 text-center">
-                        <p className="text-gray-400 text-[10px] tracking-widest uppercase">Your Plan</p>
+                        <p className="text-gray-400 text-[10px] tracking-widest uppercase">{lang === 'ja' ? '現在のプラン' : 'Your Plan'}</p>
                         <p className="text-2xl font-bold text-white mt-1">{currentPlan}</p>
                     </div>
                     <div className="border border-yellow-500/30 bg-gray-800 p-4 rounded-xl relative overflow-hidden">
@@ -563,6 +586,11 @@ function HomeContent() {
                         <h3 className="font-bold text-purple-400 text-lg flex items-center gap-2"><Crown size={18}/> Royal Plan</h3>
                         <p className="text-white font-bold text-xl my-2">¥2,980 <span className="text-xs text-gray-400">/ mo</span></p>
                         <button onClick={() => handleCheckout('ROYAL')} disabled={currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-purple-600 text-white">Upgrade</button>
+                    </div>
+                    <div className="bg-gray-800 p-4 rounded-xl border border-white/10">
+                        <h3 className="font-bold text-white text-md flex items-center gap-2"><FileText size={16}/> {lang === 'ja' ? '会話チケット（+100回）' : 'Chat Tickets (+100)'}</h3>
+                        <p className="text-xs text-gray-400 mt-1 mb-3">¥500</p>
+                        <button onClick={() => handleCheckout('TICKET')} className="w-full py-2 bg-gray-600 text-white rounded-lg text-sm font-bold hover:bg-gray-500 transition-colors">{lang === 'ja' ? '購入する' : 'Purchase'}</button>
                     </div>
                 </div>
             </div>
