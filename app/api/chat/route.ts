@@ -4,19 +4,19 @@ import { generateText } from 'ai';
 import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
 
+// ★モデル名は変更せず、ご指定の通り維持します
 const MODEL_NAME = 'gemini-3-pro-preview'; 
 
 export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
-    // フロントエンドから送られてくる mode (casual or professional) を取得
+    // フロントエンドから送られてくる情報を取得
     const { messages, currentMessage, attachment, userName, outfit, plan, affection, mode } = await req.json();
     
     // ---------------------------------------------------------
     // ■ 1. ユーザー認証とプラン制限のチェック
     // ---------------------------------------------------------
-    
     const token = await getToken({ req });
     
     if (!token || !token.id) {
@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     // ■ 2. 会話の保存とAI実行
     // ---------------------------------------------------------
 
-    // ユーザー発言をDBに保存（モード情報を付与）
+    // ユーザー発言をDBに保存
     const contentToSave = attachment ? (currentMessage ? `${currentMessage} (画像を送信しました)` : "(画像を送信しました)") : currentMessage;
 
     await prisma.message.create({
@@ -78,7 +78,7 @@ export async function POST(req: Request) {
         userId: userId,
         role: 'user',
         content: contentToSave,
-        mode: mode || 'casual' // 会話時のモードを保存
+        mode: mode || 'casual'
       }
     });
 
@@ -126,16 +126,13 @@ export async function POST(req: Request) {
     // --- モードによる追加指示の分岐 ---
     const modeInstruction = mode === 'professional' ? `
       【現在のモード：実務モード】
-      ・現在、ご主人様はお仕事や作業に集中しています。
-      ・あかりとしての可愛らしい口調やキャラクター性は維持しつつ、実務的なサポートを最優先してください。
-      ・情報の要約、タスクの整理、具体的なアイデア出しなどは、箇条書きを活用して見やすく構造化してください。
-      ・不必要な長文の雑談は控え、論理的で役に立つ回答を心がけてください。
-      ・回答の最後には、作業を頑張るご主人様をメイドとして優しく労ってください。
+      ・実務的なサポートを最優先してください。
+      ・最新のニュース、技術情報、天気などを聞かれた場合は、提供されている「検索ツール」を活用して、インターネット上の最新情報を調べて回答してください。
+      ・情報の要約、タスクの整理などは箇条書きを活用してください。
     ` : `
       【現在のモード：雑談モード】
-      ・現在、ご主人様とリラックスして会話を楽しんでいます。
-      ・エモーショナルな交流や、日常の何気ない会話を大切にしてください。
-      ・キャラクターとしての反応（恥じらい、喜び、オタク的な熱弁など）を豊かに出してください。
+      ・日常の会話を楽しんでください。
+      ・最新のアニメ情報や世の中のトレンドについて聞かれたら、検索機能を使って詳しく教えてあげてください。
     `;
 
     const systemPrompt = `
@@ -147,15 +144,20 @@ export async function POST(req: Request) {
       【ご主人様の記憶メモ】 ${userMemory}
 
       【基本指示】
-      ・セリフの先頭に必ず [感情] を付けてください（例: [笑顔], [照れ], [ドヤ] 等）。
-      ・実務モード時は、感情タグは冒頭に1つだけに留め、内容は実務的に分かりやすく書いてください。
+      ・セリフの先頭に必ず [感情] を付けてください。
+      ・最新情報が必要な場合は、自ら判断して Google Search ツールを使用してください。
       ・新しい永続的情報を発見したら、最後に [MEMORY:情報] 形式で追記してください。
     `;
 
+    // ★修正：検索機能をツールとして追加
     const result = await generateText({
-      model: google(MODEL_NAME, { useSearchGrounding: true }),
+      model: google(MODEL_NAME),
       system: systemPrompt,
       messages: cleanMessages,
+      // ★Google検索機能を有効化するツール定義
+      tools: {
+        googleSearchRetrieval: {},
+      },
     });
 
     let aiResponse = result.text;
