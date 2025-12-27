@@ -11,7 +11,7 @@ import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
 
-// ★翻訳用マスタデータ（説明書の内容を追加）
+// ★翻訳用マスタデータ（リーガルリンク用を追加）
 const TRANSLATIONS = {
   ja: {
     charName: "あかり",
@@ -20,6 +20,7 @@ const TRANSLATIONS = {
     termsAgree: "利用規約に同意して開始",
     termsLink: "利用規約",
     startGoogle: "Googleで始める",
+    scrollMore: "▼ スクロールして詳細を見る",
     features: "主な機能",
     featChat: "自然な会話",
     featChatDesc: "最新AIがあなたとの会話を記憶。話せば話すほど仲良くなれます。",
@@ -27,6 +28,9 @@ const TRANSLATIONS = {
     featDressDesc: "メイド服だけじゃない？プレゼントを贈って特別な衣装に着替えさせましょう。",
     featVision: "画像認識",
     featVisionDesc: "写真を見せて感想を聞いてみましょう。あなたの日常を共有できます。",
+    pricingTitle: "料金プラン",
+    popular: "人気",
+    upgrade: "プランを変更する",
     proMode: "PROFESSIONAL MODE",
     backCasual: "BACK TO CASUAL",
     pointsLabel: "pt",
@@ -52,6 +56,11 @@ const TRANSLATIONS = {
     basicFuncTitle: "3. 基本機能",
     eventModeTitle: "4. シークレット・イベントモード",
     eventModeDesc: "会話の中で「特定のキーワード」を伝えると、特別なイベントモードに突入します。背景が変化し、二人きりの特別な時間を楽しめます。",
+    // リーガルリンク用
+    legalLink: "特定商取引法に基づく表記",
+    privacyLink: "プライバシーポリシー",
+    copyright: "© 2025 Maid Akari Project. All rights reserved.",
+    // ギフト
     letter: "手紙", tea: "紅茶", shortcake: "ショートケーキ", pancake: "パンケーキ", 
     anime_dvd: "アニメDVD", game_rpg: "ゲームソフト（RPG）", game_fight: "ゲームソフト（格闘）",
     accessory: "高級アクセサリー", bag: "高級バッグ", esthe: "高級エステチケット", ring: "指輪"
@@ -61,8 +70,9 @@ const TRANSLATIONS = {
     title: "Akari the Maid",
     subtitle: "Your personal AI partner. Always kind, always waiting for you to come home.",
     termsAgree: "Agree to Terms and Start",
-    termsLink: "Terms",
+    termsLink: "Terms of Service",
     startGoogle: "Continue with Google",
+    scrollMore: "▼ Scroll down for more details",
     features: "Core Features",
     featChat: "Natural Chat",
     featChatDesc: "Advanced AI remembers your talks. The more you speak, the closer you get.",
@@ -70,6 +80,9 @@ const TRANSLATIONS = {
     featDressDesc: "Give gifts to unlock special outfits beyond just the maid dress.",
     featVision: "Vision AI",
     featVisionDesc: "Show her photos and share your daily life. She will sympathize with you.",
+    pricingTitle: "Pricing Plans",
+    popular: "Popular",
+    upgrade: "Upgrade Plan",
     proMode: "PROFESSIONAL MODE",
     backCasual: "BACK TO CASUAL",
     pointsLabel: "pts",
@@ -95,6 +108,11 @@ const TRANSLATIONS = {
     basicFuncTitle: "3. Key Features",
     eventModeTitle: "4. Secret Event Mode",
     eventModeDesc: "Mentioning specific keywords will trigger special event modes. The background changes, letting you enjoy exclusive private moments together.",
+    // リーガルリンク用
+    legalLink: "Legal Disclosure",
+    privacyLink: "Privacy Policy",
+    copyright: "© 2025 Maid Akari Project. All rights reserved.",
+    // ギフト
     letter: "Letter", tea: "Tea", shortcake: "Shortcake", pancake: "Pancake",
     anime_dvd: "Anime DVD", game_rpg: "Game (RPG)", game_fight: "Game (Fighting)",
     accessory: "Jewelry", bag: "Luxury Bag", esthe: "Spa Ticket", ring: "Ring"
@@ -248,7 +266,7 @@ function HomeContent() {
       setShowSettings(false);
       setMessages(prev => [
         ...prev, 
-        { id: Date.now().toString(), role: 'assistant', content: lang === 'ja' ? `[悲しみ]申し訳ございません…。お名前の変更は、有料プラン（プロ・ロイヤル）のご主人様だけの特典なんです。` : `[悲しみ]I'm sorry... changing your name is a feature for Pro/Royal members.`, mode: 'casual' }
+        { id: Date.now().toString(), role: 'assistant', content: lang === 'ja' ? `[悲しみ]申し訳ございません…。お名前の変更は有料プランのみとなります。` : `[悲しみ]Changing your name is for paid plans only.`, mode: 'casual' }
       ]);
       return; 
     }
@@ -269,10 +287,7 @@ function HomeContent() {
         setPoints(data.points);
         setAffection(data.affection);
         setShowGift(false);
-        const isLoveModeNow = data.affection >= 100;
-        let reactionText = item.reaction;
-        if (!reactionText.startsWith('[')) { reactionText = (isLoveModeNow ? "[照れ]" : "[笑顔]") + reactionText; }
-        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: reactionText, mode: 'casual' }]);
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: item.reaction, mode: 'casual' }]);
     } catch (err) { alert('Communication Error'); }
   };
 
@@ -280,27 +295,16 @@ function HomeContent() {
     const plan = currentPlan.toUpperCase();
     const hour = new Date().getHours();
     const isNightTime = hour >= 23 || hour < 6; 
-    if (isNightTime && newOutfit !== 'swimsuit') {
-      setShowCostume(false);
-      return;
-    }
-    if (newOutfit === 'swimsuit' || newOutfit === 'bunny') {
-      if (plan === 'FREE') {
-        setShowCostume(false); return;
-      }
-    }
-    if (newOutfit === 'santa' || newOutfit === 'kimono') {
-      if (plan !== 'ROYAL') {
-        setShowCostume(false); return;
-      }
-    }
+    if (isNightTime && newOutfit !== 'swimsuit') { setShowCostume(false); return; }
+    if (newOutfit === 'swimsuit' || newOutfit === 'bunny') { if (plan === 'FREE') { setShowCostume(false); return; } }
+    if (newOutfit === 'santa' || newOutfit === 'kimono') { if (plan !== 'ROYAL') { setShowCostume(false); return; } }
     try {
         await fetch('/api/user/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ outfit: newOutfit }),
         });
-    } catch (e) { console.error('save error', e); }
+    } catch (e) {}
     setCurrentOutfit(newOutfit);
     setShowCostume(false);
   };
@@ -335,12 +339,11 @@ function HomeContent() {
         }),
       });
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
         if (response.status === 429) {
           setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: `[悲しみ]Limit reached.`, mode: mode }]);
           return;
         }
-        throw new Error(errorData.error || `Error: ${response.status}`);
+        throw new Error(`Error: ${response.status}`);
       }
       const data = await response.json();
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: data.text, mode: mode }]);
@@ -358,6 +361,7 @@ function HomeContent() {
     return <div className="flex h-screen items-center justify-center bg-black text-white">Loading...</div>;
   }
 
+  // --- ログイン前（ランディングページ） ---
   if (status === "unauthenticated") {
     return (
       <div className="flex flex-col min-h-screen bg-black text-white overflow-y-auto font-sans">
@@ -384,24 +388,24 @@ function HomeContent() {
                 <img src="https://www.google.com/favicon.ico" alt="G" className={`w-6 h-6 ${!isAgreed && "opacity-50"}`} /> {t.startGoogle}
               </button>
             </div>
-            <div className="absolute bottom-8 animate-bounce text-gray-400 text-sm">▼</div>
+            <div className="absolute bottom-8 animate-bounce text-gray-400 text-sm">{t.scrollMore}</div>
         </div>
 
         <section className="py-20 px-6 bg-gray-900 border-t border-white/10 text-center">
             <div className="max-w-4xl mx-auto">
                <h2 className="text-3xl font-bold text-pink-400 mb-12 flex items-center justify-center gap-2"><Star className="fill-pink-400" /> {t.features}</h2>
                <div className="grid md:grid-cols-3 gap-8">
-                  <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
+                  <div className="bg-black/40 p-6 rounded-2xl border border-white/10 text-center">
                      <div className="bg-pink-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-pink-400"><Send size={32}/></div>
                      <h3 className="font-bold text-xl mb-2">{t.featChat}</h3>
                      <p className="text-gray-400 text-sm">{t.featChatDesc}</p>
                   </div>
-                  <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
+                  <div className="bg-black/40 p-6 rounded-2xl border border-white/10 text-center">
                      <div className="bg-yellow-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-yellow-400"><Shirt size={32}/></div>
                      <h3 className="font-bold text-xl mb-2">{t.featDress}</h3>
                      <p className="text-gray-400 text-sm">{t.featDressDesc}</p>
                   </div>
-                  <div className="bg-black/40 p-6 rounded-2xl border border-white/10">
+                  <div className="bg-black/40 p-6 rounded-2xl border border-white/10 text-center">
                      <div className="bg-purple-900/30 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-purple-400"><ImageIcon size={32}/></div>
                      <h3 className="font-bold text-xl mb-2">{t.featVision}</h3>
                      <p className="text-gray-400 text-sm">{t.featVisionDesc}</p>
@@ -409,6 +413,70 @@ function HomeContent() {
                </div>
             </div>
         </section>
+
+        {/* 料金プランセクションも復元 */}
+        <section className="py-20 px-6 bg-black text-center border-t border-white/5">
+            <div className="max-w-4xl mx-auto">
+               <h2 className="text-3xl font-bold text-white mb-12">{t.pricingTitle}</h2>
+               <div className="grid md:grid-cols-3 gap-6">
+                  <div className="bg-gray-800 p-6 rounded-2xl border border-white/10 flex flex-col text-left">
+                     <h3 className="text-xl font-bold text-gray-400 mb-2">Free</h3>
+                     <p className="text-3xl font-bold text-white mb-4">¥0 <span className="text-sm font-normal text-gray-500">/mo</span></p>
+                     <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
+                        <li className="flex gap-2"><Check size={16} className="text-green-400"/> Basic Chat</li>
+                        <li className="flex gap-2 text-gray-500"><X size={16}/> Premium Outfits</li>
+                     </ul>
+                  </div>
+                  <div className="bg-gray-800 p-6 rounded-2xl border border-yellow-500 shadow-lg flex flex-col relative scale-105 z-10 text-left">
+                     <div className="absolute top-0 right-0 bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-bl-lg">{t.popular}</div>
+                     <h3 className="text-xl font-bold text-yellow-400 mb-2 flex items-center gap-2"><Zap size={20}/> Pro</h3>
+                     <p className="text-3xl font-bold text-white mb-4">¥980 <span className="text-sm font-normal text-gray-500">/mo</span></p>
+                     <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
+                        <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 200 msgs / day</li>
+                        <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> Special Outfits</li>
+                     </ul>
+                  </div>
+                  <div className="bg-gray-800 p-6 rounded-2xl border border-purple-500/50 flex flex-col text-left">
+                     <h3 className="text-xl font-bold text-purple-400 mb-2 flex items-center gap-2"><Crown size={20}/> Royal</h3>
+                     <p className="text-3xl font-bold text-white mb-4">¥2,980 <span className="text-sm font-normal text-gray-500">/mo</span></p>
+                     <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
+                        <li className="flex gap-2"><Check size={16} className="text-purple-400"/> 2500 msgs / day</li>
+                        <li className="flex gap-2"><Check size={16} className="text-purple-400"/> All Seasonal Outfits</li>
+                     </ul>
+                  </div>
+               </div>
+            </div>
+        </section>
+
+        {/* ★復元：フッターリーガルリンクセクション */}
+        <footer className="py-12 bg-gray-900 text-center text-xs text-gray-500 border-t border-white/10">
+            <div className="flex justify-center gap-8 mb-6">
+               <a href="/legal" target="_blank" className="hover:text-white transition-colors">{t.legalLink}</a>
+               <a href="/terms" target="_blank" className="hover:text-white transition-colors">{t.termsLink}</a>
+               <a href="/privacy" target="_blank" className="hover:text-white transition-colors">{t.privacyLink}</a>
+            </div>
+            <p>{t.copyright}</p>
+        </footer>
+
+        {/* 利用規約モーダルは維持 */}
+        {showTerms && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 p-4">
+            <div className="bg-gray-900 border border-pink-500/30 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col shadow-2xl overflow-hidden text-left">
+              <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800">
+                <h2 className="text-lg font-bold text-white">{t.termsLink}</h2>
+                <button onClick={() => setShowTerms(false)} className="text-gray-400 hover:text-white"><X size={24}/></button>
+              </div>
+              <div className="p-6 overflow-y-auto text-sm text-gray-300 space-y-4 leading-relaxed">
+                <p>{lang === 'ja' ? "本サービスを利用する前に、以下の注意事項を必ずご確認ください。" : "Please read the following notes carefully before using this service."}</p>
+                <h3 className="font-bold text-pink-400">1. {lang === 'ja' ? "AIの回答精度と免責" : "AI Accuracy and Disclaimer"}</h3>
+                <p>{lang === 'ja' ? "当サービスは生成AI技術を使用しています。発言はフィクションであり、事実と異なる場合があります。" : "This service uses Generative AI. Responses are fictional and may not be factual."}</p>
+              </div>
+              <div className="p-4 border-t border-gray-700 bg-gray-800 text-center">
+                <button onClick={() => setShowTerms(false)} className="bg-pink-600 text-white py-2 px-8 rounded-full font-bold">{t.close}</button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -436,7 +504,7 @@ function HomeContent() {
       </div>
 
       {mode === 'casual' && !isManualOpen && (
-        <div className="absolute top-4 left-4 z-[200] flex flex-col gap-4">
+        <div className="absolute top-4 left-4 z-[200] flex flex-col gap-4 text-left">
            <div className="bg-black/60 backdrop-blur-md border border-white/20 rounded-lg p-2 text-xs flex flex-col gap-1 shadow-lg font-mono">
               <div className="text-orange-400 font-bold">★ {points} {t.pointsLabel} ({currentPlan})</div>
               <div className="flex items-center gap-2 text-orange-400 font-bold"><Heart size={12} className="text-pink-400" /> {t.affection}: {affection}</div>
@@ -462,7 +530,7 @@ function HomeContent() {
             messages={messages.filter(m => !m.mode || m.mode === 'casual')} 
             outfit={currentOutfit} currentPlan={currentPlan} 
             affection={affection} onManualChange={setIsManualOpen} 
-            t={t} // ★修正：翻訳オブジェクトごと渡すように変更
+            charName={t.charName} t={t}
           />
         ) : (
           <div className="flex h-full w-full bg-[#fcfcfc] text-slate-700 font-sans animate-in fade-in duration-500 overflow-hidden">
@@ -471,7 +539,7 @@ function HomeContent() {
                 <span className="font-bold flex items-center gap-2 text-slate-600"><FileText size={18} className="text-blue-500" /> {t.assistantLog}</span>
                 <span className="text-[10px] text-gray-400 font-mono">{new Date().toLocaleTimeString()}</span>
               </div>
-              <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-white custom-scrollbar text-left">
                 {messages.filter(m => m.mode === 'professional').map((m, i) => (
                   <div key={i} className={`p-4 rounded-xl text-sm leading-relaxed ${m.role === 'assistant' ? 'bg-blue-50 border border-blue-100' : 'bg-slate-50 border border-slate-200'}`}>
                     <p className="text-[9px] font-bold mb-1 opacity-40 uppercase">{m.role === 'assistant' ? t.charName : 'User'}</p>
@@ -514,7 +582,7 @@ function HomeContent() {
             onCompositionStart={() => setIsComposing(true)} onCompositionEnd={() => setIsComposing(false)}
             onKeyDown={handleKeyDown} rows={1} disabled={isLoading}
             placeholder={isLoading ? t.thinking : (mode === 'professional' ? t.proPlaceholder : t.placeholder)}
-            className={`flex-1 bg-transparent px-4 py-3 focus:outline-none resize-none h-12 max-h-32 font-sans transition-colors ${mode === 'professional' ? 'text-slate-700' : 'text-white'}`}
+            className={`flex-1 bg-transparent px-4 py-3 focus:outline-none resize-none h-12 max-h-32 font-sans transition-colors text-left ${mode === 'professional' ? 'text-slate-700' : 'text-white'}`}
           />
           <button type="button" onClick={handleSendMessage} disabled={isLoading || (!localInput.trim() && !selectedImage)} className={`p-3 rounded-full text-white shadow-lg transition-all mb-1 shrink-0 ${isLoading ? 'bg-gray-600' : 'bg-pink-600 hover:bg-pink-500'}`}><Send size={20} /></button>
         </div>
@@ -575,15 +643,15 @@ function HomeContent() {
                         <p className="text-2xl font-bold text-white mt-1">{currentPlan}</p>
                     </div>
                     <div className="border border-yellow-500/30 bg-gray-800 p-4 rounded-xl relative overflow-hidden">
-                        <div className="absolute top-0 right-0 bg-yellow-600 text-white text-[10px] px-2 py-1 rounded-bl">Popular</div>
+                        <div className="absolute top-0 right-0 bg-yellow-600 text-white text-[10px] px-2 py-1 rounded-bl">{lang === 'ja' ? '人気' : 'Popular'}</div>
                         <h3 className="font-bold text-yellow-400 text-lg flex items-center gap-2"><Zap size={18}/> Pro Plan</h3>
                         <p className="text-white font-bold text-xl my-2">¥980 <span className="text-xs text-gray-400">/ mo</span></p>
-                        <button onClick={() => handleCheckout('PRO')} disabled={currentPlan === 'PRO' || currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-yellow-600 text-white">Upgrade</button>
+                        <button onClick={() => handleCheckout('PRO')} disabled={currentPlan === 'PRO' || currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-yellow-600 text-white">{t.upgrade}</button>
                     </div>
                     <div className="border border-purple-500/30 bg-gray-800 p-4 rounded-xl">
                         <h3 className="font-bold text-purple-400 text-lg flex items-center gap-2"><Crown size={18}/> Royal Plan</h3>
                         <p className="text-white font-bold text-xl my-2">¥2,980 <span className="text-xs text-gray-400">/ mo</span></p>
-                        <button onClick={() => handleCheckout('ROYAL')} disabled={currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-purple-600 text-white">Upgrade</button>
+                        <button onClick={() => handleCheckout('ROYAL')} disabled={currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-purple-600 text-white">{t.upgrade}</button>
                     </div>
                     <div className="bg-gray-800 p-4 rounded-xl border border-white/10">
                         <h3 className="font-bold text-white text-md flex items-center gap-2"><FileText size={16}/> {lang === 'ja' ? '会話チケット（+100回）' : 'Chat Tickets (+100)'}</h3>
