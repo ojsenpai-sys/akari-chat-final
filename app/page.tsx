@@ -5,13 +5,13 @@ import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { 
   Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, 
   ShoppingCart, Crown, Zap, Paperclip, Image as ImageIcon, 
-  Check, Star, Layout, Languages, Calendar // ★Calendarを追加
+  Check, Star, Layout, Languages 
 } from 'lucide-react'; 
 import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
 
-// ★翻訳用マスタデータ（カレンダー用を追加）
+// ★翻訳用マスタデータ
 const TRANSLATIONS = {
   ja: {
     charName: "あかり",
@@ -59,8 +59,6 @@ const TRANSLATIONS = {
     legalLink: "特定商取引法に基づく表記",
     privacyLink: "プライバシーポリシー",
     copyright: "© 2025 Maid Akari Project. All rights reserved.",
-    calendar: "スケジュールを確認", // ★追加
-    fetchingSchedule: "スケジュールを確認していますわ...", // ★追加
     // ギフト
     letter: "手紙", tea: "紅茶", shortcake: "ショートケーキ", pancake: "パンケーキ", 
     anime_dvd: "アニメDVD", game_rpg: "ゲームソフト（RPG）", game_fight: "ゲームソフト（格闘）",
@@ -112,8 +110,6 @@ const TRANSLATIONS = {
     legalLink: "Legal Disclosure",
     privacyLink: "Privacy Policy",
     copyright: "© 2025 Maid Akari Project. All rights reserved.",
-    calendar: "Check Schedule", // ★追加
-    fetchingSchedule: "Checking your schedule, Master...", // ★追加
     // ギフト
     letter: "Letter", tea: "Tea", shortcake: "Shortcake", pancake: "Pancake",
     anime_dvd: "Anime DVD", game_rpg: "Game (RPG)", game_fight: "Game (Fighting)",
@@ -179,19 +175,6 @@ function HomeContent() {
   const [currentPlan, setCurrentPlan] = useState('FREE'); 
   const [points, setPoints] = useState(0);
   const [affection, setAffection] = useState(0);
-
-  // ★追加：カレンダーボタンを押した時の処理
-  const handleCalendarClick = () => {
-    const requestText = lang === 'ja' 
-      ? "今日のGoogleカレンダーの予定を読み上げてください" 
-      : "Please read out my Google Calendar events for today.";
-    
-    // ユーザーからのメッセージとして送信
-    setLocalInput(requestText);
-    setTimeout(() => {
-      handleSendMessage();
-    }, 100);
-  };
 
   useEffect(() => {
     if (mode === 'professional') {
@@ -379,7 +362,6 @@ function HomeContent() {
     return <div className="flex h-screen items-center justify-center bg-black text-white">Loading...</div>;
   }
 
-  // --- ログイン前（ランディングページ） ---
   if (status === "unauthenticated") {
     return (
       <div className="flex flex-col min-h-screen bg-black text-white overflow-y-auto font-sans text-left">
@@ -509,12 +491,6 @@ function HomeContent() {
               <button onClick={() => setShowShop(true)} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-blue-400 rounded-xl border border-white/20 shadow-lg hover:bg-blue-600 hover:text-white transition-all"><ShoppingCart size={24} /></button>
               <button onClick={() => setShowCostume(true)} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-pink-400 rounded-xl border border-white/20 shadow-lg hover:bg-pink-600 hover:text-white transition-all"><Shirt size={24} /></button>
               <button onClick={() => setShowGift(true)} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-yellow-400 rounded-xl border border-white/20 shadow-lg hover:bg-yellow-600 hover:text-white transition-all"><Gift size={24} /></button>
-              
-              {/* ★追加：カレンダーアイコンボタン（秘書モード起動） */}
-              <button onClick={handleCalendarClick} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-green-400 rounded-xl border border-white/20 shadow-lg hover:bg-green-600 hover:text-white transition-all" title={t.calendar}>
-                <Calendar size={24} />
-              </button>
-
               <button onClick={() => signOut()} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-gray-400 rounded-xl border border-white/20 shadow-lg hover:bg-red-900 hover:text-white transition-all"><LogOut size={24} /></button>
            </div>
         </div>
@@ -604,7 +580,7 @@ function HomeContent() {
         </div>
       )}
       {showGift && (
-        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-80 text-left text-left">
+        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-80 text-left">
           <h3 className="text-yellow-400 font-bold mb-4 flex items-center gap-2"><Gift size={18}/> {t.giveGift}</h3>
           <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">
             {GIFT_ITEMS.map((item) => (
@@ -640,7 +616,7 @@ function HomeContent() {
 
       {showShop && (
         <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 text-left">
-            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden font-sans">
+            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden font-sans text-left">
                 <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 text-center">
                     <h2 className="text-lg font-bold text-blue-400 flex items-center gap-2"><ShoppingCart size={20}/> {t.premiumShop}</h2>
                     <button onClick={() => setShowShop(false)} className="text-gray-400 hover:text-white"><X size={24}/></button>
@@ -650,18 +626,18 @@ function HomeContent() {
                         <p className="text-gray-400 text-[10px] tracking-widest uppercase">{lang === 'ja' ? '現在のプラン' : 'Your Plan'}</p>
                         <p className="text-2xl font-bold text-white mt-1">{currentPlan}</p>
                     </div>
-                    <div className="border border-yellow-500/30 bg-gray-800 p-4 rounded-xl relative overflow-hidden">
+                    <div className="border border-yellow-500/30 bg-gray-800 p-4 rounded-xl relative overflow-hidden text-left">
                         <div className="absolute top-0 right-0 bg-yellow-600 text-white text-[10px] px-2 py-1 rounded-bl">{lang === 'ja' ? '人気' : 'Popular'}</div>
                         <h3 className="font-bold text-yellow-400 text-lg flex items-center gap-2"><Zap size={18}/> Pro Plan</h3>
                         <p className="text-white font-bold text-xl my-2">¥980 <span className="text-xs text-gray-400">/ mo</span></p>
                         <button onClick={() => handleCheckout('PRO')} disabled={currentPlan === 'PRO' || currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-yellow-600 text-white">{t.upgrade}</button>
                     </div>
-                    <div className="border border-purple-500/30 bg-gray-800 p-4 rounded-xl">
+                    <div className="border border-purple-500/30 bg-gray-800 p-4 rounded-xl text-left">
                         <h3 className="font-bold text-purple-400 text-lg flex items-center gap-2"><Crown size={18}/> Royal Plan</h3>
                         <p className="text-white font-bold text-xl my-2">¥2,980 <span className="text-xs text-gray-400">/ mo</span></p>
                         <button onClick={() => handleCheckout('ROYAL')} disabled={currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-purple-600 text-white">{t.upgrade}</button>
                     </div>
-                    <div className="bg-gray-800 p-4 rounded-xl border border-white/10">
+                    <div className="bg-gray-800 p-4 rounded-xl border border-white/10 text-left">
                         <h3 className="font-bold text-white text-md flex items-center gap-2"><FileText size={16}/> {lang === 'ja' ? '会話チケット（+100回）' : 'Chat Tickets (+100)'}</h3>
                         <p className="text-xs text-gray-400 mt-1 mb-3">¥500</p>
                         <button onClick={() => handleCheckout('TICKET')} className="w-full py-2 bg-gray-600 text-white rounded-lg text-sm font-bold hover:bg-gray-500 transition-colors">{lang === 'ja' ? '購入する' : 'Purchase'}</button>

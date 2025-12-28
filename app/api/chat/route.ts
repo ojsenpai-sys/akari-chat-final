@@ -1,11 +1,10 @@
 // @ts-nocheck
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
-import { generateText, tool } from 'ai'; // ★toolを追加
+import { generateText } from 'ai'; 
 import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
-import { z } from 'zod'; // ★バリデーション用に追加
 
-// ★モデル名はご指定の通り維持します
+// ★モデル名はご指定の通り gemini-3-pro-preview を維持します
 const MODEL_NAME = 'gemini-3-pro-preview'; 
 
 export const maxDuration = 60;
@@ -31,11 +30,6 @@ export async function POST(req: Request) {
     if (!user) {
       return Response.json({ error: "User not found" }, { status: 404 });
     }
-
-    // Googleアクセストークンの取得（カレンダー操作に必要）
-    const account = await prisma.account.findFirst({
-      where: { userId: userId, provider: 'google' },
-    });
 
     const now = new Date();
     const jstOffset = 9 * 60; 
@@ -147,64 +141,19 @@ export async function POST(req: Request) {
       【記憶】 ${userMemory}
       【指示】 
       ・セリフの先頭に必ず [感情] を付けてください。
-      ・カレンダーの確認や予定の追加を頼まれたら、提供されたツールを迷わず使用してください。
       ・最新情報、ニュース、天気などについては Google 検索ツールを使用して調べてください。
       ・新しい情報は [MEMORY:情報] 形式で最後に書いてください。
     `;
 
     // ---------------------------------------------------------
-    // ■ 4. AI実行（ツールの定義を追加）
+    // ■ 4. AI実行（Google検索のみをツールとして保持）
     // ---------------------------------------------------------
     const result = await generateText({
       model: google(MODEL_NAME),
       system: systemPrompt,
       messages: cleanMessages,
       tools: {
-        // A. Google検索ツール（既存）
         googleSearch: google.tools.googleSearch({}),
-
-        // B. 今日の予定を取得するツール（★追加）
-        getTodayEvents: tool({
-          description: 'Googleカレンダーから本日の予定一覧を取得します。',
-          parameters: z.object({}),
-          execute: async () => {
-            if (!account?.access_token) return { error: "Google連携が必要です。" };
-            const start = new Date(now.setHours(0, 0, 0, 0)).toISOString();
-            const end = new Date(now.setHours(23, 59, 59, 999)).toISOString();
-            const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events?timeMin=${start}&timeMax=${end}&singleEvents=true&orderBy=startTime`, {
-              headers: { Authorization: `Bearer ${account.access_token}` }
-            });
-            const data = await res.json();
-            return data.items?.map((e: any) => ({ summary: e.summary, start: e.start.dateTime || e.start.date })) || [];
-          }
-        }),
-
-        // C. 予定を追加するツール（★追加）
-        createCalendarEvent: tool({
-          description: 'Googleカレンダーに新しい予定を追加します。引数には予定のタイトル、開始日時、終了日時を指定してください。',
-          parameters: z.object({
-            summary: z.string().describe('予定のタイトル（例：打ち合わせ）'),
-            startDateTime: z.string().describe('開始日時（ISO 8601形式。例：2025-12-27T10:00:00Z）'),
-            endDateTime: z.string().describe('終了日時（ISO 8601形式）'),
-          }),
-          execute: async ({ summary, startDateTime, endDateTime }) => {
-            if (!account?.access_token) return { error: "Google連携が必要です。" };
-            const res = await fetch(`https://www.googleapis.com/calendar/v3/calendars/primary/events`, {
-              method: 'POST',
-              headers: { 
-                Authorization: `Bearer ${account.access_token}`,
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                summary,
-                start: { dateTime: startDateTime },
-                end: { dateTime: endDateTime }
-              })
-            });
-            const data = await res.json();
-            return data.status === 'confirmed' ? { success: true } : { error: "追加に失敗しました。" };
-          }
-        }),
       },
       maxSteps: 5,
     });
