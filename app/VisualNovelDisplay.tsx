@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, X, Heart, Star, Sparkles, MessageCircle, Volume2, VolumeX } from 'lucide-react';
+import { BookOpen, X, Heart, Star, Sparkles, MessageCircle, Volume2, VolumeX, Maximize2, Minimize2 } from 'lucide-react';
 
 // --- BGM設定 ---
 const BGM_NORMAL = "/audio/bgm_normal.mp3";
@@ -9,7 +9,7 @@ const MAX_VOLUME = 0.4; // ★BGMの最大音量
 const FADE_STEP = 0.02; // ★1回の変化量
 const FADE_INTERVAL = 50; // ★変化させる間隔(ms)
 
-// --- 各衣装の定義（変更なし） ---
+// --- 各衣装の定義 ---
 const MAID_EMOTIONS = {
   normal: "/images/akari_normal.png",
   shy: "/images/akari_shy.png",
@@ -91,7 +91,7 @@ const SITUATION_DEFINITIONS = [
   { id: "yoga", image: "/images/event_yoga.png", triggers: ["ヨガしよう"], releases: ["終わろう"] }
 ];
 
-// --- マニュアル用モーダル（変更なし） ---
+// --- マニュアル用モーダル ---
 const ManualModal = ({ onClose, t }) => {
   const isJP = t.charName === 'あかり';
   return (
@@ -263,11 +263,12 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const [isNightTime, setIsNightTime] = useState(false); 
   const [isRoomwearTime, setIsRoomwearTime] = useState(false);
   const [showManual, setShowManual] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false); // ★追加：全文表示フラグ
 
   const lastProcessedMessageId = useRef(null);
   const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef(null);
-  const fadeIntervalRef = useRef(null); // ★追加：フェードタイマー用
+  const fadeIntervalRef = useRef(null);
   const scrollRef = useRef(null);
   const typingRef = useRef(null);
 
@@ -275,22 +276,18 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const plan = currentPlan?.toUpperCase() || 'FREE';
   const isJP = t?.charName === 'あかり';
 
-  // --- ★追加：音量フェード制御関数 ---
+  // --- 音量フェード制御関数 ---
   const fadeVolume = (targetVolume, callback) => {
     if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
-    
     const audio = audioRef.current;
     if (!audio) return;
-
     fadeIntervalRef.current = setInterval(() => {
       const currentVol = audio.volume;
-      // 目標音量に近づいたら停止
       if (Math.abs(currentVol - targetVolume) < FADE_STEP) {
         audio.volume = targetVolume;
         clearInterval(fadeIntervalRef.current);
         if (callback) callback();
       } else {
-        // 音量を少しずつ変化させる
         audio.volume = currentVol < targetVolume 
           ? Math.min(MAX_VOLUME, currentVol + FADE_STEP)
           : Math.max(0, currentVol - FADE_STEP);
@@ -310,18 +307,30 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     setShowUI(!showUI);
   };
 
+  // ★追加：全文表示切り替え関数
+  const toggleExpand = (e) => {
+    e.stopPropagation();
+    if (!isExpanded) {
+      // 展開時：タイピングを止めて全文を表示
+      if (typingRef.current) clearInterval(typingRef.current);
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg && lastMsg.role === 'assistant') {
+        const cleanContent = lastMsg.content.replace(/\[.*?\]/g, '');
+        setDisplayedText(cleanContent);
+      }
+    }
+    setIsExpanded(!isExpanded);
+  };
+
   const toggleMute = (e) => { 
     e.stopPropagation(); 
     const newMuted = !isMuted;
     setIsMuted(newMuted);
-
     if (newMuted) {
-      // ミュート時はスッと音を絞ってからmutedをtrueに
       fadeVolume(0, () => {
         if (audioRef.current) audioRef.current.muted = true;
       });
     } else {
-      // ミュート解除時はまずmutedを解いてからスッと音を上げる
       if (audioRef.current) {
         audioRef.current.muted = false;
         fadeVolume(MAX_VOLUME);
@@ -342,19 +351,16 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     return () => clearInterval(timer);
   }, []);
 
-  // --- BGM管理ロジック（フェード対応版） ---
+  // --- BGM管理ロジック ---
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.loop = true;
-      audioRef.current.volume = 0; // 初回は音量0から
+      audioRef.current.volume = 0;
     }
-    
     const audio = audioRef.current;
     const targetSrc = isLoveMode ? BGM_LOVE : BGM_NORMAL;
-    
     if (!audio.src.includes(targetSrc)) {
-      // 曲の切り替え：スッと消して、曲を変えて、スッと出す
       fadeVolume(0, () => {
         audio.src = targetSrc;
         if (!isMuted) {
@@ -364,22 +370,14 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         }
       });
     } else if (!isMuted && audio.paused && audio.src) {
-        // 未再生状態で復帰した時
         audio.play().then(() => fadeVolume(MAX_VOLUME)).catch(e => {});
     }
-
-    // クリーンアップ（プロモード切り替えなど画面消失時）
     return () => {
       if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
-      // 即座にフェードアウトを開始（コンポーネントが破棄される短い間に実行）
       if (audio) {
         const fastFade = setInterval(() => {
-          if (audio.volume > 0.05) {
-            audio.volume -= 0.05;
-          } else {
-            audio.pause();
-            audio.src = "";
-            clearInterval(fastFade);
+          if (audio.volume > 0.05) { audio.volume -= 0.05; } else {
+            audio.pause(); audio.src = ""; clearInterval(fastFade);
           }
         }, 30);
       }
@@ -400,6 +398,9 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     if (lastMsg.role === 'assistant') {
       if (lastProcessedMessageId.current === lastMsg.id) return; 
       lastProcessedMessageId.current = lastMsg.id;
+
+      // 新しいメッセージが来たら展開をリセット
+      setIsExpanded(false);
 
       if (typingRef.current) clearInterval(typingRef.current);
       let content = lastMsg.content;
@@ -444,7 +445,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
 
   let characterSrc = MAID_EMOTIONS[currentEmotion] || MAID_EMOTIONS.normal;
   let activeOutfit = outfit;
-
   if (outfit === 'swimsuit' || outfit === 'bunny') { if (plan === 'FREE') activeOutfit = 'maid'; }
   else if (outfit === 'santa' || outfit === 'kimono') { if (plan !== 'ROYAL') activeOutfit = 'maid'; }
 
@@ -500,13 +500,30 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
 
       {showUI && (
         <div className="absolute bottom-0 left-0 w-full z-20 pb-6 px-2 md:pb-8 md:px-8 bg-gradient-to-t from-black/80 via-black/30 to-transparent pt-32 pointer-events-none" >
-          <div onClick={(e) => e.stopPropagation()} className={`pointer-events-auto max-w-4xl mx-auto rounded-3xl p-4 shadow-2xl backdrop-blur-md border transition-colors duration-500 ${isLoveMode ? 'bg-pink-900/10 border-pink-400/30' : 'bg-black/10 border-white/10'}`}>
-            <div className="text-pink-400 font-bold text-lg mb-2 flex items-center gap-2 drop-shadow-md">
-              <span>{t.charName}</span>
-              {isLoveMode && <span className="text-xs text-white bg-pink-600/80 px-2 py-0.5 rounded-full border border-white/20 animate-pulse shadow-sm">❤ Love ❤</span>}
-              {currentSituation && <span className="text-xs text-gray-300 bg-gray-800/80 px-2 py-0.5 rounded-full border border-white/20">{isJP ? 'イベント中' : 'EVENT'}</span>}
+          <div onClick={(e) => e.stopPropagation()} className={`pointer-events-auto max-w-4xl mx-auto rounded-3xl p-4 shadow-2xl backdrop-blur-md border transition-all duration-500 ${isLoveMode ? 'bg-pink-900/10 border-pink-400/30' : 'bg-black/10 border-white/10'}`}>
+            <div className="flex justify-between items-center mb-2">
+              <div className="text-pink-400 font-bold text-lg flex items-center gap-2 drop-shadow-md">
+                <span>{t.charName}</span>
+                {isLoveMode && <span className="text-xs text-white bg-pink-600/80 px-2 py-0.5 rounded-full border border-white/20 animate-pulse shadow-sm">❤ Love ❤</span>}
+                {currentSituation && <span className="text-xs text-gray-300 bg-gray-800/80 px-2 py-0.5 rounded-full border border-white/20">{isJP ? 'イベント中' : 'EVENT'}</span>}
+              </div>
+              
+              {/* ★追加：全文表示ボタン（長文が予想されるときに出現） */}
+              <button 
+                onClick={toggleExpand}
+                className="text-white/60 hover:text-white transition-colors p-1"
+                title={isExpanded ? "Close" : "Expand All"}
+              >
+                {isExpanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
+              </button>
             </div>
-            <div ref={scrollRef} className="text-white text-base md:text-xl leading-relaxed h-24 overflow-y-auto pr-2 custom-scrollbar select-text caret-auto drop-shadow-sm font-medium" style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}>
+
+            {/* ★修正：isExpandedの状態によって高さを可変にする */}
+            <div 
+              ref={scrollRef} 
+              className={`text-white text-base md:text-xl leading-relaxed overflow-y-auto pr-2 custom-scrollbar select-text caret-auto drop-shadow-sm font-medium transition-all duration-500 ${isExpanded ? 'h-64' : 'h-24'}`} 
+              style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}
+            >
               {messages.length > 0 && messages[messages.length - 1].role === 'assistant' ? displayedText : <span className="text-gray-300 text-sm animate-pulse">{isJP ? '（あかりの返答を待っています...）' : '...'}</span>}
             </div>
           </div>
