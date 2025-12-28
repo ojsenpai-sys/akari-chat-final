@@ -6,7 +6,7 @@ import { BookOpen, X, Heart, Star, Sparkles, MessageCircle, Volume2, VolumeX } f
 const BGM_NORMAL = "/audio/bgm_normal.mp3";
 const BGM_LOVE = "/audio/bgm_love.mp3";
 
-// --- 各衣装の定義 ---
+// --- 各衣装の定義（変更なし） ---
 const MAID_EMOTIONS = {
   normal: "/images/akari_normal.png",
   shy: "/images/akari_shy.png",
@@ -88,13 +88,12 @@ const SITUATION_DEFINITIONS = [
   { id: "yoga", image: "/images/event_yoga.png", triggers: ["ヨガしよう"], releases: ["終わろう"] }
 ];
 
-// --- マニュアル用モーダル（翻訳データ t を適用） ---
+// --- マニュアル用モーダル（変更なし） ---
 const ManualModal = ({ onClose, t }) => {
   const isJP = t.charName === 'あかり';
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-300" onClick={onClose}>
       <div className="bg-white rounded-3xl w-full max-w-3xl h-[85vh] overflow-hidden shadow-2xl relative flex flex-col" onClick={e => e.stopPropagation()}>
-        
         <div className="bg-pink-500 p-4 flex items-center justify-between text-white shrink-0">
           <div className="flex items-center gap-2">
             <BookOpen className="w-6 h-6" />
@@ -104,7 +103,6 @@ const ManualModal = ({ onClose, t }) => {
             <X className="w-6 h-6" />
           </button>
         </div>
-
         <div className="flex-1 overflow-y-auto p-6 md:p-8 custom-scrollbar text-gray-800 space-y-8 bg-pink-50/30 text-left">
           <section>
             <h3 className="text-pink-600 font-bold text-xl border-b-2 border-pink-200 pb-2 mb-4 flex items-center gap-2">
@@ -116,7 +114,6 @@ const ManualModal = ({ onClose, t }) => {
             <p className="text-sm text-gray-600 mb-6 leading-relaxed">
               {t.conceptDesc}
             </p>
-            
             <div className="grid md:grid-cols-2 gap-4">
               <div className="bg-white p-4 rounded-xl shadow-sm border border-pink-100">
                 <h4 className="font-bold text-pink-500 mb-2">{isJP ? "A面：オタク友達として（癒やし）" : "A-Side: As an Otaku Friend (Healing)"}</h4>
@@ -144,7 +141,6 @@ const ManualModal = ({ onClose, t }) => {
               </p>
             </div>
           </section>
-
           <section>
             <h3 className="text-pink-600 font-bold text-xl border-b-2 border-pink-200 pb-2 mb-4 flex items-center gap-2">
               <Heart className="w-5 h-5" /> {t.charIntroTitle}
@@ -165,12 +161,10 @@ const ManualModal = ({ onClose, t }) => {
               </div>
             </div>
           </section>
-
           <section>
             <h3 className="text-pink-600 font-bold text-xl border-b-2 border-pink-200 pb-2 mb-4 flex items-center gap-2">
               <Star className="w-5 h-5" /> {t.basicFuncTitle}
             </h3>
-            
             <div className="space-y-6">
               <div>
                 <h4 className="font-bold text-lg text-gray-800 mb-2 flex items-center gap-2">
@@ -209,7 +203,6 @@ const ManualModal = ({ onClose, t }) => {
                   </div>
                 </div>
               </div>
-
               <div>
                 <h4 className="font-bold text-lg text-gray-800 mb-2 flex items-center gap-2">
                   <Heart className="w-4 h-4 text-pink-400" /> {isJP ? "お着替え機能 【有料サービス限定】" : "Dress-up Feature [Paid Only]"}
@@ -223,20 +216,17 @@ const ManualModal = ({ onClose, t }) => {
               </div>
             </div>
           </section>
-
           <section>
             <h3 className="text-pink-600 font-bold text-xl border-b-2 border-pink-200 pb-2 mb-4 flex items-center gap-2">
               <Sparkles className="w-5 h-5" /> {t.eventModeTitle}
             </h3>
             <p className="text-sm text-gray-600 mb-4">{t.eventModeDesc}</p>
-            
             <div className="bg-gray-800 rounded-xl overflow-hidden shadow-lg mb-4 relative group">
               <img src="/images/event_christmas.png" className="w-full h-48 object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="Event Mode" />
               <div className="absolute bottom-2 right-2 text-white text-[10px] bg-black/60 px-2 py-1 rounded">
                 {isJP ? "※画像はXmasイベントのイメージです" : "*Image of the Xmas event"}
               </div>
             </div>
-
             <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-left">
               <h4 className="font-bold text-yellow-800 mb-2 flex items-center gap-2">
                 🔑 {isJP ? "イベント発動ワードのヒント" : "Hints for Event Keywords"}
@@ -248,7 +238,6 @@ const ManualModal = ({ onClose, t }) => {
               </ul>
             </div>
           </section>
-
           <div className="pt-8 pb-4 text-center">
             <h2 className="text-2xl md:text-3xl font-bold text-pink-500 mb-2 drop-shadow-sm">
               {isJP ? "さあ、あかりとの⽣活を始めましょう。" : "Start your life with Akari."}
@@ -293,7 +282,10 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     setShowUI(!showUI);
   };
 
-  const toggleMute = (e) => { e.stopPropagation(); setIsMuted(!isMuted); };
+  const toggleMute = (e) => { 
+    e.stopPropagation(); 
+    setIsMuted(!isMuted); 
+  };
 
   useEffect(() => {
     const checkTime = () => {
@@ -308,18 +300,36 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     return () => clearInterval(timer);
   }, []);
 
+  // --- BGM管理ロジックの修正 ---
   useEffect(() => {
-    if (!audioRef.current) { audioRef.current = new Audio(); audioRef.current.loop = true; }
+    // 1. 初回のみオーディオオブジェクトを作成
+    if (!audioRef.current) {
+      audioRef.current = new Audio();
+      audioRef.current.loop = true;
+    }
+    
     const audio = audioRef.current;
     const targetSrc = isLoveMode ? BGM_LOVE : BGM_NORMAL;
+    
+    // 2. 音源の切り替えが必要な場合のみ src を更新
     if (!audio.src.includes(targetSrc)) {
-        audio.src = targetSrc;
-        if (!isMuted) audio.play().catch(e => {});
+      audio.src = targetSrc;
+      if (!isMuted) {
+        audio.play().catch(e => console.log("Autoplay blocked:", e));
+      }
     }
+
+    // 3. ミュート状態の同期
     audio.muted = isMuted;
-    if (!isMuted && audio.paused && audio.src) {
-         audio.play().catch(e => {});
-    }
+
+    // ★重要★ コンポーネントが消える（アンマウント）時のクリーンアップ
+    // これによりプロフェッショナルモードに切り替えた時に音が止まり、二重再生を防ぐ
+    return () => {
+      if (audio) {
+        audio.pause();
+        audio.src = "";
+      }
+    };
   }, [isLoveMode, isMuted]);
 
   useEffect(() => {
@@ -451,6 +461,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       
       {showManual && <ManualModal onClose={() => setShowManual(false)} t={t} />}
       
+      {/* プリロード（変更なし） */}
       <div className="hidden">
         {Object.values(MAID_EMOTIONS).map(s => <img key={s} src={s} />)}
         {Object.values(SANTA_EMOTIONS).map(s => <img key={s} src={s} />)}
