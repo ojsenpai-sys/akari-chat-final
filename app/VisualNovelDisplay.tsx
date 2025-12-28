@@ -201,21 +201,7 @@ const ManualModal = ({ onClose, t }) => {
                       </tr>
                     </tbody>
                   </table>
-                  <div className="p-2 bg-gray-50 text-xs text-gray-500 text-right">
-                    {isJP ? "会話チケット（+100回）：500円（都度払い）" : "Chat Ticket (+100 msgs): 500 JPY"}
-                  </div>
                 </div>
-              </div>
-              <div>
-                <h4 className="font-bold text-lg text-gray-800 mb-2 flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-pink-400" /> {isJP ? "お着替え機能 【有料サービス限定】" : "Dress-up Feature [Paid Only]"}
-                </h4>
-                <p className="text-sm text-gray-600 mb-3">{isJP ? "共通衣装はメイド服のみですが、有料プランは特別な⾐装に変更可能です。" : "Standard outfit is the maid dress, but paid plans allow switching to special costumes."}</p>
-                <ul className="list-disc list-inside text-sm text-gray-700 space-y-2 bg-white p-4 rounded-lg border border-gray-200">
-                  <li><span className="font-bold text-blue-600">Pro Plan：</span> {isJP ? "水着、バニーガール" : "Swimsuit, Bunny Girl"}</li>
-                  <li><span className="font-bold text-pink-600">Royal Plan：</span> {isJP ? "Pro衣装 ＋ 季節の特別衣装" : "Pro Outfits + Seasonal Specials"}</li>
-                </ul>
-                <p className="text-xs text-gray-500 mt-2 ml-4">※{isJP ? "12月はサンタ、1月は晴れ着を実装します" : "Dec: Santa, Jan: Kimono"}</p>
               </div>
             </div>
           </section>
@@ -226,28 +212,12 @@ const ManualModal = ({ onClose, t }) => {
             <p className="text-sm text-gray-600 mb-4">{t.eventModeDesc}</p>
             <div className="bg-gray-800 rounded-xl overflow-hidden shadow-lg mb-4 relative group">
               <img src="/images/event_christmas.png" className="w-full h-48 object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="Event Mode" />
-              <div className="absolute bottom-2 right-2 text-white text-[10px] bg-black/60 px-2 py-1 rounded">
-                {isJP ? "※画像はXmasイベントのイメージです" : "*Image of the Xmas event"}
-              </div>
-            </div>
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 text-left">
-              <h4 className="font-bold text-yellow-800 mb-2 flex items-center gap-2">
-                🔑 {isJP ? "イベント発動ワードのヒント" : "Hints for Event Keywords"}
-              </h4>
-              <ul className="text-sm text-yellow-900 space-y-1">
-                <li><span className="font-bold">{isJP ? "Xmasデート：" : "Xmas Date:"}</span> {isJP ? "「イルミネーション」「デート」「クリスマス」" : "'Illumination', 'Date', 'Christmas'"}</li>
-                <li><span className="font-bold">{isJP ? "⼿料理：" : "Home Cooking:"}</span> {isJP ? "「オムライス」「ご飯」" : "'Omelet rice', 'Dinner'"}</li>
-                <li>{isJP ? "など… たくさん用意しているので探してみてください！" : "...and more! Explore and find them all!"}</li>
-              </ul>
             </div>
           </section>
           <div className="pt-8 pb-4 text-center">
             <h2 className="text-2xl md:text-3xl font-bold text-pink-500 mb-2 drop-shadow-sm">
               {isJP ? "さあ、あかりとの⽣活を始めましょう。" : "Start your life with Akari."}
             </h2>
-            <p className="text-gray-600 italic">
-              {isJP ? "「おかえりなさいませ、ご主⼈様︕ずっとお待ちしておりましたわ。」" : '"Welcome home, Master! I have been waiting for you."'}
-            </p>
           </div>
         </div>
       </div>
@@ -263,7 +233,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const [isNightTime, setIsNightTime] = useState(false); 
   const [isRoomwearTime, setIsRoomwearTime] = useState(false);
   const [showManual, setShowManual] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false); // ★追加：全文表示フラグ
+  const [isExpanded, setIsExpanded] = useState(false); 
 
   const lastProcessedMessageId = useRef(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -307,11 +277,9 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     setShowUI(!showUI);
   };
 
-  // ★追加：全文表示切り替え関数
   const toggleExpand = (e) => {
     e.stopPropagation();
     if (!isExpanded) {
-      // 展開時：タイピングを止めて全文を表示
       if (typingRef.current) clearInterval(typingRef.current);
       const lastMsg = messages[messages.length - 1];
       if (lastMsg && lastMsg.role === 'assistant') {
@@ -351,7 +319,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     return () => clearInterval(timer);
   }, []);
 
-  // --- BGM管理ロジック ---
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
@@ -398,10 +365,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     if (lastMsg.role === 'assistant') {
       if (lastProcessedMessageId.current === lastMsg.id) return; 
       lastProcessedMessageId.current = lastMsg.id;
-
-      // 新しいメッセージが来たら展開をリセット
       setIsExpanded(false);
-
       if (typingRef.current) clearInterval(typingRef.current);
       let content = lastMsg.content;
       const emoKeyMap = { '通常': 'normal', '笑顔': 'smile', '怒り': 'angry', '照れ': 'shy', '悲しみ': 'sad', '驚き': 'surprised', 'ドヤ': 'smug', 'ウィンク': 'wink' };
@@ -508,20 +472,15 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
                 {currentSituation && <span className="text-xs text-gray-300 bg-gray-800/80 px-2 py-0.5 rounded-full border border-white/20">{isJP ? 'イベント中' : 'EVENT'}</span>}
               </div>
               
-              {/* ★追加：全文表示ボタン（長文が予想されるときに出現） */}
-              <button 
-                onClick={toggleExpand}
-                className="text-white/60 hover:text-white transition-colors p-1"
-                title={isExpanded ? "Close" : "Expand All"}
-              >
+              <button onClick={toggleExpand} className="text-white/60 hover:text-white transition-colors p-1" title={isExpanded ? "Close" : "Expand All"}>
                 {isExpanded ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
               </button>
             </div>
 
-            {/* ★修正：isExpandedの状態によって高さを可変にする */}
+            {/* ★修正箇所：whitespace-pre-wrap を追加しました */}
             <div 
               ref={scrollRef} 
-              className={`text-white text-base md:text-xl leading-relaxed overflow-y-auto pr-2 custom-scrollbar select-text caret-auto drop-shadow-sm font-medium transition-all duration-500 ${isExpanded ? 'h-64' : 'h-24'}`} 
+              className={`whitespace-pre-wrap text-white text-base md:text-xl leading-relaxed overflow-y-auto pr-2 custom-scrollbar select-text caret-auto drop-shadow-sm font-medium transition-all duration-500 ${isExpanded ? 'h-64' : 'h-24'}`} 
               style={{ textShadow: '0 2px 4px rgba(0,0,0,0.8)' }}
             >
               {messages.length > 0 && messages[messages.length - 1].role === 'assistant' ? displayedText : <span className="text-gray-300 text-sm animate-pulse">{isJP ? '（あかりの返答を待っています...）' : '...'}</span>}
