@@ -11,13 +11,13 @@ import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
 
-// ★翻訳用マスタデータ（サービス紹介文を更新）
+// ★翻訳用マスタデータ（サービス紹介文をご指定の内容に更新）
 const TRANSLATIONS = {
   ja: {
     charName: "あかり",
     title: "メイドのあかりちゃん",
     subtitle: "あなた専属のAIメイドとお話ししませんか？ いつでも優しく、あなたの帰りをお待ちしています。",
-    // ★更新：サービス紹介文
+    // ★更新：サービス紹介文（タイトル1行・内容をご指定通りに）
     serviceIntroTitle: "あなたの日常に、癒やしと有能なパートナーを。",
     serviceIntroDesc: "「メイドのあかりちゃん」は、最新のAI技術を活用した次世代パートナーサービスです。ただの雑談だけでなく実務のサポート、そして親密度に合わせた着せ替えイベントなど、あなただけの特別なメイドとの生活が楽しめます。\n\nあなたの趣味嗜好を覚えて会話に織り交ぜしっかりと記憶していきます。つまりあなた好みのAIメイドを作ることができるのです！",
     termsAgree: "利用規約に同意して開始",
@@ -141,7 +141,7 @@ const TRANSLATIONS = {
 // ★衣装変更時のセリフ定義（長文・感情マシマシ版）
 const OUTFIT_REACTIONS = {
   ja: {
-    maid: "はぁ…やっぱりこの戦闘服（メイド服）が一番落ち着きますわね！襟元のフリル、エプロンの張り具合、完璧な防御力…いえ、可愛さです！さあご主人様、改めてお仕えいたしますわっ！",
+    maid: "はぁ…やっぱりこの戦闘服（メイド服）が一番落ち着きますわね！襟元のフリル,エプロンの張り具合,完璧な防御力…いえ、可愛さです！さあご主人様、改めてお仕えいたしますわっ！",
     santa: "メリークリスマス、ご主人様っ！少し気が早い気もしますが、イベントは準備期間が一番楽しいって言いますでしょ？…えへへ、この帽子、可愛くないですか？プレゼント、期待しててくださいね♪",
     kimono: "謹賀新年…いえ、ご主人様と迎える特別なハレの日ですわ。この着物、帯の締め付けが心地よい緊張感を生んで…ふふっ、大和撫子モードの私に、どうぞ見惚れてくださいまし？",
     swimsuit: "（…うぅ、布面積が防御力低すぎませんこと…？）あ,あのっ、ご主人様！あまりジロジロ見ないでくださいまし…！恥ずかしくて、どこを見ていいか分かりませんの…///",
@@ -467,19 +467,19 @@ function HomeContent() {
             <div className="absolute bottom-8 animate-bounce text-gray-400 text-sm">{t.scrollMore}</div>
         </div>
 
-        {/* ★追加：サービス紹介セクション */}
+        {/* ★追加・修正：サービス紹介セクション（縦積みレイアウト） */}
         <section className="py-20 px-6 bg-gradient-to-b from-black to-gray-900 border-t border-white/5">
-            <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-12 text-left">
-               <div className="flex-1 space-y-6">
-                  <h2 className="text-3xl font-bold text-pink-400 flex items-center gap-2">
-                    <Sparkles className="fill-pink-400" size={24} /> {t.serviceIntroTitle}
+            <div className="max-w-4xl mx-auto flex flex-col items-center gap-12 text-center">
+               {/* 1. 見出し */}
+               <div className="space-y-6">
+                  <h2 className="text-3xl md:text-4xl font-bold text-pink-400 flex items-center justify-center gap-3">
+                    <Sparkles className="fill-pink-400" size={28} /> {t.serviceIntroTitle}
                   </h2>
-                  <p className="text-gray-300 leading-relaxed text-lg whitespace-pre-wrap">
-                    {t.serviceIntroDesc}
-                  </p>
                </div>
-               <div className="flex-1 w-full max-w-md">
-                  <div className="bg-gray-800 p-2 rounded-2xl border border-white/10 shadow-2xl rotate-2 hover:rotate-0 transition-transform duration-500 overflow-hidden">
+               
+               {/* 2. 写真（大きく中央に、傾きなし） */}
+               <div className="w-full max-w-3xl">
+                  <div className="bg-gray-800 p-2 rounded-2xl border border-white/10 shadow-2xl overflow-hidden transition-all duration-500">
                      <img 
                         src="/images/akari_preview.png" 
                         alt="Service Preview" 
@@ -487,6 +487,13 @@ function HomeContent() {
                         onError={(e) => { e.target.src = "/images/bg_room_day.jpg"; }} 
                      />
                   </div>
+               </div>
+
+               {/* 3. 説明文 */}
+               <div className="max-w-3xl text-left md:text-center">
+                  <p className="text-gray-300 leading-relaxed text-lg md:text-xl whitespace-pre-wrap">
+                    {t.serviceIntroDesc}
+                  </p>
                </div>
             </div>
         </section>
