@@ -5,18 +5,21 @@ import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { 
   Send, Settings, Shirt, LogOut, FileText, X, Gift, Heart, 
   ShoppingCart, Crown, Zap, Paperclip, Image as ImageIcon, 
-  Check, Star, Layout, Languages 
+  Check, Star, Layout, Languages, Sparkles 
 } from 'lucide-react'; 
 import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
 
-// ★翻訳用マスタデータ（プラン制限用のセリフを追加）
+// ★翻訳用マスタデータ（サービス紹介文を更新）
 const TRANSLATIONS = {
   ja: {
     charName: "あかり",
     title: "メイドのあかりちゃん",
     subtitle: "あなた専属のAIメイドとお話ししませんか？ いつでも優しく、あなたの帰りをお待ちしています。",
+    // ★更新：サービス紹介文
+    serviceIntroTitle: "あなたの日常に、癒やしと有能なパートナーを。",
+    serviceIntroDesc: "「メイドのあかりちゃん」は、最新のAI技術を活用した次世代パートナーサービスです。ただの雑談だけでなく実務のサポート、そして親密度に合わせた着せ替えイベントなど、あなただけの特別なメイドとの生活が楽しめます。\n\nあなたの趣味嗜好を覚えて会話に織り交ぜしっかりと記憶していきます。つまりあなた好みのAIメイドを作ることができるのです！",
     termsAgree: "利用規約に同意して開始",
     termsLink: "利用規約",
     startGoogle: "Googleで始める",
@@ -66,10 +69,8 @@ const TRANSLATIONS = {
     featMsgs: "メッセージ / 日",
     featPremiumDress: "限定衣装の解放",
     featSeasonalDress: "全季節限定衣装の解放",
-    // プラン制限メッセージ
     planLimitPro: "[悲しみ]ご主人様、申し訳ございません…。こちらの衣装はProプラン以上のご主人様限定となっておりますの。もっと仲良くなれたら、いつかお見せしたいですわ…！",
     planLimitRoyal: "[悲しみ]ご主人様、こちらの衣装はロイヤルプランをお使いの特別なご主人様限定のものですわ。今の私では、まだ袖を通すことが許されませんの…ごめんなさい。",
-    // ギフト
     letter: "手紙", tea: "紅茶", shortcake: "ショートケーキ", pancake: "パンケーキ", 
     anime_dvd: "アニメDVD", game_rpg: "ゲームソフト（RPG）", game_fight: "ゲームソフト（格闘）",
     accessory: "高級アクセサリー", bag: "高級バッグ", esthe: "高級エステチケット", ring: "指輪"
@@ -78,6 +79,8 @@ const TRANSLATIONS = {
     charName: "AKARI",
     title: "Akari the Maid",
     subtitle: "Your personal AI partner. Always kind, always waiting for you to come home.",
+    serviceIntroTitle: "A healing and capable partner for your daily life.",
+    serviceIntroDesc: "'Akari the Maid' is a next-generation partner service powered by the latest AI. Beyond just casual chat, you can enjoy a life with your own special maid through professional support and dress-up events based on affection levels.\n\nShe learns your hobbies and preferences, weaving them into conversations and remembering them clearly. In other words, you can create an AI maid perfectly tailored to your taste!",
     termsAgree: "Agree to Terms and Start",
     termsLink: "Terms of Service",
     startGoogle: "Continue with Google",
@@ -127,23 +130,21 @@ const TRANSLATIONS = {
     featMsgs: "msgs / day",
     featPremiumDress: "Premium Outfits",
     featSeasonalDress: "All Seasonal Outfits",
-    // Plan restrictions
     planLimitPro: "[悲しみ]I'm so sorry, Master... This outfit is exclusive to Pro plan members. I hope I can show it to you someday when we're closer...!",
     planLimitRoyal: "[悲しみ]Master, I apologize. This is a special outfit only for Royal plan members. I'm not yet allowed to wear this for you... I'm so sorry.",
-    // ギフト
     letter: "Letter", tea: "Tea", shortcake: "Shortcake", pancake: "Pancake",
     anime_dvd: "Anime DVD", game_rpg: "Game (RPG)", game_fight: "Game (Fighting)",
     accessory: "Jewelry", bag: "Luxury Bag", esthe: "Spa Ticket", ring: "Ring"
   }
 };
 
-// ★修正：衣装変更時のセリフ定義（長文・感情マシマシ版）
+// ★衣装変更時のセリフ定義（長文・感情マシマシ版）
 const OUTFIT_REACTIONS = {
   ja: {
     maid: "はぁ…やっぱりこの戦闘服（メイド服）が一番落ち着きますわね！襟元のフリル、エプロンの張り具合、完璧な防御力…いえ、可愛さです！さあご主人様、改めてお仕えいたしますわっ！",
     santa: "メリークリスマス、ご主人様っ！少し気が早い気もしますが、イベントは準備期間が一番楽しいって言いますでしょ？…えへへ、この帽子、可愛くないですか？プレゼント、期待しててくださいね♪",
     kimono: "謹賀新年…いえ、ご主人様と迎える特別なハレの日ですわ。この着物、帯の締め付けが心地よい緊張感を生んで…ふふっ、大和撫子モードの私に、どうぞ見惚れてくださいまし？",
-    swimsuit: "（…うぅ、布面積が防御力低すぎませんこと…？）あ、あのっ、ご主人様！あまりジロジロ見ないでくださいまし…！恥ずかしくて、どこを見ていいか分かりませんの…///",
+    swimsuit: "（…うぅ、布面積が防御力低すぎませんこと…？）あ,あのっ、ご主人様！あまりジロジロ見ないでくださいまし…！恥ずかしくて、どこを見ていいか分かりませんの…///",
     bunny: "ご、ご主人様…！？こ、これはその、えっと…/// あまりにも大胆すぎますわ…！こんな格好、誰にも見せられません…ご主人様だけの、秘密ですよ…？（小声で）ぴょん…///"
   },
   en: {
@@ -330,13 +331,11 @@ function HomeContent() {
     } catch (err) { alert('Communication Error'); }
   };
 
-  // ★修正：衣装変更ロジック（お断りメッセージ & 強制照れ連動）
   const changeOutfit = async (newOutfit) => {
     const plan = currentPlan.toUpperCase();
     const hour = new Date().getHours();
     const isNightTime = hour >= 23 || hour < 6; 
 
-    // 1. 深夜帯の制限（水着以外は禁止 & メッセージ）
     if (isNightTime && newOutfit !== 'swimsuit') {
       setMessages(prev => [...prev, { 
         id: Date.now().toString(), 
@@ -348,21 +347,18 @@ function HomeContent() {
       return;
     }
 
-    // 2. Proプラン制限（水着・バニー）
     if ((newOutfit === 'swimsuit' || newOutfit === 'bunny') && plan === 'FREE') {
       setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: t.planLimitPro, mode: 'casual' }]);
       setShowCostume(false);
       return;
     }
 
-    // 3. Royalプラン制限（サンタ・晴れ着）
     if ((newOutfit === 'santa' || newOutfit === 'kimono') && plan !== 'ROYAL') {
       setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: t.planLimitRoyal, mode: 'casual' }]);
       setShowCostume(false);
       return;
     }
 
-    // --- 以下、制限をクリアした場合の成功処理 ---
     try {
         await fetch('/api/user/sync', {
             method: 'POST',
@@ -370,15 +366,12 @@ function HomeContent() {
             body: JSON.stringify({ outfit: newOutfit }),
         });
         
-        // ★セリフの取得
         const reaction = OUTFIT_REACTIONS[lang][newOutfit] || OUTFIT_REACTIONS[lang].maid;
         
-        // ★表情ロジック：水着(swimsuit)・バニー(bunny)・親密度100以上は必ず[照れ]
         let prefix = "[笑顔]";
         if (affection >= 100 || newOutfit === 'swimsuit' || newOutfit === 'bunny') {
           prefix = "[照れ]";
         }
-        // メイド服に戻った時は、お帰りなさいの笑顔
         if (newOutfit === 'maid') {
           prefix = "[笑顔]";
         }
@@ -448,7 +441,7 @@ function HomeContent() {
   if (status === "unauthenticated") {
     return (
       <div className="flex flex-col min-h-screen bg-black text-white overflow-y-auto font-sans text-left">
-        <div className="relative h-screen flex flex-col items-center justify-center p-6 text-center">
+        <div className="relative h-screen flex flex-col items-center justify-center p-6 text-center shrink-0">
             <div className="absolute inset-0 opacity-40">
                <img src="/images/bg_room_day.jpg" className="w-full h-full object-cover blur-sm" />
             </div>
@@ -473,6 +466,30 @@ function HomeContent() {
             </div>
             <div className="absolute bottom-8 animate-bounce text-gray-400 text-sm">{t.scrollMore}</div>
         </div>
+
+        {/* ★追加：サービス紹介セクション */}
+        <section className="py-20 px-6 bg-gradient-to-b from-black to-gray-900 border-t border-white/5">
+            <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-12 text-left">
+               <div className="flex-1 space-y-6">
+                  <h2 className="text-3xl font-bold text-pink-400 flex items-center gap-2">
+                    <Sparkles className="fill-pink-400" size={24} /> {t.serviceIntroTitle}
+                  </h2>
+                  <p className="text-gray-300 leading-relaxed text-lg whitespace-pre-wrap">
+                    {t.serviceIntroDesc}
+                  </p>
+               </div>
+               <div className="flex-1 w-full max-w-md">
+                  <div className="bg-gray-800 p-2 rounded-2xl border border-white/10 shadow-2xl rotate-2 hover:rotate-0 transition-transform duration-500 overflow-hidden">
+                     <img 
+                        src="/images/akari_preview.png" 
+                        alt="Service Preview" 
+                        className="rounded-xl w-full h-auto object-cover" 
+                        onError={(e) => { e.target.src = "/images/bg_room_day.jpg"; }} 
+                     />
+                  </div>
+               </div>
+            </div>
+        </section>
 
         <section className="py-20 px-6 bg-gray-900 border-t border-white/10 text-center">
             <div className="max-w-4xl mx-auto">
@@ -699,7 +716,7 @@ function HomeContent() {
 
       {showShop && (
         <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 text-left">
-            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden font-sans text-left">
+            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden font-sans">
                 <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 text-center">
                     <h2 className="text-lg font-bold text-blue-400 flex items-center gap-2"><ShoppingCart size={20}/> {t.premiumShop}</h2>
                     <button onClick={() => setShowShop(false)} className="text-gray-400 hover:text-white"><X size={24}/></button>
@@ -709,18 +726,18 @@ function HomeContent() {
                         <p className="text-gray-400 text-[10px] tracking-widest uppercase">{lang === 'ja' ? '現在のプラン' : 'Your Plan'}</p>
                         <p className="text-2xl font-bold text-white mt-1">{currentPlan}</p>
                     </div>
-                    <div className="border border-yellow-500/30 bg-gray-800 p-4 rounded-xl relative overflow-hidden text-left">
+                    <div className="border border-yellow-500/30 bg-gray-800 p-4 rounded-xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 bg-yellow-600 text-white text-[10px] px-2 py-1 rounded-bl">{lang === 'ja' ? '人気' : 'Popular'}</div>
                         <h3 className="font-bold text-yellow-400 text-lg flex items-center gap-2"><Zap size={18}/> Pro Plan</h3>
                         <p className="text-white font-bold text-xl my-2">¥980 <span className="text-xs text-gray-400">/ mo</span></p>
                         <button onClick={() => handleCheckout('PRO')} disabled={currentPlan === 'PRO' || currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-yellow-600 text-white">{t.upgrade}</button>
                     </div>
-                    <div className="border border-purple-500/30 bg-gray-800 p-4 rounded-xl text-left">
+                    <div className="border border-purple-500/30 bg-gray-800 p-4 rounded-xl">
                         <h3 className="font-bold text-purple-400 text-lg flex items-center gap-2"><Crown size={18}/> Royal Plan</h3>
                         <p className="text-white font-bold text-xl my-2">¥2,980 <span className="text-xs text-gray-400">/ mo</span></p>
                         <button onClick={() => handleCheckout('ROYAL')} disabled={currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-purple-600 text-white">{t.upgrade}</button>
                     </div>
-                    <div className="bg-gray-800 p-4 rounded-xl border border-white/10 text-left">
+                    <div className="bg-gray-800 p-4 rounded-xl border border-white/10">
                         <h3 className="font-bold text-white text-md flex items-center gap-2"><FileText size={16}/> {lang === 'ja' ? '会話チケット（+100回）' : 'Chat Tickets (+100)'}</h3>
                         <p className="text-xs text-gray-400 mt-1 mb-3">¥500</p>
                         <button onClick={() => handleCheckout('TICKET')} className="w-full py-2 bg-gray-600 text-white rounded-lg text-sm font-bold hover:bg-gray-500 transition-colors">{lang === 'ja' ? '購入する' : 'Purchase'}</button>
