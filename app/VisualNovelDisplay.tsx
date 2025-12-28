@@ -5,6 +5,9 @@ import { BookOpen, X, Heart, Star, Sparkles, MessageCircle, Volume2, VolumeX } f
 // --- BGM設定 ---
 const BGM_NORMAL = "/audio/bgm_normal.mp3";
 const BGM_LOVE = "/audio/bgm_love.mp3";
+const MAX_VOLUME = 0.4; // ★BGMの最大音量
+const FADE_STEP = 0.02; // ★1回の変化量
+const FADE_INTERVAL = 50; // ★変化させる間隔(ms)
 
 // --- 各衣装の定義（変更なし） ---
 const MAID_EMOTIONS = {
@@ -264,12 +267,36 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const lastProcessedMessageId = useRef(null);
   const [isMuted, setIsMuted] = useState(false);
   const audioRef = useRef(null);
+  const fadeIntervalRef = useRef(null); // ★追加：フェードタイマー用
   const scrollRef = useRef(null);
   const typingRef = useRef(null);
 
   const isLoveMode = affection >= 100;
   const plan = currentPlan?.toUpperCase() || 'FREE';
   const isJP = t?.charName === 'あかり';
+
+  // --- ★追加：音量フェード制御関数 ---
+  const fadeVolume = (targetVolume, callback) => {
+    if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
+    
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    fadeIntervalRef.current = setInterval(() => {
+      const currentVol = audio.volume;
+      // 目標音量に近づいたら停止
+      if (Math.abs(currentVol - targetVolume) < FADE_STEP) {
+        audio.volume = targetVolume;
+        clearInterval(fadeIntervalRef.current);
+        if (callback) callback();
+      } else {
+        // 音量を少しずつ変化させる
+        audio.volume = currentVol < targetVolume 
+          ? Math.min(MAX_VOLUME, currentVol + FADE_STEP)
+          : Math.max(0, currentVol - FADE_STEP);
+      }
+    }, FADE_INTERVAL);
+  };
 
   useEffect(() => {
     if (onManualChange) onManualChange(showManual);
@@ -278,13 +305,28 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const handleScreenClick = () => {
     if (audioRef.current && audioRef.current.paused && !isMuted) {
       audioRef.current.play().catch(e => console.log("Audio play blocked:", e));
+      fadeVolume(MAX_VOLUME);
     }
     setShowUI(!showUI);
   };
 
   const toggleMute = (e) => { 
     e.stopPropagation(); 
-    setIsMuted(!isMuted); 
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+
+    if (newMuted) {
+      // ミュート時はスッと音を絞ってからmutedをtrueに
+      fadeVolume(0, () => {
+        if (audioRef.current) audioRef.current.muted = true;
+      });
+    } else {
+      // ミュート解除時はまずmutedを解いてからスッと音を上げる
+      if (audioRef.current) {
+        audioRef.current.muted = false;
+        fadeVolume(MAX_VOLUME);
+      }
+    }
   };
 
   useEffect(() => {
@@ -300,34 +342,46 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     return () => clearInterval(timer);
   }, []);
 
-  // --- BGM管理ロジックの修正 ---
+  // --- BGM管理ロジック（フェード対応版） ---
   useEffect(() => {
-    // 1. 初回のみオーディオオブジェクトを作成
     if (!audioRef.current) {
       audioRef.current = new Audio();
       audioRef.current.loop = true;
+      audioRef.current.volume = 0; // 初回は音量0から
     }
     
     const audio = audioRef.current;
     const targetSrc = isLoveMode ? BGM_LOVE : BGM_NORMAL;
     
-    // 2. 音源の切り替えが必要な場合のみ src を更新
     if (!audio.src.includes(targetSrc)) {
-      audio.src = targetSrc;
-      if (!isMuted) {
-        audio.play().catch(e => console.log("Autoplay blocked:", e));
-      }
+      // 曲の切り替え：スッと消して、曲を変えて、スッと出す
+      fadeVolume(0, () => {
+        audio.src = targetSrc;
+        if (!isMuted) {
+          audio.play().then(() => {
+            fadeVolume(MAX_VOLUME);
+          }).catch(e => {});
+        }
+      });
+    } else if (!isMuted && audio.paused && audio.src) {
+        // 未再生状態で復帰した時
+        audio.play().then(() => fadeVolume(MAX_VOLUME)).catch(e => {});
     }
 
-    // 3. ミュート状態の同期
-    audio.muted = isMuted;
-
-    // ★重要★ コンポーネントが消える（アンマウント）時のクリーンアップ
-    // これによりプロフェッショナルモードに切り替えた時に音が止まり、二重再生を防ぐ
+    // クリーンアップ（プロモード切り替えなど画面消失時）
     return () => {
+      if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
+      // 即座にフェードアウトを開始（コンポーネントが破棄される短い間に実行）
       if (audio) {
-        audio.pause();
-        audio.src = "";
+        const fastFade = setInterval(() => {
+          if (audio.volume > 0.05) {
+            audio.volume -= 0.05;
+          } else {
+            audio.pause();
+            audio.src = "";
+            clearInterval(fastFade);
+          }
+        }, 30);
       }
     };
   }, [isLoveMode, isMuted]);
@@ -461,7 +515,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       
       {showManual && <ManualModal onClose={() => setShowManual(false)} t={t} />}
       
-      {/* プリロード（変更なし） */}
       <div className="hidden">
         {Object.values(MAID_EMOTIONS).map(s => <img key={s} src={s} />)}
         {Object.values(SANTA_EMOTIONS).map(s => <img key={s} src={s} />)}
