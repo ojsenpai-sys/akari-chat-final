@@ -11,7 +11,7 @@ import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
 
-// ★翻訳用マスタデータ
+// ★翻訳用マスタデータ（料金プラン詳細を追加）
 const TRANSLATIONS = {
   ja: {
     charName: "あかり",
@@ -59,6 +59,14 @@ const TRANSLATIONS = {
     legalLink: "特定商取引法に基づく表記",
     privacyLink: "プライバシーポリシー",
     copyright: "© 2025 Maid Akari Project. All rights reserved.",
+    // ★料金プラン翻訳キー
+    planFree: "フリー", planPro: "プロ", planRoyal: "ロイヤル",
+    priceFree: "¥0", pricePro: "¥980", priceRoyal: "¥2,980",
+    perMonth: "/ 月",
+    featBasicChat: "基本会話機能",
+    featMsgs: "メッセージ / 日",
+    featPremiumDress: "限定衣装の解放",
+    featSeasonalDress: "全季節限定衣装の解放",
     // ギフト
     letter: "手紙", tea: "紅茶", shortcake: "ショートケーキ", pancake: "パンケーキ", 
     anime_dvd: "アニメDVD", game_rpg: "ゲームソフト（RPG）", game_fight: "ゲームソフト（格闘）",
@@ -110,10 +118,36 @@ const TRANSLATIONS = {
     legalLink: "Legal Disclosure",
     privacyLink: "Privacy Policy",
     copyright: "© 2025 Maid Akari Project. All rights reserved.",
+    // ★Pricing Plan English
+    planFree: "Free", planPro: "Pro", planRoyal: "Royal",
+    priceFree: "¥0", pricePro: "¥980", priceRoyal: "¥2,980",
+    perMonth: "/ mo",
+    featBasicChat: "Basic Chat",
+    featMsgs: "msgs / day",
+    featPremiumDress: "Premium Outfits",
+    featSeasonalDress: "All Seasonal Outfits",
     // ギフト
     letter: "Letter", tea: "Tea", shortcake: "Shortcake", pancake: "Pancake",
     anime_dvd: "Anime DVD", game_rpg: "Game (RPG)", game_fight: "Game (Fighting)",
     accessory: "Jewelry", bag: "Luxury Bag", esthe: "Spa Ticket", ring: "Ring"
+  }
+};
+
+// ★衣装変更時のセリフ定義
+const OUTFIT_REACTIONS = {
+  ja: {
+    maid: "やはり、この服が一番落ち着きますわね、ご主人様",
+    santa: "メリークリスマス、ご主人様！…少し、浮かれすぎでしょうか？",
+    kimono: "新しい年の始まりをご主人様とお迎えできて、私は幸せですわ",
+    swimsuit: "っ…あまり、まじまじと見ないでくださいまし…恥ずかしいですわ…",
+    bunny: "ご主人様…この格好、本当に気に入っていただけたのでしょうか…？ぴょん、とか、言ったほうがよろしいですか…？"
+  },
+  en: {
+    maid: "This uniform is the most comfortable after all, Master.",
+    santa: "Merry Christmas, Master! ...Do I look a bit too excited?",
+    kimono: "I am so happy to welcome the New Year with you, Master.",
+    swimsuit: "H-hey... please don't stare so much... it's embarrassing...",
+    bunny: "Master... do you really like this outfit...? Should I say 'pyon' or something...?"
   }
 };
 
@@ -292,6 +326,7 @@ function HomeContent() {
     } catch (err) { alert('Communication Error'); }
   };
 
+  // ★衣装変更時のセリフ復活ロジック
   const changeOutfit = async (newOutfit) => {
     const plan = currentPlan.toUpperCase();
     const hour = new Date().getHours();
@@ -305,7 +340,15 @@ function HomeContent() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ outfit: newOutfit }),
         });
-    } catch (e) {}
+        
+        // ★セリフの追加
+        const reaction = OUTFIT_REACTIONS[lang][newOutfit] || OUTFIT_REACTIONS[lang].maid;
+        const prefix = (affection >= 100) ? "[照れ]" : "[笑顔]";
+        setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: prefix + reaction, mode: 'casual' }]);
+
+    } catch (e) {
+      console.error("Sync error", e);
+    }
     setCurrentOutfit(newOutfit);
     setShowCostume(false);
   };
@@ -414,33 +457,37 @@ function HomeContent() {
             </div>
         </section>
 
+        {/* ★料金プランセクション：多言語データへの紐付け修正 */}
         <section className="py-20 px-6 bg-black text-center border-t border-white/5">
             <div className="max-w-4xl mx-auto text-left">
                <h2 className="text-3xl font-bold text-white mb-12 text-center">{t.pricingTitle}</h2>
                <div className="grid md:grid-cols-3 gap-6">
+                  {/* Free */}
                   <div className="bg-gray-800 p-6 rounded-2xl border border-white/10 flex flex-col">
-                     <h3 className="text-xl font-bold text-gray-400 mb-2">Free</h3>
-                     <p className="text-3xl font-bold text-white mb-4">¥0 <span className="text-sm font-normal text-gray-500">/mo</span></p>
+                     <h3 className="text-xl font-bold text-gray-400 mb-2">{t.planFree}</h3>
+                     <p className="text-3xl font-bold text-white mb-4">{t.priceFree} <span className="text-sm font-normal text-gray-500">{t.perMonth}</span></p>
                      <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
-                        <li className="flex gap-2"><Check size={16} className="text-green-400"/> Basic Chat</li>
-                        <li className="flex gap-2 text-gray-500"><X size={16}/> Premium Outfits</li>
+                        <li className="flex gap-2"><Check size={16} className="text-green-400"/> {t.featBasicChat}</li>
+                        <li className="flex gap-2 text-gray-500"><X size={16}/> {t.featPremiumDress}</li>
                      </ul>
                   </div>
+                  {/* Pro */}
                   <div className="bg-gray-800 p-6 rounded-2xl border border-yellow-500 shadow-lg flex flex-col relative scale-105 z-10">
                      <div className="absolute top-0 right-0 bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-bl-lg">{t.popular}</div>
-                     <h3 className="text-xl font-bold text-yellow-400 mb-2 flex items-center gap-2"><Zap size={20}/> Pro</h3>
-                     <p className="text-3xl font-bold text-white mb-4">¥980 <span className="text-sm font-normal text-gray-500">/mo</span></p>
+                     <h3 className="text-xl font-bold text-yellow-400 mb-2 flex items-center gap-2"><Zap size={20}/> {t.planPro}</h3>
+                     <p className="text-3xl font-bold text-white mb-4">{t.pricePro} <span className="text-sm font-normal text-gray-500">{t.perMonth}</span></p>
                      <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
-                        <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 200 msgs / day</li>
-                        <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> Special Outfits</li>
+                        <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> 200 {t.featMsgs}</li>
+                        <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> {t.featPremiumDress}</li>
                      </ul>
                   </div>
+                  {/* Royal */}
                   <div className="bg-gray-800 p-6 rounded-2xl border border-purple-500/50 flex flex-col">
-                     <h3 className="text-xl font-bold text-purple-400 mb-2 flex items-center gap-2"><Crown size={20}/> Royal</h3>
-                     <p className="text-3xl font-bold text-white mb-4">¥2,980 <span className="text-sm font-normal text-gray-500">/mo</span></p>
+                     <h3 className="text-xl font-bold text-purple-400 mb-2 flex items-center gap-2"><Crown size={20}/> {t.planRoyal}</h3>
+                     <p className="text-3xl font-bold text-white mb-4">{t.priceRoyal} <span className="text-sm font-normal text-gray-500">{t.perMonth}</span></p>
                      <ul className="text-sm text-gray-300 space-y-3 mb-8 flex-1">
-                        <li className="flex gap-2"><Check size={16} className="text-purple-400"/> 2500 msgs / day</li>
-                        <li className="flex gap-2"><Check size={16} className="text-purple-400"/> All Seasonal Outfits</li>
+                        <li className="flex gap-2"><Check size={16} className="text-purple-400"/> 2500 {t.featMsgs}</li>
+                        <li className="flex gap-2"><Check size={16} className="text-purple-400"/> {t.featSeasonalDress}</li>
                      </ul>
                   </div>
                </div>
