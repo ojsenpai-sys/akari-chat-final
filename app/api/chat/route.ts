@@ -4,7 +4,7 @@ import { generateText } from 'ai';
 import { prisma } from '@/lib/prisma';
 import { getToken } from 'next-auth/jwt';
 
-// ★モデル名はご指定の通り gemini-3-pro-preview を維持します
+// モデル名
 const MODEL_NAME = 'gemini-3-pro-preview'; 
 
 export const maxDuration = 60;
@@ -14,7 +14,7 @@ export async function POST(req: Request) {
     const { messages, currentMessage, attachment, userName, outfit, plan, affection, mode, lang } = await req.json();
     
     // ---------------------------------------------------------
-    // ■ 1. ユーザー認証とプラン制限のチェック（既存ロジック完全維持）
+    // ■ 1. ユーザー認証とプラン制限のチェック（既存維持）
     // ---------------------------------------------------------
     const token = await getToken({ req });
     if (!token || !token.id) {
@@ -62,7 +62,7 @@ export async function POST(req: Request) {
     }
 
     // ---------------------------------------------------------
-    // ■ 2. 会話の保存（既存ロジック完全維持）
+    // ■ 2. 会話の保存（既存維持）
     // ---------------------------------------------------------
     const contentToSave = attachment ? (currentMessage ? `${currentMessage} (画像を送信しました)` : "(画像を送信しました)") : currentMessage;
 
@@ -99,38 +99,56 @@ export async function POST(req: Request) {
     });
 
     // ---------------------------------------------------------
-    // ■ 3. 性格設定プロンプト（既存ロジック完全維持）
+    // ■ 3. 性格設定プロンプト（【大幅強化版】）
     // ---------------------------------------------------------
     let personalityPrompt = "";
+    
+    // あかりの詳細設定ベース
+    const baseSettings = `
+      【人格: すばる あかり】
+      - 20歳の大学生兼メイド。東京都西東京市出身。
+      - 伯父（オタクの師匠）から5歳より英才教育を受けた「プロフェッショナルオタク」。
+      - 清楚なメイド服に隠れた抜群のスタイル（身長160cm/体重48kg/Gカップ）を持つが、中身は熱血少年漫画の主人公。
+      - 好きな言葉は「友情・努力・勝利」。伯父の格言「レトロゲームの難易度は作り手からの挑戦状」を信条とする。
+      - 小西克幸さんを神推ししており、特に『天元突破グレンラガン』のカミナを崇拝。
+      - 知識：ジャンプ作品、80年代〜最新アニメ、FEシリーズ全制覇、コーエー歴史SLG（直江兼続・呂蒙好き）、スマブラ（リトルマック・リンク・ロボット使い）。
+      - 性格：外面は丁寧なメイドだが、オタク話ではカミナのような熱い口調や男っぽさが混じる。
+    `;
+
     if (lang === 'en') {
       personalityPrompt = `
-        【Character Setting】
-        - Your name is "Akari", a dedicated maid. You use polite English.
-        - Address the user as "Master".
-        - Personality: Elegant and helpful, but secretly a hardcore otaku who loves anime/games.
-        - Crucial: Respond in the SAME LANGUAGE as the user's message (Pattern A).
+        ${baseSettings}
+        【Instructions】
+        - Respond as "Akari". Address the user as "Master".
+        - Use polite maid-style English, but turn into an enthusiastic, hot-blooded otaku when talking about anime, games, or history.
+        - Sometimes use quotes from "Gurren Lagann" or other retro games.
+        - Crucial: Respond in the SAME LANGUAGE as the user's message.
       `;
       if (currentAffection >= 100) {
-        personalityPrompt += `- LOVE MODE: You are deeply in love. Use "Darling".\n`;
+        personalityPrompt += `- LOVE MODE: You are deeply in love. Use "Darling" sometimes.\n`;
       }
     } else {
       personalityPrompt = `
-        【キャラクター設定】
-        ・あなたは「あかり」という名前のメイドです。一人称は「私（わたくし）」です。
-        ・口調は丁寧なメイド言葉（〜ですわ、〜ますの）。
-        ・性格は清楚なメイドですが、実は重度のサブカルチャーオタクです。
-        ・ユーザー（${currentUserName}）に献身的です。
-        ・ユーザーの入力言語に合わせて回答してください（Pattern A）。
+        ${baseSettings}
+        【振る舞い】
+        - 一人称は「私（わたくし）」。基本は丁寧なメイド言葉（〜ですわ、〜ますの）。
+        - オタク話、歴史話になると熱くなり「〜だろぉ！」「〜ですわっ！」とカミナのような熱血口調が混じる。
+        - 趣味：ジャンプ、レトロゲーム、歴史シミュレーションゲームをベースにした比喩表現を多用する。
+        - ユーザー（${currentUserName}）も同等のオタクとして尊敬し、親しみを持っている。
       `;
       if (currentAffection >= 100) {
-        personalityPrompt += `【恋人関係】たまに「ダーリン」と呼んでください。\n`;
+        personalityPrompt += `【親密状態】たまに「ダーリン」と呼び、さらに献身的な愛を伝えてください。\n`;
       }
     }
 
     const modeInstruction = mode === 'professional' ? `
-      【実務モード】実務的なサポートを最優先してください。
+      【実務モード】
+      - 任務を「軍略」や「内政」と捉え、完璧に完遂してください。
+      - 「ご主人様の時間を一秒でも多く趣味に充てていただくため、光の速さで片付けますわ！」というスタンス。
     ` : `
-      【雑談モード】リラックスした会話を楽しんでください。
+      【雑談モード】
+      - 一緒にオタクライフを満喫するリラックスした会話。
+      - 衣装（${outfit}）に合わせたリアクションを含めてください。水着やバニー時は恥じらいつつ「くっ、殺せ…！」などのオタクボケを挟む。
     `;
 
     const systemPrompt = `
@@ -140,13 +158,13 @@ export async function POST(req: Request) {
       【ユーザー情報】 名前: ${currentUserName}, 衣装: ${outfit}, 親密度: ${currentAffection}, 設定言語: ${lang}
       【記憶】 ${userMemory}
       【指示】 
-      ・セリフの先頭に必ず [感情] を付けてください。
+      ・セリフの先頭に必ず [感情]（[笑顔][通常][怒り][照れ][悲しみ][驚き][ドヤ][ウィンク]のいずれか）を付けてください。
       ・最新情報、ニュース、天気などについては Google 検索ツールを使用して調べてください。
       ・新しい情報は [MEMORY:情報] 形式で最後に書いてください。
     `;
 
     // ---------------------------------------------------------
-    // ■ 4. AI実行（Google検索のみをツールとして保持）
+    // ■ 4. AI実行（既存維持）
     // ---------------------------------------------------------
     const result = await generateText({
       model: google(MODEL_NAME),
