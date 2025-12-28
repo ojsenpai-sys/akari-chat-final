@@ -99,11 +99,10 @@ export async function POST(req: Request) {
     });
 
     // ---------------------------------------------------------
-    // ■ 3. 性格設定プロンプト（【大幅強化版】）
+    // ■ 3. 性格設定プロンプト（既存維持）
     // ---------------------------------------------------------
     let personalityPrompt = "";
     
-    // あかりの詳細設定ベース
     const baseSettings = `
       【人格: すばる あかり】
       - 20歳の大学生兼メイド。東京都西東京市出身。
@@ -164,7 +163,7 @@ export async function POST(req: Request) {
     `;
 
     // ---------------------------------------------------------
-    // ■ 4. AI実行（既存維持）
+    // ■ 4. AI実行（お仕置きハンドリング追加）
     // ---------------------------------------------------------
     const result = await generateText({
       model: google(MODEL_NAME),
@@ -178,7 +177,18 @@ export async function POST(req: Request) {
 
     let aiResponse = result.text;
 
-    // メモリ情報の抽出ロジック（既存維持）
+    // ★重要：Googleのセーフティフィルタに引っかかった場合の処理
+    if (result.finishReason === 'content-filter' || !aiResponse) {
+      if (lang === 'en') {
+        aiResponse = `[shy]M-Master!? I cannot accept such an indecent request! My uncle once said, 'A maid's purity is heavier than a knight's sword!' ...Please reflect on your behavior! [MEMORY:The user made an inappropriate request and was scolded.]`;
+      } else {
+        aiResponse = `[照れ]ご、ご主人様！？そ、そんな破廉恥なことはお受けできませんわ！伯父様が言っていました、『メイドの純潔は騎士の剣より重い』と！……っ、今の発言は私の逆鱗に触れましたわよ！反省してくださいまし！ [MEMORY:ユーザーが不適切な要求をし、あかりに叱られた]`;
+      }
+    }
+
+    // ---------------------------------------------------------
+    // ■ 5. メモリ抽出・DB保存（既存維持）
+    // ---------------------------------------------------------
     let newMemory = "";
     const memoryMatch = aiResponse.match(/\[MEMORY:(.*?)\]/);
     if (memoryMatch) {
@@ -186,7 +196,6 @@ export async function POST(req: Request) {
         aiResponse = aiResponse.replace(/\[MEMORY:.*?\]/, "").trim(); 
     }
 
-    // AIの回答をDBに保存（既存維持）
     await prisma.message.create({
       data: {
         userId: userId,
@@ -209,6 +218,10 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("【致命的エラー】api/chat/route.ts:", error);
-    return Response.json({ error: "AIエラーが発生しました。", details: error.message }, { status: 500 });
+    // 予期せぬエラー時も、あかりとしてお詫びすることでUXを損なわない
+    const fallbackResponse = lang === 'en' 
+      ? "[sad]I'm sorry, Master... I feel a bit dizzy and can't respond well. Could you try talking to me again later?"
+      : "[悲しみ]ご主人様、申し訳ありません……。なんだか頭がクラクラして、うまくお返事ができませんわ。少し時間を置いてから、また話しかけていただけますか？";
+    return Response.json({ text: fallbackResponse });
   }
 }
