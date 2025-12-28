@@ -11,15 +11,16 @@ import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
 
-// ★翻訳用マスタデータ（サービス紹介文をご指定の内容に更新）
+// ★翻訳用マスタデータ（紹介文と強調用キーを分離）
 const TRANSLATIONS = {
   ja: {
     charName: "あかり",
     title: "メイドのあかりちゃん",
     subtitle: "あなた専属のAIメイドとお話ししませんか？ いつでも優しく、あなたの帰りをお待ちしています。",
-    // ★更新：サービス紹介文（タイトル1行・内容をご指定通りに）
+    // ★更新：サービス紹介文（改行ポイントを調整）
     serviceIntroTitle: "あなたの日常に、癒やしと有能なパートナーを。",
-    serviceIntroDesc: "「メイドのあかりちゃん」は、最新のAI技術を活用した次世代パートナーサービスです。ただの雑談だけでなく実務のサポート、そして親密度に合わせた着せ替えイベントなど、あなただけの特別なメイドとの生活が楽しめます。\n\nあなたの趣味嗜好を覚えて会話に織り交ぜしっかりと記憶していきます。つまりあなた好みのAIメイドを作ることができるのです！",
+    serviceIntroDesc: "「メイドのあかりちゃん」は最新のAI技術を活用した次世代パートナーサービスです。ただの雑談だけでなく実務のサポート、そして親密度に合わせた着せ替えイベントなど、あなただけの特別なメイドとの生活が楽しめます。\n\nあなたの趣味嗜好を覚えて会話に織り交ぜしっかりと記憶していきます。",
+    serviceHighlight: "つまりあなた好みのAIメイドを作ることができるのです！",
     termsAgree: "利用規約に同意して開始",
     termsLink: "利用規約",
     startGoogle: "Googleで始める",
@@ -80,7 +81,8 @@ const TRANSLATIONS = {
     title: "Akari the Maid",
     subtitle: "Your personal AI partner. Always kind, always waiting for you to come home.",
     serviceIntroTitle: "A healing and capable partner for your daily life.",
-    serviceIntroDesc: "'Akari the Maid' is a next-generation partner service powered by the latest AI. Beyond just casual chat, you can enjoy a life with your own special maid through professional support and dress-up events based on affection levels.\n\nShe learns your hobbies and preferences, weaving them into conversations and remembering them clearly. In other words, you can create an AI maid perfectly tailored to your taste!",
+    serviceIntroDesc: "'Akari the Maid' is a next-generation partner service powered by the latest AI. Beyond just casual chat, you can enjoy a life with your own special maid through professional support and dress-up events based on affection levels.\n\nShe learns your hobbies and preferences, weaving them into conversations and remembering them clearly.",
+    serviceHighlight: "In other words, you can create an AI maid perfectly tailored to your taste!",
     termsAgree: "Agree to Terms and Start",
     termsLink: "Terms of Service",
     startGoogle: "Continue with Google",
@@ -138,7 +140,7 @@ const TRANSLATIONS = {
   }
 };
 
-// ★衣装変更時のセリフ定義（長文・感情マシマシ版）
+// ★衣装変更時のセリフ定義
 const OUTFIT_REACTIONS = {
   ja: {
     maid: "はぁ…やっぱりこの戦闘服（メイド服）が一番落ち着きますわね！襟元のフリル,エプロンの張り具合,完璧な防御力…いえ、可愛さです！さあご主人様、改めてお仕えいたしますわっ！",
@@ -467,18 +469,16 @@ function HomeContent() {
             <div className="absolute bottom-8 animate-bounce text-gray-400 text-sm">{t.scrollMore}</div>
         </div>
 
-        {/* ★追加・修正：サービス紹介セクション（縦積みレイアウト） */}
+        {/* ★追加・修正：サービス紹介セクション（縦積み・強調レイアウト） */}
         <section className="py-20 px-6 bg-gradient-to-b from-black to-gray-900 border-t border-white/5">
-            <div className="max-w-4xl mx-auto flex flex-col items-center gap-12 text-center">
-               {/* 1. 見出し */}
-               <div className="space-y-6">
-                  <h2 className="text-3xl md:text-4xl font-bold text-pink-400 flex items-center justify-center gap-3">
-                    <Sparkles className="fill-pink-400" size={28} /> {t.serviceIntroTitle}
-                  </h2>
-               </div>
+            <div className="max-w-4xl mx-auto flex flex-col items-center gap-10 text-center">
+               {/* 1. 見出し（1行） */}
+               <h2 className="text-3xl md:text-4xl font-bold text-pink-400 flex items-center justify-center gap-3">
+                 <Sparkles className="fill-pink-400" size={28} /> {t.serviceIntroTitle}
+               </h2>
                
-               {/* 2. 写真（大きく中央に、傾きなし） */}
-               <div className="w-full max-w-3xl">
+               {/* 2. 大きな写真（傾きなし） */}
+               <div className="w-full max-w-4xl">
                   <div className="bg-gray-800 p-2 rounded-2xl border border-white/10 shadow-2xl overflow-hidden transition-all duration-500">
                      <img 
                         src="/images/akari_preview.png" 
@@ -489,10 +489,13 @@ function HomeContent() {
                   </div>
                </div>
 
-               {/* 3. 説明文 */}
-               <div className="max-w-3xl text-left md:text-center">
+               {/* 3. 説明文（決め台詞を強調） */}
+               <div className="max-w-3xl space-y-6">
                   <p className="text-gray-300 leading-relaxed text-lg md:text-xl whitespace-pre-wrap">
                     {t.serviceIntroDesc}
+                  </p>
+                  <p className="text-pink-400 font-bold text-xl md:text-2xl pt-2 drop-shadow-[0_0_10px_rgba(244,114,182,0.3)] animate-pulse">
+                    {t.serviceHighlight}
                   </p>
                </div>
             </div>
