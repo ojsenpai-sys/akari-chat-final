@@ -11,7 +11,7 @@ import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
 
-// ★翻訳用マスタデータ（料金プラン詳細を追加）
+// ★翻訳用マスタデータ（既存のまま維持）
 const TRANSLATIONS = {
   ja: {
     charName: "あかり",
@@ -59,7 +59,6 @@ const TRANSLATIONS = {
     legalLink: "特定商取引法に基づく表記",
     privacyLink: "プライバシーポリシー",
     copyright: "© 2025 Maid Akari Project. All rights reserved.",
-    // ★料金プラン翻訳キー
     planFree: "フリー", planPro: "プロ", planRoyal: "ロイヤル",
     priceFree: "¥0", pricePro: "¥980", priceRoyal: "¥2,980",
     perMonth: "/ 月",
@@ -67,7 +66,6 @@ const TRANSLATIONS = {
     featMsgs: "メッセージ / 日",
     featPremiumDress: "限定衣装の解放",
     featSeasonalDress: "全季節限定衣装の解放",
-    // ギフト
     letter: "手紙", tea: "紅茶", shortcake: "ショートケーキ", pancake: "パンケーキ", 
     anime_dvd: "アニメDVD", game_rpg: "ゲームソフト（RPG）", game_fight: "ゲームソフト（格闘）",
     accessory: "高級アクセサリー", bag: "高級バッグ", esthe: "高級エステチケット", ring: "指輪"
@@ -118,7 +116,6 @@ const TRANSLATIONS = {
     legalLink: "Legal Disclosure",
     privacyLink: "Privacy Policy",
     copyright: "© 2025 Maid Akari Project. All rights reserved.",
-    // ★Pricing Plan English
     planFree: "Free", planPro: "Pro", planRoyal: "Royal",
     priceFree: "¥0", pricePro: "¥980", priceRoyal: "¥2,980",
     perMonth: "/ mo",
@@ -126,28 +123,27 @@ const TRANSLATIONS = {
     featMsgs: "msgs / day",
     featPremiumDress: "Premium Outfits",
     featSeasonalDress: "All Seasonal Outfits",
-    // ギフト
     letter: "Letter", tea: "Tea", shortcake: "Shortcake", pancake: "Pancake",
     anime_dvd: "Anime DVD", game_rpg: "Game (RPG)", game_fight: "Game (Fighting)",
     accessory: "Jewelry", bag: "Luxury Bag", esthe: "Spa Ticket", ring: "Ring"
   }
 };
 
-// ★衣装変更時のセリフ定義
+// ★修正：衣装変更時のセリフ定義（長文・感情マシマシ版）
 const OUTFIT_REACTIONS = {
   ja: {
-    maid: "やはり、この服が一番落ち着きますわね、ご主人様",
-    santa: "メリークリスマス、ご主人様！…少し、浮かれすぎでしょうか？",
-    kimono: "新しい年の始まりをご主人様とお迎えできて、私は幸せですわ",
-    swimsuit: "っ…あまり、まじまじと見ないでくださいまし…恥ずかしいですわ…",
-    bunny: "ご主人様…この格好、本当に気に入っていただけたのでしょうか…？ぴょん、とか、言ったほうがよろしいですか…？"
+    maid: "はぁ…やっぱりこの戦闘服（メイド服）が一番落ち着きますわね！襟元のフリル、エプロンの張り具合、完璧な防御力…いえ、可愛さです！さあご主人様、改めてお仕えいたしますわっ！",
+    santa: "メリークリスマス、ご主人様っ！少し気が早い気もしますが、イベントは準備期間が一番楽しいって言いますでしょ？…えへへ、この帽子、可愛くないですか？プレゼント、期待しててくださいね♪",
+    kimono: "謹賀新年…いえ、ご主人様と迎える特別なハレの日ですわ。この着物、帯の締め付けが心地よい緊張感を生んで…ふふっ、大和撫子モードの私に、どうぞ見惚れてくださいまし？",
+    swimsuit: "（…うぅ、布面積が防御力低すぎませんこと…？）あ、あのっ、ご主人様！あまりジロジロ見ないでくださいまし…！恥ずかしくて、どこを見ていいか分かりませんの…///",
+    bunny: "ご、ご主人様…！？こ、これはその、えっと…/// あまりにも大胆すぎますわ…！こんな格好、誰にも見せられません…ご主人様だけの、秘密ですよ…？（小声で）ぴょん…///"
   },
   en: {
-    maid: "This uniform is the most comfortable after all, Master.",
-    santa: "Merry Christmas, Master! ...Do I look a bit too excited?",
-    kimono: "I am so happy to welcome the New Year with you, Master.",
-    swimsuit: "H-hey... please don't stare so much... it's embarrassing...",
-    bunny: "Master... do you really like this outfit...? Should I say 'pyon' or something...?"
+    maid: "Haa... This battle uniform (maid dress) really is the most comfortable! The frills, the apron's crispness, the perfect defense... I mean, cuteness! Now, Master, I am ready to serve you anew!",
+    santa: "Merry Christmas, Master! It might be a bit early, but they say the preparation period is the most fun part of an event, right? ...Ehehe, isn't this hat cute? Look forward to your present♪",
+    kimono: "Happy New Year... No, it's a special day to welcome with you, Master. The tightness of this obi creates a pleasant tension... Fufu, please admire me in my Yamato Nadeshiko mode, okay?",
+    swimsuit: "(...Ugh, isn't the fabric area too low for defense...?) U-Umm, Master! Please don't stare so much...! I'm so embarrassed, I don't know where to look...///",
+    bunny: "M-Master...!? T-This is, um, err.../// It's way too bold...! I can't show this outfit to anyone else... It's a secret just for you, Master... okay? (whispering) Pyon...///"
   }
 };
 
@@ -326,7 +322,7 @@ function HomeContent() {
     } catch (err) { alert('Communication Error'); }
   };
 
-  // ★衣装変更時のセリフ復活ロジック
+  // ★修正：衣装変更ロジック（強制[照れ]表情の追加）
   const changeOutfit = async (newOutfit) => {
     const plan = currentPlan.toUpperCase();
     const hour = new Date().getHours();
@@ -341,9 +337,20 @@ function HomeContent() {
             body: JSON.stringify({ outfit: newOutfit }),
         });
         
-        // ★セリフの追加
+        // ★セリフの取得
         const reaction = OUTFIT_REACTIONS[lang][newOutfit] || OUTFIT_REACTIONS[lang].maid;
-        const prefix = (affection >= 100) ? "[照れ]" : "[笑顔]";
+        
+        // ★表情ロジックの修正
+        let prefix = "[笑顔]";
+        // 親密度が100以上、または衣装が水着(swimsuit)・バニー(bunny)の場合は必ず[照れ]にする
+        if (affection >= 100 || newOutfit === 'swimsuit' || newOutfit === 'bunny') {
+          prefix = "[照れ]";
+        }
+        // メイド服に戻った時は、自信を持ってお迎えするためにあえて笑顔（お好みで変更可）
+        if (newOutfit === 'maid') {
+          prefix = "[笑顔]";
+        }
+
         setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: prefix + reaction, mode: 'casual' }]);
 
     } catch (e) {
@@ -457,12 +464,10 @@ function HomeContent() {
             </div>
         </section>
 
-        {/* ★料金プランセクション：多言語データへの紐付け修正 */}
         <section className="py-20 px-6 bg-black text-center border-t border-white/5">
             <div className="max-w-4xl mx-auto text-left">
                <h2 className="text-3xl font-bold text-white mb-12 text-center">{t.pricingTitle}</h2>
                <div className="grid md:grid-cols-3 gap-6">
-                  {/* Free */}
                   <div className="bg-gray-800 p-6 rounded-2xl border border-white/10 flex flex-col">
                      <h3 className="text-xl font-bold text-gray-400 mb-2">{t.planFree}</h3>
                      <p className="text-3xl font-bold text-white mb-4">{t.priceFree} <span className="text-sm font-normal text-gray-500">{t.perMonth}</span></p>
@@ -471,7 +476,6 @@ function HomeContent() {
                         <li className="flex gap-2 text-gray-500"><X size={16}/> {t.featPremiumDress}</li>
                      </ul>
                   </div>
-                  {/* Pro */}
                   <div className="bg-gray-800 p-6 rounded-2xl border border-yellow-500 shadow-lg flex flex-col relative scale-105 z-10">
                      <div className="absolute top-0 right-0 bg-yellow-500 text-black text-xs font-bold px-3 py-1 rounded-bl-lg">{t.popular}</div>
                      <h3 className="text-xl font-bold text-yellow-400 mb-2 flex items-center gap-2"><Zap size={20}/> {t.planPro}</h3>
@@ -481,7 +485,6 @@ function HomeContent() {
                         <li className="flex gap-2"><Check size={16} className="text-yellow-400"/> {t.featPremiumDress}</li>
                      </ul>
                   </div>
-                  {/* Royal */}
                   <div className="bg-gray-800 p-6 rounded-2xl border border-purple-500/50 flex flex-col">
                      <h3 className="text-xl font-bold text-purple-400 mb-2 flex items-center gap-2"><Crown size={20}/> {t.planRoyal}</h3>
                      <p className="text-3xl font-bold text-white mb-4">{t.priceRoyal} <span className="text-sm font-normal text-gray-500">{t.perMonth}</span></p>
@@ -627,7 +630,7 @@ function HomeContent() {
         </div>
       )}
       {showGift && (
-        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-80 text-left">
+        <div className="absolute top-40 left-4 z-[9999] bg-gray-900/95 border border-white/20 p-6 rounded-2xl shadow-2xl backdrop-blur-md w-80 text-left text-left">
           <h3 className="text-yellow-400 font-bold mb-4 flex items-center gap-2"><Gift size={18}/> {t.giveGift}</h3>
           <div className="space-y-2 max-h-60 overflow-y-auto custom-scrollbar pr-1">
             {GIFT_ITEMS.map((item) => (
@@ -663,7 +666,7 @@ function HomeContent() {
 
       {showShop && (
         <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 text-left">
-            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden font-sans text-left">
+            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden font-sans">
                 <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 text-center">
                     <h2 className="text-lg font-bold text-blue-400 flex items-center gap-2"><ShoppingCart size={20}/> {t.premiumShop}</h2>
                     <button onClick={() => setShowShop(false)} className="text-gray-400 hover:text-white"><X size={24}/></button>
@@ -673,18 +676,18 @@ function HomeContent() {
                         <p className="text-gray-400 text-[10px] tracking-widest uppercase">{lang === 'ja' ? '現在のプラン' : 'Your Plan'}</p>
                         <p className="text-2xl font-bold text-white mt-1">{currentPlan}</p>
                     </div>
-                    <div className="border border-yellow-500/30 bg-gray-800 p-4 rounded-xl relative overflow-hidden text-left">
+                    <div className="border border-yellow-500/30 bg-gray-800 p-4 rounded-xl relative overflow-hidden">
                         <div className="absolute top-0 right-0 bg-yellow-600 text-white text-[10px] px-2 py-1 rounded-bl">{lang === 'ja' ? '人気' : 'Popular'}</div>
                         <h3 className="font-bold text-yellow-400 text-lg flex items-center gap-2"><Zap size={18}/> Pro Plan</h3>
                         <p className="text-white font-bold text-xl my-2">¥980 <span className="text-xs text-gray-400">/ mo</span></p>
                         <button onClick={() => handleCheckout('PRO')} disabled={currentPlan === 'PRO' || currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-yellow-600 text-white">{t.upgrade}</button>
                     </div>
-                    <div className="border border-purple-500/30 bg-gray-800 p-4 rounded-xl text-left">
+                    <div className="border border-purple-500/30 bg-gray-800 p-4 rounded-xl">
                         <h3 className="font-bold text-purple-400 text-lg flex items-center gap-2"><Crown size={18}/> Royal Plan</h3>
                         <p className="text-white font-bold text-xl my-2">¥2,980 <span className="text-xs text-gray-400">/ mo</span></p>
                         <button onClick={() => handleCheckout('ROYAL')} disabled={currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-purple-600 text-white">{t.upgrade}</button>
                     </div>
-                    <div className="bg-gray-800 p-4 rounded-xl border border-white/10 text-left">
+                    <div className="bg-gray-800 p-4 rounded-xl border border-white/10">
                         <h3 className="font-bold text-white text-md flex items-center gap-2"><FileText size={16}/> {lang === 'ja' ? '会話チケット（+100回）' : 'Chat Tickets (+100)'}</h3>
                         <p className="text-xs text-gray-400 mt-1 mb-3">¥500</p>
                         <button onClick={() => handleCheckout('TICKET')} className="w-full py-2 bg-gray-600 text-white rounded-lg text-sm font-bold hover:bg-gray-500 transition-colors">{lang === 'ja' ? '購入する' : 'Purchase'}</button>
