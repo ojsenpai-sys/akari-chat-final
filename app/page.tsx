@@ -11,7 +11,7 @@ import VisualNovelDisplay from './VisualNovelDisplay';
 import { useSession, signIn, signOut } from "next-auth/react";
 import { useRouter, useSearchParams } from 'next/navigation'; 
 
-// ★翻訳用マスタデータ（既存のまま維持）
+// ★翻訳用マスタデータ（プラン制限用のセリフを追加）
 const TRANSLATIONS = {
   ja: {
     charName: "あかり",
@@ -66,6 +66,10 @@ const TRANSLATIONS = {
     featMsgs: "メッセージ / 日",
     featPremiumDress: "限定衣装の解放",
     featSeasonalDress: "全季節限定衣装の解放",
+    // プラン制限メッセージ
+    planLimitPro: "[悲しみ]ご主人様、申し訳ございません…。こちらの衣装はProプラン以上のご主人様限定となっておりますの。もっと仲良くなれたら、いつかお見せしたいですわ…！",
+    planLimitRoyal: "[悲しみ]ご主人様、こちらの衣装はロイヤルプランをお使いの特別なご主人様限定のものですわ。今の私では、まだ袖を通すことが許されませんの…ごめんなさい。",
+    // ギフト
     letter: "手紙", tea: "紅茶", shortcake: "ショートケーキ", pancake: "パンケーキ", 
     anime_dvd: "アニメDVD", game_rpg: "ゲームソフト（RPG）", game_fight: "ゲームソフト（格闘）",
     accessory: "高級アクセサリー", bag: "高級バッグ", esthe: "高級エステチケット", ring: "指輪"
@@ -123,6 +127,10 @@ const TRANSLATIONS = {
     featMsgs: "msgs / day",
     featPremiumDress: "Premium Outfits",
     featSeasonalDress: "All Seasonal Outfits",
+    // Plan restrictions
+    planLimitPro: "[悲しみ]I'm so sorry, Master... This outfit is exclusive to Pro plan members. I hope I can show it to you someday when we're closer...!",
+    planLimitRoyal: "[悲しみ]Master, I apologize. This is a special outfit only for Royal plan members. I'm not yet allowed to wear this for you... I'm so sorry.",
+    // ギフト
     letter: "Letter", tea: "Tea", shortcake: "Shortcake", pancake: "Pancake",
     anime_dvd: "Anime DVD", game_rpg: "Game (RPG)", game_fight: "Game (Fighting)",
     accessory: "Jewelry", bag: "Luxury Bag", esthe: "Spa Ticket", ring: "Ring"
@@ -322,14 +330,39 @@ function HomeContent() {
     } catch (err) { alert('Communication Error'); }
   };
 
-  // ★修正：衣装変更ロジック（強制[照れ]表情の追加）
+  // ★修正：衣装変更ロジック（お断りメッセージ & 強制照れ連動）
   const changeOutfit = async (newOutfit) => {
     const plan = currentPlan.toUpperCase();
     const hour = new Date().getHours();
     const isNightTime = hour >= 23 || hour < 6; 
-    if (isNightTime && newOutfit !== 'swimsuit') { setShowCostume(false); return; }
-    if (newOutfit === 'swimsuit' || newOutfit === 'bunny') { if (plan === 'FREE') { setShowCostume(false); return; } }
-    if (newOutfit === 'santa' || newOutfit === 'kimono') { if (plan !== 'ROYAL') { setShowCostume(false); return; } }
+
+    // 1. 深夜帯の制限（水着以外は禁止 & メッセージ）
+    if (isNightTime && newOutfit !== 'swimsuit') {
+      setMessages(prev => [...prev, { 
+        id: Date.now().toString(), 
+        role: 'assistant', 
+        content: lang === 'ja' ? "[照れ]ご主人様、こんな夜更けにそのお姿は…少しはしたないですわ。今はルームウェア（水着）で失礼いたしますね？" : "[照れ]Master, it's a bit too late for that outfit. Let's stay in our room wear for now, shall we?", 
+        mode: 'casual' 
+      }]);
+      setShowCostume(false);
+      return;
+    }
+
+    // 2. Proプラン制限（水着・バニー）
+    if ((newOutfit === 'swimsuit' || newOutfit === 'bunny') && plan === 'FREE') {
+      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: t.planLimitPro, mode: 'casual' }]);
+      setShowCostume(false);
+      return;
+    }
+
+    // 3. Royalプラン制限（サンタ・晴れ着）
+    if ((newOutfit === 'santa' || newOutfit === 'kimono') && plan !== 'ROYAL') {
+      setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: t.planLimitRoyal, mode: 'casual' }]);
+      setShowCostume(false);
+      return;
+    }
+
+    // --- 以下、制限をクリアした場合の成功処理 ---
     try {
         await fetch('/api/user/sync', {
             method: 'POST',
@@ -340,13 +373,12 @@ function HomeContent() {
         // ★セリフの取得
         const reaction = OUTFIT_REACTIONS[lang][newOutfit] || OUTFIT_REACTIONS[lang].maid;
         
-        // ★表情ロジックの修正
+        // ★表情ロジック：水着(swimsuit)・バニー(bunny)・親密度100以上は必ず[照れ]
         let prefix = "[笑顔]";
-        // 親密度が100以上、または衣装が水着(swimsuit)・バニー(bunny)の場合は必ず[照れ]にする
         if (affection >= 100 || newOutfit === 'swimsuit' || newOutfit === 'bunny') {
           prefix = "[照れ]";
         }
-        // メイド服に戻った時は、自信を持ってお迎えするためにあえて笑顔（お好みで変更可）
+        // メイド服に戻った時は、お帰りなさいの笑顔
         if (newOutfit === 'maid') {
           prefix = "[笑顔]";
         }
@@ -412,6 +444,7 @@ function HomeContent() {
     return <div className="flex h-screen items-center justify-center bg-black text-white">Loading...</div>;
   }
 
+  // --- ログイン前（ランディングページ） ---
   if (status === "unauthenticated") {
     return (
       <div className="flex flex-col min-h-screen bg-black text-white overflow-y-auto font-sans text-left">
@@ -666,7 +699,7 @@ function HomeContent() {
 
       {showShop && (
         <div className="absolute inset-0 z-[9999] flex items-center justify-center bg-black/80 p-4 text-left">
-            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden font-sans">
+            <div className="bg-gray-900 border border-blue-500/30 rounded-2xl w-full max-w-lg max-h-[85vh] flex flex-col shadow-2xl overflow-hidden font-sans text-left">
                 <div className="p-4 border-b border-gray-700 flex justify-between items-center bg-gray-800 text-center">
                     <h2 className="text-lg font-bold text-blue-400 flex items-center gap-2"><ShoppingCart size={20}/> {t.premiumShop}</h2>
                     <button onClick={() => setShowShop(false)} className="text-gray-400 hover:text-white"><X size={24}/></button>
@@ -676,18 +709,18 @@ function HomeContent() {
                         <p className="text-gray-400 text-[10px] tracking-widest uppercase">{lang === 'ja' ? '現在のプラン' : 'Your Plan'}</p>
                         <p className="text-2xl font-bold text-white mt-1">{currentPlan}</p>
                     </div>
-                    <div className="border border-yellow-500/30 bg-gray-800 p-4 rounded-xl relative overflow-hidden">
+                    <div className="border border-yellow-500/30 bg-gray-800 p-4 rounded-xl relative overflow-hidden text-left">
                         <div className="absolute top-0 right-0 bg-yellow-600 text-white text-[10px] px-2 py-1 rounded-bl">{lang === 'ja' ? '人気' : 'Popular'}</div>
                         <h3 className="font-bold text-yellow-400 text-lg flex items-center gap-2"><Zap size={18}/> Pro Plan</h3>
                         <p className="text-white font-bold text-xl my-2">¥980 <span className="text-xs text-gray-400">/ mo</span></p>
                         <button onClick={() => handleCheckout('PRO')} disabled={currentPlan === 'PRO' || currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-yellow-600 text-white">{t.upgrade}</button>
                     </div>
-                    <div className="border border-purple-500/30 bg-gray-800 p-4 rounded-xl">
+                    <div className="border border-purple-500/30 bg-gray-800 p-4 rounded-xl text-left">
                         <h3 className="font-bold text-purple-400 text-lg flex items-center gap-2"><Crown size={18}/> Royal Plan</h3>
                         <p className="text-white font-bold text-xl my-2">¥2,980 <span className="text-xs text-gray-400">/ mo</span></p>
                         <button onClick={() => handleCheckout('ROYAL')} disabled={currentPlan === 'ROYAL'} className="w-full py-2 rounded-lg font-bold bg-purple-600 text-white">{t.upgrade}</button>
                     </div>
-                    <div className="bg-gray-800 p-4 rounded-xl border border-white/10">
+                    <div className="bg-gray-800 p-4 rounded-xl border border-white/10 text-left">
                         <h3 className="font-bold text-white text-md flex items-center gap-2"><FileText size={16}/> {lang === 'ja' ? '会話チケット（+100回）' : 'Chat Tickets (+100)'}</h3>
                         <p className="text-xs text-gray-400 mt-1 mb-3">¥500</p>
                         <button onClick={() => handleCheckout('TICKET')} className="w-full py-2 bg-gray-600 text-white rounded-lg text-sm font-bold hover:bg-gray-500 transition-colors">{lang === 'ja' ? '購入する' : 'Purchase'}</button>
