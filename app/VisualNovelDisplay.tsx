@@ -5,9 +5,9 @@ import { BookOpen, X, Heart, Star, Sparkles, MessageCircle, Volume2, VolumeX, Ma
 // --- BGM設定 ---
 const BGM_NORMAL = "/audio/bgm_normal.mp3";
 const BGM_LOVE = "/audio/bgm_love.mp3";
-const MAX_VOLUME = 0.4; // ★BGMの最大音量
-const FADE_STEP = 0.02; // ★1回の変化量
-const FADE_INTERVAL = 50; // ★変化させる間隔(ms)
+const MAX_VOLUME = 0.4;
+const FADE_STEP = 0.02;
+const FADE_INTERVAL = 50;
 
 // --- 各衣装の定義 ---
 const MAID_EMOTIONS = {
@@ -91,6 +91,57 @@ const SITUATION_DEFINITIONS = [
   { id: "yoga", image: "/images/event_yoga.png", triggers: ["ヨガしよう"], releases: ["終わろう"] }
 ];
 
+// --- 感情パーティクルコンポーネント ---
+const EmotionParticles = ({ emotion }) => {
+  if (emotion === 'smile' || emotion === 'wink') {
+    return (
+      <div className="absolute inset-0 pointer-events-none z-30">
+        {[...Array(12)].map((_, i) => (
+          <div key={i} className="absolute animate-ping" style={{
+            top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%`,
+            animationDelay: `${Math.random() * 2}s`, animationDuration: '3s'
+          }}>
+            <Sparkles className="text-yellow-300 w-4 h-4 opacity-40" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (emotion === 'shy') {
+    return (
+      <div className="absolute inset-0 pointer-events-none z-30 overflow-hidden">
+        {[...Array(10)].map((_, i) => (
+          <div key={i} className="absolute animate-bounce" style={{
+            bottom: '-10%', left: `${Math.random() * 100}%`,
+            animationDuration: `${3 + Math.random() * 2}s`,
+            opacity: 0.6
+          }}>
+            <Heart className="text-pink-400 fill-pink-400 w-6 h-6" />
+          </div>
+        ))}
+      </div>
+    );
+  }
+  if (emotion === 'sad') {
+    return (
+      <div className="absolute inset-0 pointer-events-none z-30 bg-blue-900/10 transition-colors">
+        {[...Array(20)].map((_, i) => (
+          <div key={i} className="absolute w-[1px] h-8 bg-blue-200/40 animate-pulse" style={{
+            top: `${Math.random() * 100}%`, left: `${Math.random() * 100}%`,
+            animationDuration: '1s'
+          }} />
+        ))}
+      </div>
+    );
+  }
+  if (emotion === 'angry') {
+    return (
+      <div className="absolute inset-0 pointer-events-none z-30 border-4 border-red-500/20 animate-pulse" />
+    );
+  }
+  return null;
+};
+
 // --- マニュアル用モーダル ---
 const ManualModal = ({ onClose, t }) => {
   const isJP = t.charName === 'あかり';
@@ -137,82 +188,6 @@ const ManualModal = ({ onClose, t }) => {
                 </p>
               </div>
             </div>
-            <div className="mt-4 bg-gradient-to-r from-pink-100 to-purple-100 p-4 rounded-xl text-center">
-              <h4 className="font-bold text-purple-600">{isJP ? "C⾯：その融合（没⼊感）" : "C-Side: The Fusion (Immersion)"}</h4>
-              <p className="text-sm text-gray-700">
-                {isJP ? "事務的な作業も、あかりちゃんなら「ご主⼈様のために尽くす喜び」に変えてくれます。" : "Even administrative tasks become a joy when Akari does them out of devotion to you."}
-              </p>
-            </div>
-          </section>
-          <section>
-            <h3 className="text-pink-600 font-bold text-xl border-b-2 border-pink-200 pb-2 mb-4 flex items-center gap-2">
-              <Heart className="w-5 h-5" /> {t.charIntroTitle}
-            </h3>
-            <div className="flex flex-col md:flex-row gap-6 items-center">
-              <div className="w-32 h-32 md:w-40 md:h-40 rounded-full border-4 border-pink-200 overflow-hidden shrink-0 shadow-md">
-                <img src="/images/akari_smile.png" className="w-full h-full object-cover object-top" alt="Akari Profile" />
-              </div>
-              <div>
-                <h4 className="text-2xl font-bold text-gray-800 mb-2">{t.charName} <span className="text-base font-normal text-gray-500">(Akari)</span></h4>
-                <div className="space-y-2 text-sm text-gray-700">
-                  <p><span className="font-bold text-pink-500">{isJP ? "設定:" : "Role:"}</span> {isJP ? "あなたに仕える専属メイド。" : "Your dedicated personal maid."}</p>
-                  <p><span className="font-bold text-pink-500">{isJP ? "性格:" : "Personality:"}</span> {t.charIntroDesc}</p>
-                  <p className="bg-yellow-50 p-2 rounded-lg border border-yellow-200 text-xs text-left">
-                    💡 {isJP ? "アナタの好きな作品を覚えさせると会話に盛り込んでいくようになります！" : "Tell her about your favorite works, and she will start including them in your talks!"}
-                  </p>
-                </div>
-              </div>
-            </div>
-          </section>
-          <section>
-            <h3 className="text-pink-600 font-bold text-xl border-b-2 border-pink-200 pb-2 mb-4 flex items-center gap-2">
-              <Star className="w-5 h-5" /> {t.basicFuncTitle}
-            </h3>
-            <div className="space-y-6">
-              <div>
-                <h4 className="font-bold text-lg text-gray-800 mb-2 flex items-center gap-2">
-                  <MessageCircle className="w-4 h-4 text-blue-400" /> {isJP ? "リアルタイムチャット (無料/有料)" : "Real-time Chat (Free/Paid)"}
-                </h4>
-                <p className="text-sm text-gray-600 mb-3">{isJP ? "⾃然な会話で、雑談から仕事の相談まで幅広く対応します。" : "Natural conversations covering everything from casual chat to business advice."}</p>
-                <div className="bg-white rounded-lg border border-gray-200 overflow-hidden text-left">
-                  <table className="w-full text-sm text-left">
-                    <thead className="bg-gray-50 text-gray-700">
-                      <tr>
-                        <th className="p-3">{isJP ? "プラン" : "Plan"}</th>
-                        <th className="p-3">{isJP ? "価格" : "Price"}</th>
-                        <th className="p-3">{isJP ? "会話回数" : "Messages"}</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100">
-                      <tr>
-                        <td className="p-3 font-bold text-gray-600">Free Plan</td>
-                        <td className="p-3">{isJP ? "無料" : "Free"}</td>
-                        <td className="p-3">{isJP ? "1⽇ 20回" : "20 / day"}</td>
-                      </tr>
-                      <tr className="bg-blue-50/50">
-                        <td className="p-3 font-bold text-blue-600">Pro Plan</td>
-                        <td className="p-3">{isJP ? "月980円" : "980 JPY/mo"}</td>
-                        <td className="p-3">{isJP ? "1日 200回" : "200 / day"}</td>
-                      </tr>
-                      <tr className="bg-pink-50/50">
-                        <td className="p-3 font-bold text-pink-600">Royal Plan</td>
-                        <td className="p-3">{isJP ? "月2980円" : "2,980 JPY/mo"}</td>
-                        <td className="p-3">{isJP ? "1日 2500回" : "2,500 / day"}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </section>
-          <section>
-            <h3 className="text-pink-600 font-bold text-xl border-b-2 border-pink-200 pb-2 mb-4 flex items-center gap-2">
-              <Sparkles className="w-5 h-5" /> {t.eventModeTitle}
-            </h3>
-            <p className="text-sm text-gray-600 mb-4">{t.eventModeDesc}</p>
-            <div className="bg-gray-800 rounded-xl overflow-hidden shadow-lg mb-4 relative group">
-              <img src="/images/event_christmas.png" className="w-full h-48 object-cover opacity-80 group-hover:opacity-100 transition-opacity" alt="Event Mode" />
-            </div>
           </section>
           <div className="pt-8 pb-4 text-center">
             <h2 className="text-2xl md:text-3xl font-bold text-pink-500 mb-2 drop-shadow-sm">
@@ -234,6 +209,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const [isRoomwearTime, setIsRoomwearTime] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false); 
+  const [isShaking, setIsShaking] = useState(false); // ★画面シェイク用
 
   const lastProcessedMessageId = useRef(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -246,7 +222,12 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const plan = currentPlan?.toUpperCase() || 'FREE';
   const isJP = t?.charName === 'あかり';
 
-  // --- 音量フェード制御関数 ---
+  // --- 画面シェイク実行 ---
+  const triggerShake = () => {
+    setIsShaking(true);
+    setTimeout(() => setIsShaking(false), 500);
+  };
+
   const fadeVolume = (targetVolume, callback) => {
     if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
     const audio = audioRef.current;
@@ -341,13 +322,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
     return () => {
       if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
-      if (audio) {
-        const fastFade = setInterval(() => {
-          if (audio.volume > 0.05) { audio.volume -= 0.05; } else {
-            audio.pause(); audio.src = ""; clearInterval(fastFade);
-          }
-        }, 30);
-      }
     };
   }, [isLoveMode, isMuted]);
 
@@ -372,7 +346,11 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       const emotionRegex = /\[(.*?)\]/g;
       let match;
       while ((match = emotionRegex.exec(content)) !== null) {
-        if (emoKeyMap[match[1]]) setCurrentEmotion(emoKeyMap[match[1]]);
+        const emo = emoKeyMap[match[1]];
+        if (emo) {
+          setCurrentEmotion(emo);
+          if (emo === 'angry' || emo === 'surprised') triggerShake(); // ★強い感情で揺らす
+        }
       }
       const cleanContent = content.replace(/\[.*?\]/g, '');
       setDisplayedText('');
@@ -387,12 +365,12 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     return () => { if (typingRef.current) clearInterval(typingRef.current); };
   }, [messages, currentSituation]);
 
+  // お着替え・夜の着替えロジックは既存を維持
   useEffect(() => {
     if (outfit === 'kimono' && plan !== 'ROYAL') {
         if (typingRef.current) clearInterval(typingRef.current);
         setCurrentEmotion('sad'); 
-        const rejectionText = isJP ? "それはロイヤル会員さんだけの特別な衣装なので...ごめんなさい💦" : "I'm sorry, this outfit is for Royal members only...💦";
-        setDisplayedText(rejectionText); 
+        setDisplayedText(isJP ? "それはロイヤル会員さんだけの特別な衣装なので...ごめんなさい💦" : "I'm sorry, this outfit is for Royal members only...💦"); 
     }
   }, [outfit, plan, isJP]);
 
@@ -400,10 +378,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     if (isRoomwearTime && !isLoveMode) {
         if (typingRef.current) clearInterval(typingRef.current);
         setCurrentEmotion('shy');
-        const specialText = isJP 
-          ? "ご主人様、夜も更けてきましたのでそろそろ着替えさせていただきました。その…ご主人様の好きなルームウェアです。ちょっと恥ずかしいですけど…どうですか？" 
-          : "Master, it's getting late, so I've changed into my loungewear. It's... the one you like. It's a bit embarrassing, but how do I look?";
-        setDisplayedText(specialText); 
+        setDisplayedText(isJP ? "ご主人様、夜も更けてきましたのでそろそろ着替えさせていただきました。その…ご主人様の好きなルームウェアです。ちょっと恥ずかしいですけど…どうですか？" : "Master, it's getting late..."); 
     }
   }, [isRoomwearTime, isLoveMode, isJP]);
 
@@ -436,25 +411,35 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   let currentBg = (plan === 'ROYAL') ? (isNightTime ? BG_ROYAL_NIGHT : BG_ROYAL_DAY) : (isNightTime ? BG_NIGHT : BG_DAY);
   if (currentSituation) currentBg = currentSituation.image;
 
+  // --- ウィンドウの感情カラー設定 ---
+  const getWindowBorderColor = () => {
+    if (isLoveMode) return 'border-pink-400';
+    switch (currentEmotion) {
+      case 'shy': return 'border-rose-300';
+      case 'angry': return 'border-red-500';
+      case 'smile': return 'border-yellow-300';
+      case 'sad': return 'border-blue-400';
+      default: return 'border-white/10';
+    }
+  };
+
   return (
-    <div className="relative w-full h-full bg-black overflow-hidden cursor-pointer select-none outline-none caret-transparent" onClick={handleScreenClick}>
+    <div className={`relative w-full h-full bg-black overflow-hidden cursor-pointer select-none outline-none caret-transparent transition-transform duration-100 ${isShaking ? 'animate-bounce' : ''}`} onClick={handleScreenClick}>
+      {/* 背景層 */}
       <div className="absolute inset-0 w-full h-full z-0"><img src={currentBg} alt="BG" className="w-full h-full object-cover transition-opacity duration-500"/></div>
       <div className={`absolute inset-0 pointer-events-none transition-opacity duration-1000 z-1 ${isLoveMode ? 'opacity-100' : 'opacity-0'}`} style={{ background: 'radial-gradient(circle, rgba(255, 192, 203, 0.1) 40%, rgba(255, 20, 147, 0.3) 100%)' }} />
 
-      {isLoveMode && (
-        <div className="absolute inset-0 pointer-events-none overflow-hidden z-2">
-           <div className="absolute top-1/4 left-1/4 w-3 h-3 bg-pink-300 rounded-full blur-[4px] animate-pulse opacity-60" />
-           <div className="absolute bottom-1/3 right-1/4 w-4 h-4 bg-white rounded-full blur-[6px] animate-bounce opacity-50" style={{ animationDuration: '3s' }} />
-           <div className="absolute top-1/2 left-2/3 w-2 h-2 bg-pink-200 rounded-full blur-[2px] animate-ping opacity-70" style={{ animationDuration: '2s' }} />
-        </div>
-      )}
+      {/* 感情パーティクル層（新規追加） */}
+      <EmotionParticles emotion={currentEmotion} />
 
+      {/* キャラクター層 */}
       {!currentSituation && (
         <div className="absolute inset-0 z-10 flex items-end justify-center pointer-events-none">
           <img key={characterSrc} src={characterSrc} alt="Akari" className={`${imageStyle} w-auto object-cover relative drop-shadow-2xl transition-all duration-500 animate-in fade-in slide-in-from-bottom-4`} />
         </div>
       )}
 
+      {/* UIパーツ */}
       {showUI && (
         <div className="absolute top-4 right-4 z-50 pointer-events-auto flex flex-col gap-3">
           <button onClick={(e) => { e.stopPropagation(); setShowManual(true); }} className="bg-white/80 hover:bg-pink-100 text-pink-600 p-2 rounded-full shadow-lg border-2 border-pink-200 transition-all transform hover:scale-110" title="Manual"><BookOpen className="w-6 h-6" /></button>
@@ -462,9 +447,10 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         </div>
       )}
 
+      {/* メッセージウィンドウ層 */}
       {showUI && (
-        <div className="absolute bottom-0 left-0 w-full z-20 pb-6 px-2 md:pb-8 md:px-8 bg-gradient-to-t from-black/80 via-black/30 to-transparent pt-32 pointer-events-none" >
-          <div onClick={(e) => e.stopPropagation()} className={`pointer-events-auto max-w-4xl mx-auto rounded-3xl p-4 shadow-2xl backdrop-blur-md border transition-all duration-500 ${isLoveMode ? 'bg-pink-900/10 border-pink-400/30' : 'bg-black/10 border-white/10'}`}>
+        <div className="absolute bottom-0 left-0 w-full z-40 pb-6 px-2 md:pb-8 md:px-8 bg-gradient-to-t from-black/90 via-black/40 to-transparent pt-32 pointer-events-none" >
+          <div onClick={(e) => e.stopPropagation()} className={`pointer-events-auto max-w-4xl mx-auto rounded-3xl p-4 shadow-2xl backdrop-blur-lg border-2 transition-all duration-500 ${getWindowBorderColor()} ${isLoveMode ? 'bg-pink-900/20' : 'bg-black/20'}`}>
             <div className="flex justify-between items-center mb-2">
               <div className="text-pink-400 font-bold text-lg flex items-center gap-2 drop-shadow-md">
                 <span>{t.charName}</span>
@@ -477,7 +463,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
               </button>
             </div>
 
-            {/* ★修正箇所：whitespace-pre-wrap を追加しました */}
             <div 
               ref={scrollRef} 
               className={`whitespace-pre-wrap text-white text-base md:text-xl leading-relaxed overflow-y-auto pr-2 custom-scrollbar select-text caret-auto drop-shadow-sm font-medium transition-all duration-500 ${isExpanded ? 'h-64' : 'h-24'}`} 
@@ -491,6 +476,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       
       {showManual && <ManualModal onClose={() => setShowManual(false)} t={t} />}
       
+      {/* プリロード用（隠し要素） */}
       <div className="hidden">
         {Object.values(MAID_EMOTIONS).map(s => <img key={s} src={s} />)}
         {Object.values(SANTA_EMOTIONS).map(s => <img key={s} src={s} />)}
@@ -499,8 +485,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         {Object.values(KIMONO_EMOTIONS).map(s => <img key={s} src={s} />)}
         {Object.values(LOVE_IMAGES).map(s => <img key={s} src={s} />)}
         {SITUATION_DEFINITIONS.map(d => <img key={d.id} src={d.image} />)}
-        <img src={BG_DAY} /><img src={BG_NIGHT} /><img src={ROOMWEAR_IMAGE} /><img src={ROOMWEAR_LOVE_IMAGE} />
-        <img src={BG_ROYAL_DAY} /><img src={BG_ROYAL_NIGHT} />
       </div>
     </div>
   );
