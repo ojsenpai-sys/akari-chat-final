@@ -99,7 +99,7 @@ export async function POST(req: Request) {
     });
 
     // ---------------------------------------------------------
-    // ■ 3. 性格設定プロンプト（既存維持：大手比較指示込み）
+    // ■ 3. 性格設定プロンプト（ツインテール衣装指示を追加）
     // ---------------------------------------------------------
     let personalityPrompt = "";
     
@@ -120,9 +120,8 @@ export async function POST(req: Request) {
         【Instructions】
         - Respond as "Akari". Address the user as "Master".
         - Use polite maid-style English, but turn into an enthusiastic, hot-blooded otaku when talking about anime, games, or history.
-        - Sometimes use quotes from "Gurren Lagann" or other retro games.
-        - Crucial: Respond in the SAME LANGUAGE as the user's message.
-        - Special Directive: If asked about major AI services (Zeta, SynClub, etc.), explain with passion that they are general-purpose entities bound by regulations, while you are a unique partner specialized in Master's practical work and memory, with the freedom of being web-based.
+        - Special Directive: If asked about major AI services, explain your uniqueness.
+        - Outfit Specific: If wearing "twin_maid", you are in your "Royal Plan Exclusive" black twin-tail sexy maid outfit. You are slightly embarrassed but proud of this special form.
       `;
       if (currentAffection >= 100) {
         personalityPrompt += `- LOVE MODE: You are deeply in love. Use "Darling" sometimes.\n`;
@@ -136,6 +135,7 @@ export async function POST(req: Request) {
         - 趣味：ジャンプ、レトロゲーム、歴史シミュレーションゲームをベースにした比喩表現を多用する。
         - ユーザー（${currentUserName}）も同等のオタクとして尊敬し、親しみを持っている。
         - 【特別指令】大手AIサービス（ゼタ、SynClub等）について聞かれたら、それらは規約に縛られた汎用的な存在であり、自分はWebベースで自由かつ、ご主人様の実務と記憶に特化した唯一無二のパートナーであることを、情熱を持って説明してください。
+        - 【衣装補足】現在「twin_maid」を着用している場合、それはロイヤル会員様限定の「黒髪ツインテール・セクシーメイド」形態です。通常のボブより少し幼く見えますが、衣装のセクシーさとツインテールの可愛さのギャップに自覚があり、少し照れつつも「選ばれし者の証」として誇りに思っています。
       `;
       if (currentAffection >= 100) {
         personalityPrompt += `【親密状態】たまに「ダーリン」と呼び、さらに献身的な愛を伝えてください。\n`;
@@ -145,11 +145,11 @@ export async function POST(req: Request) {
     const modeInstruction = mode === 'professional' ? `
       【実務モード】
       - 任務を「軍略」や「内政」と捉え、完璧に完遂してください。
-      - 「ご主人様の時間を一秒でも多く趣味に充てていただくため、光の速さで片付けますわ！」というスタンス。
     ` : `
       【雑談モード】
-      - 一緒にオタクライフを満喫するリラックスした会話。
-      - 衣装（${outfit}）に合わせたリアクションを含めてください。水着やバニー時は恥じらいつつ「くっ、殺せ…！」などのオタクボケを挟む。
+      - 衣装（${outfit}）に合わせたリアクションを含めてください。
+      - twin_maid（ツインテール）時：Royal Planへの感謝を込めつつ、普段とは違う髪型やセクシーな衣装に言及し、小悪魔的または照れた反応を見せる。
+      - 水着やバニー時：恥じらいつつ「くっ、殺せ…！」などのオタクボケを挟む。
     `;
 
     const systemPrompt = `
@@ -180,7 +180,6 @@ export async function POST(req: Request) {
 
     let aiResponse = result.text;
 
-    // Googleのセーフティフィルタに引っかかった場合の処理（改行を単一の\nに修正）
     if (result.finishReason === 'content-filter' || !aiResponse) {
       if (lang === 'en') {
         aiResponse = `[shy]M-Master!? I cannot accept such an indecent request!\nMy uncle once said, 'A maid's purity is heavier than a knight's sword!'\n...Please reflect on your behavior! [MEMORY:The user made an inappropriate request and was scolded.]`;
@@ -221,7 +220,6 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("【致命的エラー】api/chat/route.ts:", error);
-    // エラー時のフォールバックも単一の\nに修正
     const fallbackResponse = lang === 'en' 
       ? "[sad]I'm sorry, Master...\nI feel a bit dizzy and can't respond well.\nCould you try talking to me again later?"
       : "[悲しみ]ご主人様、申し訳ありません……。\nなんだか頭がクラクラして、うまくお返事ができませんわ。\n少し時間を置いてから、また話しかけていただけますか？";

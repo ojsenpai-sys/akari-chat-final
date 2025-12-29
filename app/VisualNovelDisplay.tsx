@@ -21,6 +21,18 @@ const MAID_EMOTIONS = {
   wink: "/images/akari_wink.png",
 };
 
+// ★追加：黒髪ツインテール衣装の定義
+const TWIN_MAID_EMOTIONS = {
+  normal: "/images/akari_twin_normal.png",
+  shy: "/images/akari_twin_shy.png",
+  smile: "/images/akari_twin_smile.png",
+  angry: "/images/akari_twin_normal.png", // 必要に応じて変更してください
+  sad: "/images/akari_twin_sad.png",
+  surprised: "/images/akari_twin_normal.png",
+  smug: "/images/akari_twin_smug.png",
+  wink: "/images/akari_twin_normal.png",
+};
+
 const SANTA_EMOTIONS = {
   normal: "/images/akari_santa_normal.png",
   shy: "/images/akari_santa_shy.png",
@@ -67,6 +79,7 @@ const KIMONO_EMOTIONS = {
 
 const LOVE_IMAGES = {
   maid: "/images/akari_maid_love.png",
+  twin_maid: "/images/akari_twin_love.png", // ★追加
   santa: "/images/akari_santa_love.png",
   swimsuit: "/images/akari_swim_love.png",
   bunny: "/images/akari_bunny_love.png",
@@ -225,7 +238,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     setTimeout(() => setIsShaking(false), 500);
   };
 
-  // --- 音量フェード制御関数 ---
   const fadeVolume = (targetVolume, callback) => {
     if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
     const audio = audioRef.current;
@@ -269,7 +281,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     setIsExpanded(!isExpanded);
   };
 
-  // ★修正：ミュートトグル（isMutedの状態変更のみに集中し、Effectで実体を同期させる）
   const toggleMute = (e) => { 
     e.stopPropagation(); 
     setIsMuted(!isMuted);
@@ -288,7 +299,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     return () => clearInterval(timer);
   }, []);
 
-  // ★修正：BGM管理ロジック（isMutedの変化に即座に反応するように強化）
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
@@ -298,11 +308,9 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     const audio = audioRef.current;
     const targetSrc = isLoveMode ? BGM_LOVE : BGM_NORMAL;
 
-    // ミュート属性の同期
     audio.muted = isMuted;
 
     if (!audio.src.includes(targetSrc)) {
-      // 曲が変わる場合
       fadeVolume(0, () => {
         audio.src = targetSrc;
         if (!isMuted) {
@@ -312,9 +320,8 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         }
       });
     } else {
-      // 同じ曲の場合の再生・停止制御
       if (isMuted) {
-        fadeVolume(0); // 徐々に音を消す
+        fadeVolume(0); 
       } else {
         if (audio.paused && audio.src) {
           audio.play().then(() => fadeVolume(MAX_VOLUME)).catch(e => {});
@@ -327,7 +334,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     return () => {
       if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
     };
-  }, [isLoveMode, isMuted]); // isMutedを監視対象に含める
+  }, [isLoveMode, isMuted]);
 
   useEffect(() => {
     if (messages.length === 0) return;
@@ -370,7 +377,8 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   }, [messages, currentSituation]);
 
   useEffect(() => {
-    if (outfit === 'kimono' && plan !== 'ROYAL') {
+    // ★ツインテール衣装（twin_maid）と晴れ着、サンタの制限をロイヤルプランに適用
+    if ((outfit === 'kimono' || outfit === 'twin_maid') && plan !== 'ROYAL') {
         if (typingRef.current) clearInterval(typingRef.current);
         setCurrentEmotion('sad'); 
         setDisplayedText(isJP ? "それはロイヤル会員さんだけの特別な衣装なので...ごめんなさい💦" : "I'm sorry, this outfit is for Royal members only...💦"); 
@@ -387,8 +395,13 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
 
   let characterSrc = MAID_EMOTIONS[currentEmotion] || MAID_EMOTIONS.normal;
   let activeOutfit = outfit;
-  if (outfit === 'swimsuit' || outfit === 'bunny') { if (plan === 'FREE') activeOutfit = 'maid'; }
-  else if (outfit === 'santa' || outfit === 'kimono') { if (plan !== 'ROYAL') activeOutfit = 'maid'; }
+
+  // ★プランごとの衣装ロック解除ロジック
+  if (outfit === 'swimsuit' || outfit === 'bunny') { 
+    if (plan === 'FREE') activeOutfit = 'maid'; 
+  } else if (outfit === 'santa' || outfit === 'kimono' || outfit === 'twin_maid') { 
+    if (plan !== 'ROYAL') activeOutfit = 'maid'; 
+  }
 
   if (isRoomwearTime && activeOutfit === 'maid') {
     characterSrc = isLoveMode ? ROOMWEAR_LOVE_IMAGE : ROOMWEAR_IMAGE;
@@ -396,6 +409,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     if (isLoveMode) characterSrc = LOVE_IMAGES[activeOutfit] || LOVE_IMAGES.maid;
     else {
         switch (activeOutfit) {
+          case 'twin_maid': characterSrc = TWIN_MAID_EMOTIONS[currentEmotion] || TWIN_MAID_EMOTIONS.normal; break; // ★追加
           case 'santa': characterSrc = SANTA_EMOTIONS[currentEmotion] || SANTA_EMOTIONS.normal; break;
           case 'swimsuit': characterSrc = SWIM_EMOTIONS[currentEmotion] || SWIM_EMOTIONS.normal; break;
           case 'bunny': characterSrc = BUNNY_EMOTIONS[currentEmotion] || BUNNY_EMOTIONS.normal; break;
@@ -405,6 +419,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
   }
 
+  // ★位置調整：ツインテール（twin_maid）は膝上なのでメイド（maid）と同じ位置に
   const adjustPosition = (activeOutfit === 'santa' || activeOutfit === 'kimono') || isLoveMode;
   const imageScale = isLoveMode ? "scale-110" : "scale-100";
   const imageStyle = adjustPosition
@@ -447,7 +462,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
 
       {showUI && (
         <div className="absolute bottom-0 left-0 w-full z-40 pb-6 px-2 md:pb-8 md:px-8 bg-gradient-to-t from-black/90 via-black/40 to-transparent pt-32 pointer-events-none" >
-          <div onClick={(e) => e.stopPropagation()} className={`pointer-events-auto max-w-4xl mx-auto rounded-3xl p-4 shadow-2xl backdrop-blur-lg border-2 transition-all duration-500 ${getWindowBorderColor()} ${isLoveMode ? 'bg-pink-900/20' : 'bg-black/20'}`}>
+          <div onClick={(e) => e.stopPropagation()} className={`pointer-events-auto max-w-4xl mx-auto rounded-3xl p-4 shadow-2xl backdrop-blur-lg border-2 transition-all duration-500 ${getWindowBorderColor()} ${isLoveMode ? 'bg-pink-900/20' : 'border-white/10 bg-black/20'}`}>
             <div className="flex justify-between items-center mb-2">
               <div className="text-pink-400 font-bold text-lg flex items-center gap-2 drop-shadow-md">
                 <span>{t.charName}</span>
@@ -475,6 +490,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       
       <div className="hidden">
         {Object.values(MAID_EMOTIONS).map(s => <img key={s} src={s} />)}
+        {Object.values(TWIN_MAID_EMOTIONS).map(s => <img key={s} src={s} />)}
         {Object.values(SANTA_EMOTIONS).map(s => <img key={s} src={s} />)}
         {Object.values(SWIM_EMOTIONS).map(s => <img key={s} src={s} />)}
         {Object.values(BUNNY_EMOTIONS).map(s => <img key={s} src={s} />)}
