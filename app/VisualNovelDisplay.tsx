@@ -221,7 +221,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const [showManual, setShowManual] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false); 
   const [isShaking, setIsShaking] = useState(false);
-  const [showOutfitMenu, setShowOutfitMenu] = useState(false); // ★衣装メニュー用
+  const [showOutfitMenu, setShowOutfitMenu] = useState(false);
 
   const lastProcessedMessageId = useRef(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -267,7 +267,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       fadeVolume(MAX_VOLUME);
     }
     setShowUI(!showUI);
-    setShowOutfitMenu(false); // クリックでメニューを閉じる
+    setShowOutfitMenu(false);
   };
 
   const toggleExpand = (e) => {
@@ -276,7 +276,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       if (typingRef.current) clearInterval(typingRef.current);
       const lastMsg = messages[messages.length - 1];
       if (lastMsg && lastMsg.role === 'assistant') {
-        // ★修正：改行詰めをここでも適用
         const cleanContent = lastMsg.content.replace(/\[.*?\]/g, '').replace(/\n\s*\n/g, '\n').trim();
         setDisplayedText(cleanContent);
       }
@@ -284,9 +283,19 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     setIsExpanded(!isExpanded);
   };
 
+  // ★修正：ミュートトグル（直接再生制御を加えることで確実にオンオフできるように改善）
   const toggleMute = (e) => { 
     e.stopPropagation(); 
-    setIsMuted(!isMuted);
+    const newMuted = !isMuted;
+    setIsMuted(newMuted);
+    
+    // ユーザー操作の直後に再生/停止を試みることでブラウザ制限を回避
+    if (audioRef.current) {
+      audioRef.current.muted = newMuted;
+      if (!newMuted && audioRef.current.paused) {
+        audioRef.current.play().catch(e => console.log("Play failed on toggle:", e));
+      }
+    }
   };
 
   useEffect(() => {
@@ -302,6 +311,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     return () => clearInterval(timer);
   }, []);
 
+  // ★修正：BGM管理ロジック（isMutedの変化に即座に反応するように強化）
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
@@ -313,25 +323,26 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
 
     audio.muted = isMuted;
 
+    // 再生・フェードの共通処理
+    const playAudio = () => {
+      if (!isMuted && audio.paused && audio.src) {
+        audio.play().then(() => fadeVolume(MAX_VOLUME)).catch(e => {});
+      } else if (!isMuted) {
+        fadeVolume(MAX_VOLUME);
+      } else {
+        fadeVolume(0);
+      }
+    };
+
     if (!audio.src.includes(targetSrc)) {
+      // 曲が変わる場合
       fadeVolume(0, () => {
         audio.src = targetSrc;
-        if (!isMuted) {
-          audio.play().then(() => {
-            fadeVolume(MAX_VOLUME);
-          }).catch(e => {});
-        }
+        playAudio();
       });
     } else {
-      if (isMuted) {
-        fadeVolume(0); 
-      } else {
-        if (audio.paused && audio.src) {
-          audio.play().then(() => fadeVolume(MAX_VOLUME)).catch(e => {});
-        } else {
-          fadeVolume(MAX_VOLUME);
-        }
-      }
+      // 同じ曲の場合の制御
+      playAudio();
     }
 
     return () => {
@@ -366,10 +377,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
           if (emo === 'angry' || emo === 'surprised') triggerShake();
         }
       }
-      
-      // ★修正：2つ以上の連続する改行を1つにまとめ、空行を排除する
       const cleanContent = content.replace(/\[.*?\]/g, '').replace(/\n\s*\n/g, '\n').trim();
-      
       setDisplayedText('');
       let i = 0;
       typingRef.current = setInterval(() => {
@@ -423,15 +431,13 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
   }
 
-  // ★修正：サイズ決定のロジック（親密度100での強制ズームを排除）
-  // ツインテールメイド（twin_maid）と通常メイド（maid）は膝上なので、Love ModeでもPath 2（h-[140%]）を使用する。
+  // ★膝上表示のため twin_maid はメイドと同じ位置に設定
   const isFullBodyOutfit = activeOutfit === 'santa' || activeOutfit === 'kimono';
-  const adjustPosition = isFullBodyOutfit; // 親密度によらず、衣装の種類のみで配置を決定
-  
+  const adjustPosition = isFullBodyOutfit; 
   const imageScale = isLoveMode ? "scale-110" : "scale-100";
   const imageStyle = adjustPosition
     ? `h-[150%] w-auto -bottom-[60%] md:h-auto md:max-h-[220%] md:-bottom-[120%] ${imageScale}` 
-    : `h-[140%] w-auto -bottom-[50%] md:h-auto md:max-h-[140%] md:-bottom-[45%] ${imageScale}`; // ★膝上Pathにもscaleを適用
+    : `h-[140%] w-auto -bottom-[50%] md:h-auto md:max-h-[140%] md:-bottom-[45%] ${imageScale}`;
 
   let currentBg = (plan === 'ROYAL') ? (isNightTime ? BG_ROYAL_NIGHT : BG_ROYAL_DAY) : (isNightTime ? BG_NIGHT : BG_DAY);
   if (currentSituation) currentBg = currentSituation.image;
@@ -447,7 +453,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
   };
 
-  // ★衣装リスト
   const outfitList = [
     { id: 'maid', label: isJP ? '通常メイド' : 'Maid', royal: false },
     { id: 'twin_maid', label: isJP ? 'ツインテールメイド' : 'Twin Tail Maid', royal: true },
@@ -471,7 +476,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
 
       {showUI && (
         <>
-          {/* ★左上の衣装セレクター */}
           <div className="absolute top-4 left-4 z-50 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
             <button 
               onClick={() => setShowOutfitMenu(!showOutfitMenu)}
@@ -502,7 +506,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
             )}
           </div>
 
-          {/* 右上のメニュー */}
           <div className="absolute top-4 right-4 z-50 pointer-events-auto flex flex-col gap-3">
             <button onClick={(e) => { e.stopPropagation(); setShowManual(true); }} className="bg-white/80 hover:bg-pink-100 text-pink-600 p-2 rounded-full shadow-lg border-2 border-pink-200 transition-all transform hover:scale-110" title="Manual"><BookOpen className="w-6 h-6" /></button>
             <button onClick={toggleMute} className="bg-white/80 hover:bg-gray-100 text-gray-600 p-2 rounded-full shadow-lg border-2 border-gray-200 transition-all transform hover:scale-110" title="Mute">{isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}</button>
