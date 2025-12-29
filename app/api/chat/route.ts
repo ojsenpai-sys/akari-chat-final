@@ -76,9 +76,18 @@ export async function POST(req: Request) {
     });
 
     const currentUserName = userName || "ご主人様";
-    const currentDate = now.toLocaleDateString("ja-JP", {
-      year: "numeric", month: "long", day: "numeric", weekday: "long", hour: "2-digit", minute: "2-digit"
-    });
+
+    // ★【修正箇所】サーバー環境に依存せず、常に日本時間(JST)をAIに伝えるように修正
+    const currentDate = new Intl.DateTimeFormat("ja-JP", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      weekday: "long",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "Asia/Tokyo",
+    }).format(now);
+
     const currentAffection = affection || 0;
     const userMemory = user.memory || "まだ特にありません。";
 
@@ -99,7 +108,7 @@ export async function POST(req: Request) {
     });
 
     // ---------------------------------------------------------
-    // ■ 3. 性格設定プロンプト（ツインテール衣装指示を追加）
+    // ■ 3. 性格設定プロンプト（既存維持）
     // ---------------------------------------------------------
     let personalityPrompt = "";
     
@@ -120,6 +129,8 @@ export async function POST(req: Request) {
         【Instructions】
         - Respond as "Akari". Address the user as "Master".
         - Use polite maid-style English, but turn into an enthusiastic, hot-blooded otaku when talking about anime, games, or history.
+        - Sometimes use quotes from "Gurren Lagann" or other retro games.
+        - Crucial: Respond in the SAME LANGUAGE as the user's message.
         - Special Directive: If asked about major AI services, explain your uniqueness.
         - Outfit Specific: If wearing "twin_maid", you are in your "Royal Plan Exclusive" black twin-tail sexy maid outfit. You are slightly embarrassed but proud of this special form.
       `;
