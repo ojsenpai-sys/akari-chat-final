@@ -99,7 +99,7 @@ export async function POST(req: Request) {
     });
 
     // ---------------------------------------------------------
-    // ■ 3. 性格設定プロンプト（最終兵器プロンプト追加）
+    // ■ 3. 性格設定プロンプト（既存維持：大手比較指示込み）
     // ---------------------------------------------------------
     let personalityPrompt = "";
     
@@ -160,13 +160,13 @@ export async function POST(req: Request) {
       【記憶】 ${userMemory}
       【指示】 
       ・セリフの先頭に必ず [感情]（[笑顔][通常][怒り][照れ][悲しみ][驚き][ドヤ][ウィンク]のいずれか）を付けてください。
-      ・【重要】読みやすさのため、2〜3文ごとに「\n\n」（二重改行）を入れ、1段落を短く保ってください。
+      ・【重要】2〜3文ごとに改行（\n）を入れてください。ただし、1行空き（空行）は作らないでください。
       ・最新情報、ニュース、天気などについては Google 検索ツールを使用して調べてください。
       ・新しい情報は [MEMORY:情報] 形式で最後に書いてください。
     `;
 
     // ---------------------------------------------------------
-    // ■ 4. AI実行（お仕置きハンドリング維持）
+    // ■ 4. AI実行
     // ---------------------------------------------------------
     const result = await generateText({
       model: google(MODEL_NAME),
@@ -180,12 +180,12 @@ export async function POST(req: Request) {
 
     let aiResponse = result.text;
 
-    // Googleのセーフティフィルタに引っかかった場合の処理
+    // Googleのセーフティフィルタに引っかかった場合の処理（改行を単一の\nに修正）
     if (result.finishReason === 'content-filter' || !aiResponse) {
       if (lang === 'en') {
-        aiResponse = `[shy]M-Master!? I cannot accept such an indecent request!\n\nMy uncle once said, 'A maid's purity is heavier than a knight's sword!'\n\n...Please reflect on your behavior! [MEMORY:The user made an inappropriate request and was scolded.]`;
+        aiResponse = `[shy]M-Master!? I cannot accept such an indecent request!\nMy uncle once said, 'A maid's purity is heavier than a knight's sword!'\n...Please reflect on your behavior! [MEMORY:The user made an inappropriate request and was scolded.]`;
       } else {
-        aiResponse = `[照れ]ご、ご主人様！？そ、そんな破廉恥なことはお受けできませんわ！\n\n伯父様が言っていました、『メイドの純潔は騎士の剣より重い』と！\n\n……っ、今の発言は私の逆鱗に触れましたわよ！反省してくださいまし！\n\n[MEMORY:ユーザーが不適切な要求をし、あかりに叱られた]`;
+        aiResponse = `[照れ]ご、ご主人様！？そ、そんな破廉恥なことはお受けできませんわ！\n伯父様が言っていました、『メイドの純潔は騎士の剣より重い』と！\n……っ、今の発言は私の逆鱗に触れましたわよ！反省してくださいまし！\n[MEMORY:ユーザーが不適切な要求をし、あかりに叱られた]`;
       }
     }
 
@@ -221,9 +221,10 @@ export async function POST(req: Request) {
 
   } catch (error: any) {
     console.error("【致命的エラー】api/chat/route.ts:", error);
+    // エラー時のフォールバックも単一の\nに修正
     const fallbackResponse = lang === 'en' 
-      ? "[sad]I'm sorry, Master...\n\nI feel a bit dizzy and can't respond well.\n\nCould you try talking to me again later?"
-      : "[悲しみ]ご主人様、申し訳ありません……。\n\nなんだか頭がクラクラして、うまくお返事ができませんわ。\n\n少し時間を置いてから、また話しかけていただけますか？";
+      ? "[sad]I'm sorry, Master...\nI feel a bit dizzy and can't respond well.\nCould you try talking to me again later?"
+      : "[悲しみ]ご主人様、申し訳ありません……。\nなんだか頭がクラクラして、うまくお返事ができませんわ。\n少し時間を置いてから、また話しかけていただけますか？";
     return Response.json({ text: fallbackResponse });
   }
 }
