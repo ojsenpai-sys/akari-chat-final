@@ -1,6 +1,6 @@
 // @ts-nocheck
 import React, { useState, useEffect, useRef } from 'react';
-import { BookOpen, X, Heart, Star, Sparkles, MessageCircle, Volume2, VolumeX, Maximize2, Minimize2 } from 'lucide-react';
+import { BookOpen, X, Heart, Star, Sparkles, MessageCircle, Volume2, VolumeX, Maximize2, Minimize2, ChevronDown, Lock } from 'lucide-react';
 
 // --- BGM設定 ---
 const BGM_NORMAL = "/audio/bgm_normal.mp3";
@@ -26,7 +26,7 @@ const TWIN_MAID_EMOTIONS = {
   normal: "/images/akari_twin_normal.png",
   shy: "/images/akari_twin_shy.png",
   smile: "/images/akari_twin_smile.png",
-  angry: "/images/akari_twin_normal.png", // 必要に応じて変更してください
+  angry: "/images/akari_twin_normal.png",
   sad: "/images/akari_twin_sad.png",
   surprised: "/images/akari_twin_normal.png",
   smug: "/images/akari_twin_smug.png",
@@ -211,7 +211,7 @@ const ManualModal = ({ onClose, t }) => {
   );
 };
 
-export default function VisualNovelDisplay({ messages, outfit = 'maid', currentPlan = 'free', affection = 0, onManualChange, charName = 'あかり', t }) {
+export default function VisualNovelDisplay({ messages, outfit = 'maid', currentPlan = 'free', affection = 0, onManualChange, onOutfitChange, charName = 'あかり', t }) {
   const [currentEmotion, setCurrentEmotion] = useState('normal');
   const [currentSituation, setCurrentSituation] = useState(null); 
   const [displayedText, setDisplayedText] = useState('');
@@ -221,6 +221,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const [showManual, setShowManual] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false); 
   const [isShaking, setIsShaking] = useState(false);
+  const [showOutfitMenu, setShowOutfitMenu] = useState(false); // ★衣装メニュー用
 
   const lastProcessedMessageId = useRef(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -266,6 +267,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       fadeVolume(MAX_VOLUME);
     }
     setShowUI(!showUI);
+    setShowOutfitMenu(false); // クリックでメニューを閉じる
   };
 
   const toggleExpand = (e) => {
@@ -274,7 +276,8 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       if (typingRef.current) clearInterval(typingRef.current);
       const lastMsg = messages[messages.length - 1];
       if (lastMsg && lastMsg.role === 'assistant') {
-        const cleanContent = lastMsg.content.replace(/\[.*?\]/g, '');
+        // ★修正：改行詰めをここでも適用
+        const cleanContent = lastMsg.content.replace(/\[.*?\]/g, '').replace(/\n\s*\n/g, '\n').trim();
         setDisplayedText(cleanContent);
       }
     }
@@ -363,7 +366,10 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
           if (emo === 'angry' || emo === 'surprised') triggerShake();
         }
       }
-      const cleanContent = content.replace(/\[.*?\]/g, '');
+      
+      // ★修正：2つ以上の連続する改行を1つにまとめ、空行を排除する
+      const cleanContent = content.replace(/\[.*?\]/g, '').replace(/\n\s*\n/g, '\n').trim();
+      
       setDisplayedText('');
       let i = 0;
       typingRef.current = setInterval(() => {
@@ -377,7 +383,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   }, [messages, currentSituation]);
 
   useEffect(() => {
-    // ★ツインテール衣装（twin_maid）と晴れ着、サンタの制限をロイヤルプランに適用
     if ((outfit === 'kimono' || outfit === 'twin_maid') && plan !== 'ROYAL') {
         if (typingRef.current) clearInterval(typingRef.current);
         setCurrentEmotion('sad'); 
@@ -396,7 +401,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   let characterSrc = MAID_EMOTIONS[currentEmotion] || MAID_EMOTIONS.normal;
   let activeOutfit = outfit;
 
-  // ★プランごとの衣装ロック解除ロジック
   if (outfit === 'swimsuit' || outfit === 'bunny') { 
     if (plan === 'FREE') activeOutfit = 'maid'; 
   } else if (outfit === 'santa' || outfit === 'kimono' || outfit === 'twin_maid') { 
@@ -409,7 +413,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     if (isLoveMode) characterSrc = LOVE_IMAGES[activeOutfit] || LOVE_IMAGES.maid;
     else {
         switch (activeOutfit) {
-          case 'twin_maid': characterSrc = TWIN_MAID_EMOTIONS[currentEmotion] || TWIN_MAID_EMOTIONS.normal; break; // ★追加
+          case 'twin_maid': characterSrc = TWIN_MAID_EMOTIONS[currentEmotion] || TWIN_MAID_EMOTIONS.normal; break;
           case 'santa': characterSrc = SANTA_EMOTIONS[currentEmotion] || SANTA_EMOTIONS.normal; break;
           case 'swimsuit': characterSrc = SWIM_EMOTIONS[currentEmotion] || SWIM_EMOTIONS.normal; break;
           case 'bunny': characterSrc = BUNNY_EMOTIONS[currentEmotion] || BUNNY_EMOTIONS.normal; break;
@@ -419,7 +423,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
   }
 
-  // ★位置調整：ツインテール（twin_maid）は膝上なのでメイド（maid）と同じ位置に
+  // ★膝上表示のため twin_maid はメイドと同じ位置に設定
   const adjustPosition = (activeOutfit === 'santa' || activeOutfit === 'kimono') || isLoveMode;
   const imageScale = isLoveMode ? "scale-110" : "scale-100";
   const imageStyle = adjustPosition
@@ -440,6 +444,15 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
   };
 
+  // ★衣装リスト
+  const outfitList = [
+    { id: 'maid', label: isJP ? '通常メイド' : 'Maid', royal: false },
+    { id: 'twin_maid', label: isJP ? 'ツインテールメイド' : 'Twin Tail Maid', royal: true },
+    { id: 'swimsuit', label: isJP ? '水着' : 'Swimsuit', royal: false },
+    { id: 'bunny', label: isJP ? 'バニー' : 'Bunny', royal: false },
+    { id: 'kimono', label: isJP ? '晴れ着' : 'Kimono', royal: true },
+  ];
+
   return (
     <div className={`relative w-full h-full bg-black overflow-hidden cursor-pointer select-none outline-none caret-transparent transition-transform duration-100 ${isShaking ? 'animate-bounce' : ''}`} onClick={handleScreenClick}>
       <div className="absolute inset-0 w-full h-full z-0"><img src={currentBg} alt="BG" className="w-full h-full object-cover transition-opacity duration-500"/></div>
@@ -454,10 +467,44 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       )}
 
       {showUI && (
-        <div className="absolute top-4 right-4 z-50 pointer-events-auto flex flex-col gap-3">
-          <button onClick={(e) => { e.stopPropagation(); setShowManual(true); }} className="bg-white/80 hover:bg-pink-100 text-pink-600 p-2 rounded-full shadow-lg border-2 border-pink-200 transition-all transform hover:scale-110" title="Manual"><BookOpen className="w-6 h-6" /></button>
-          <button onClick={toggleMute} className="bg-white/80 hover:bg-gray-100 text-gray-600 p-2 rounded-full shadow-lg border-2 border-gray-200 transition-all transform hover:scale-110" title="Mute">{isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}</button>
-        </div>
+        <>
+          {/* ★左上の衣装セレクター */}
+          <div className="absolute top-4 left-4 z-50 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+            <button 
+              onClick={() => setShowOutfitMenu(!showOutfitMenu)}
+              className="bg-black/40 hover:bg-black/60 backdrop-blur-md text-white px-4 py-2 rounded-2xl border border-white/20 flex items-center gap-2 transition-all shadow-lg"
+            >
+              <Sparkles className="w-4 h-4 text-pink-400" />
+              <span className="text-sm font-bold">{outfitList.find(o => o.id === outfit)?.label || outfit}</span>
+              <ChevronDown className={`w-4 h-4 transition-transform ${showOutfitMenu ? 'rotate-180' : ''}`} />
+            </button>
+
+            {showOutfitMenu && (
+              <div className="absolute top-12 left-0 w-56 bg-black/60 backdrop-blur-xl border border-white/20 rounded-2xl overflow-hidden shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+                {outfitList.map((item) => (
+                  <button
+                    key={item.id}
+                    disabled={item.royal && plan !== 'ROYAL'}
+                    onClick={() => {
+                      if (onOutfitChange) onOutfitChange(item.id);
+                      setShowOutfitMenu(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-4 py-3 text-sm transition-colors ${outfit === item.id ? 'bg-pink-500/20 text-pink-400' : 'text-white/80 hover:bg-white/10'} ${item.royal && plan !== 'ROYAL' ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                  >
+                    <span>{item.label}</span>
+                    {item.royal && <Lock className={`w-3 h-3 ${plan === 'ROYAL' ? 'text-yellow-400' : 'text-gray-400'}`} />}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* 右上のメニュー */}
+          <div className="absolute top-4 right-4 z-50 pointer-events-auto flex flex-col gap-3">
+            <button onClick={(e) => { e.stopPropagation(); setShowManual(true); }} className="bg-white/80 hover:bg-pink-100 text-pink-600 p-2 rounded-full shadow-lg border-2 border-pink-200 transition-all transform hover:scale-110" title="Manual"><BookOpen className="w-6 h-6" /></button>
+            <button onClick={toggleMute} className="bg-white/80 hover:bg-gray-100 text-gray-600 p-2 rounded-full shadow-lg border-2 border-gray-200 transition-all transform hover:scale-110" title="Mute">{isMuted ? <VolumeX className="w-6 h-6" /> : <Volume2 className="w-6 h-6" />}</button>
+          </div>
+        </>
       )}
 
       {showUI && (
