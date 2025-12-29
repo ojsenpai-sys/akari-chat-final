@@ -91,7 +91,6 @@ const SITUATION_DEFINITIONS = [
   { id: "yoga", image: "/images/event_yoga.png", triggers: ["ヨガしよう"], releases: ["終わろう"] }
 ];
 
-// --- 感情パーティクルコンポーネント ---
 const EmotionParticles = ({ emotion }) => {
   if (emotion === 'smile' || emotion === 'wink') {
     return (
@@ -142,7 +141,6 @@ const EmotionParticles = ({ emotion }) => {
   return null;
 };
 
-// --- マニュアル用モーダル ---
 const ManualModal = ({ onClose, t }) => {
   const isJP = t.charName === 'あかり';
   return (
@@ -209,7 +207,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const [isRoomwearTime, setIsRoomwearTime] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false); 
-  const [isShaking, setIsShaking] = useState(false); // ★画面シェイク用
+  const [isShaking, setIsShaking] = useState(false);
 
   const lastProcessedMessageId = useRef(null);
   const [isMuted, setIsMuted] = useState(false);
@@ -222,12 +220,12 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   const plan = currentPlan?.toUpperCase() || 'FREE';
   const isJP = t?.charName === 'あかり';
 
-  // --- 画面シェイク実行 ---
   const triggerShake = () => {
     setIsShaking(true);
     setTimeout(() => setIsShaking(false), 500);
   };
 
+  // --- 音量フェード制御関数 ---
   const fadeVolume = (targetVolume, callback) => {
     if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
     const audio = audioRef.current;
@@ -271,20 +269,10 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     setIsExpanded(!isExpanded);
   };
 
+  // ★修正：ミュートトグル（isMutedの状態変更のみに集中し、Effectで実体を同期させる）
   const toggleMute = (e) => { 
     e.stopPropagation(); 
-    const newMuted = !isMuted;
-    setIsMuted(newMuted);
-    if (newMuted) {
-      fadeVolume(0, () => {
-        if (audioRef.current) audioRef.current.muted = true;
-      });
-    } else {
-      if (audioRef.current) {
-        audioRef.current.muted = false;
-        fadeVolume(MAX_VOLUME);
-      }
-    }
+    setIsMuted(!isMuted);
   };
 
   useEffect(() => {
@@ -300,6 +288,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     return () => clearInterval(timer);
   }, []);
 
+  // ★修正：BGM管理ロジック（isMutedの変化に即座に反応するように強化）
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
@@ -308,7 +297,12 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
     const audio = audioRef.current;
     const targetSrc = isLoveMode ? BGM_LOVE : BGM_NORMAL;
+
+    // ミュート属性の同期
+    audio.muted = isMuted;
+
     if (!audio.src.includes(targetSrc)) {
+      // 曲が変わる場合
       fadeVolume(0, () => {
         audio.src = targetSrc;
         if (!isMuted) {
@@ -317,13 +311,23 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
           }).catch(e => {});
         }
       });
-    } else if (!isMuted && audio.paused && audio.src) {
-        audio.play().then(() => fadeVolume(MAX_VOLUME)).catch(e => {});
+    } else {
+      // 同じ曲の場合の再生・停止制御
+      if (isMuted) {
+        fadeVolume(0); // 徐々に音を消す
+      } else {
+        if (audio.paused && audio.src) {
+          audio.play().then(() => fadeVolume(MAX_VOLUME)).catch(e => {});
+        } else {
+          fadeVolume(MAX_VOLUME);
+        }
+      }
     }
+
     return () => {
       if (fadeIntervalRef.current) clearInterval(fadeIntervalRef.current);
     };
-  }, [isLoveMode, isMuted]);
+  }, [isLoveMode, isMuted]); // isMutedを監視対象に含める
 
   useEffect(() => {
     if (messages.length === 0) return;
@@ -349,7 +353,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         const emo = emoKeyMap[match[1]];
         if (emo) {
           setCurrentEmotion(emo);
-          if (emo === 'angry' || emo === 'surprised') triggerShake(); // ★強い感情で揺らす
+          if (emo === 'angry' || emo === 'surprised') triggerShake();
         }
       }
       const cleanContent = content.replace(/\[.*?\]/g, '');
@@ -365,7 +369,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     return () => { if (typingRef.current) clearInterval(typingRef.current); };
   }, [messages, currentSituation]);
 
-  // お着替え・夜の着替えロジックは既存を維持
   useEffect(() => {
     if (outfit === 'kimono' && plan !== 'ROYAL') {
         if (typingRef.current) clearInterval(typingRef.current);
@@ -411,7 +414,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
   let currentBg = (plan === 'ROYAL') ? (isNightTime ? BG_ROYAL_NIGHT : BG_ROYAL_DAY) : (isNightTime ? BG_NIGHT : BG_DAY);
   if (currentSituation) currentBg = currentSituation.image;
 
-  // --- ウィンドウの感情カラー設定 ---
   const getWindowBorderColor = () => {
     if (isLoveMode) return 'border-pink-400';
     switch (currentEmotion) {
@@ -425,21 +427,17 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
 
   return (
     <div className={`relative w-full h-full bg-black overflow-hidden cursor-pointer select-none outline-none caret-transparent transition-transform duration-100 ${isShaking ? 'animate-bounce' : ''}`} onClick={handleScreenClick}>
-      {/* 背景層 */}
       <div className="absolute inset-0 w-full h-full z-0"><img src={currentBg} alt="BG" className="w-full h-full object-cover transition-opacity duration-500"/></div>
       <div className={`absolute inset-0 pointer-events-none transition-opacity duration-1000 z-1 ${isLoveMode ? 'opacity-100' : 'opacity-0'}`} style={{ background: 'radial-gradient(circle, rgba(255, 192, 203, 0.1) 40%, rgba(255, 20, 147, 0.3) 100%)' }} />
 
-      {/* 感情パーティクル層（新規追加） */}
       <EmotionParticles emotion={currentEmotion} />
 
-      {/* キャラクター層 */}
       {!currentSituation && (
         <div className="absolute inset-0 z-10 flex items-end justify-center pointer-events-none">
           <img key={characterSrc} src={characterSrc} alt="Akari" className={`${imageStyle} w-auto object-cover relative drop-shadow-2xl transition-all duration-500 animate-in fade-in slide-in-from-bottom-4`} />
         </div>
       )}
 
-      {/* UIパーツ */}
       {showUI && (
         <div className="absolute top-4 right-4 z-50 pointer-events-auto flex flex-col gap-3">
           <button onClick={(e) => { e.stopPropagation(); setShowManual(true); }} className="bg-white/80 hover:bg-pink-100 text-pink-600 p-2 rounded-full shadow-lg border-2 border-pink-200 transition-all transform hover:scale-110" title="Manual"><BookOpen className="w-6 h-6" /></button>
@@ -447,7 +445,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         </div>
       )}
 
-      {/* メッセージウィンドウ層 */}
       {showUI && (
         <div className="absolute bottom-0 left-0 w-full z-40 pb-6 px-2 md:pb-8 md:px-8 bg-gradient-to-t from-black/90 via-black/40 to-transparent pt-32 pointer-events-none" >
           <div onClick={(e) => e.stopPropagation()} className={`pointer-events-auto max-w-4xl mx-auto rounded-3xl p-4 shadow-2xl backdrop-blur-lg border-2 transition-all duration-500 ${getWindowBorderColor()} ${isLoveMode ? 'bg-pink-900/20' : 'bg-black/20'}`}>
@@ -476,7 +473,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       
       {showManual && <ManualModal onClose={() => setShowManual(false)} t={t} />}
       
-      {/* プリロード用（隠し要素） */}
       <div className="hidden">
         {Object.values(MAID_EMOTIONS).map(s => <img key={s} src={s} />)}
         {Object.values(SANTA_EMOTIONS).map(s => <img key={s} src={s} />)}
