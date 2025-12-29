@@ -88,6 +88,7 @@ const LOVE_IMAGES = {
 
 const ROOMWEAR_IMAGE = "/images/akari_roomwear.png"; 
 const ROOMWEAR_LOVE_IMAGE = "/images/akari_roomwear_love.png"; 
+const ROOMWEAR_LOVE_ROYAL_IMAGE = "/images/akari_roomwear_love_royal.png"; // ★追加：Royal版ルームウェア
 
 const BG_DAY = "/images/bg_room_day.jpg";
 const BG_NIGHT = "/images/bg_room_night.jpg";
@@ -288,8 +289,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     e.stopPropagation(); 
     const newMuted = !isMuted;
     setIsMuted(newMuted);
-    
-    // ユーザー操作の直後に再生/停止を試みることでブラウザ制限を回避
     if (audioRef.current) {
       audioRef.current.muted = newMuted;
       if (!newMuted && audioRef.current.paused) {
@@ -323,7 +322,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
 
     audio.muted = isMuted;
 
-    // 再生・フェードの共通処理
     const playAudio = () => {
       if (!isMuted && audio.paused && audio.src) {
         audio.play().then(() => fadeVolume(MAX_VOLUME)).catch(e => {});
@@ -335,13 +333,11 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     };
 
     if (!audio.src.includes(targetSrc)) {
-      // 曲が変わる場合
       fadeVolume(0, () => {
         audio.src = targetSrc;
         playAudio();
       });
     } else {
-      // 同じ曲の場合の制御
       playAudio();
     }
 
@@ -415,8 +411,14 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     if (plan !== 'ROYAL') activeOutfit = 'maid'; 
   }
 
-  if (isRoomwearTime && activeOutfit === 'maid') {
-    characterSrc = isLoveMode ? ROOMWEAR_LOVE_IMAGE : ROOMWEAR_IMAGE;
+  // ★修正：ルームウェア時間帯の画像選択ロジックを最優先にする
+  if (isRoomwearTime && (activeOutfit === 'maid' || activeOutfit === 'swimsuit')) {
+    if (isLoveMode) {
+      // 親密度100かつロイヤルプランなら royal版、そうでなければ通常版
+      characterSrc = (plan === 'ROYAL') ? ROOMWEAR_LOVE_ROYAL_IMAGE : ROOMWEAR_LOVE_IMAGE;
+    } else {
+      characterSrc = ROOMWEAR_IMAGE;
+    }
   } else {
     if (isLoveMode) characterSrc = LOVE_IMAGES[activeOutfit] || LOVE_IMAGES.maid;
     else {
@@ -431,7 +433,6 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
   }
 
-  // ★膝上表示のため twin_maid はメイドと同じ位置に設定
   const isFullBodyOutfit = activeOutfit === 'santa' || activeOutfit === 'kimono';
   const adjustPosition = isFullBodyOutfit; 
   const imageScale = isLoveMode ? "scale-110" : "scale-100";
@@ -550,6 +551,9 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
         {Object.values(KIMONO_EMOTIONS).map(s => <img key={s} src={s} />)}
         {Object.values(LOVE_IMAGES).map(s => <img key={s} src={s} />)}
         {SITUATION_DEFINITIONS.map(d => <img key={d.id} src={d.image} />)}
+        <img src={ROOMWEAR_IMAGE} />
+        <img src={ROOMWEAR_LOVE_IMAGE} />
+        <img src={ROOMWEAR_LOVE_ROYAL_IMAGE} />
       </div>
     </div>
   );
