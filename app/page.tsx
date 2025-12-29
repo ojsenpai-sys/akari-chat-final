@@ -27,7 +27,7 @@ const TRANSLATIONS = {
     scrollMore: "▼ スクロールして詳細を見る",
     features: "主な機能",
     featChat: "自然な会話",
-    featChatDesc: "最新AIがあなたとの会話を記憶。話せば話すほど仲良くなれます。",
+    featChatDesc: "最新AIがあなたとの会話を記憶.話せば話すほど仲良くなれます。",
     featDress: "着せ替え・ギフト",
     featDressDesc: "メイド服だけじゃない？プレゼントを贈って特別な衣装に着替えさせましょう。",
     featVision: "画像認識",
@@ -144,6 +144,7 @@ const TRANSLATIONS = {
 const OUTFIT_REACTIONS = {
   ja: {
     maid: "はぁ…やっぱりこの戦闘服（メイド服）が一番落ち着きますわね！襟元のフリル,エプロンの張り具合,完璧な防御力…いえ、可愛さです！さあご主人様、改めてお仕えいたしますわっ！",
+    twin_maid: "どうですか、ご主人様…？ロイヤルな方限定の、黒髪ツインテール姿です。少し幼く見えますけど、特別感があって…その、悪くないですわよね？///",
     santa: "メリークリスマス、ご主人様っ！少し気が早い気もしますが、イベントは準備期間が一番楽しいって言いますでしょ？…えへへ、この帽子、可愛くないですか？プレゼント、期待しててくださいね♪",
     kimono: "謹賀新年…いえ、ご主人様と迎える特別なハレの日ですわ。この着物、帯の締め付けが心地よい緊張感を生んで…ふふっ、大和撫子モードの私に、どうぞ見惚れてくださいまし？",
     swimsuit: "（…うぅ、布面積が防御力低すぎませんこと…？）あ,あのっ、ご主人様！あまりジロジロ見ないでくださいまし…！恥ずかしくて、どこを見ていいか分かりませんの…///",
@@ -151,6 +152,7 @@ const OUTFIT_REACTIONS = {
   },
   en: {
     maid: "Haa... This battle uniform (maid dress) really is the most comfortable! The frills, the apron's crispness, the perfect defense... I mean, cuteness! Now, Master, I am ready to serve you anew!",
+    twin_maid: "How do I look, Master...? This is my black twin-tail look, exclusive to Royal members. It feels special... umm, it's not bad, right? ///",
     santa: "Merry Christmas, Master! It might be a bit early, but they say the preparation period is the most fun part of an event, right? ...Ehehe, isn't this hat cute? Look forward to your present♪",
     kimono: "Happy New Year... No, it's a special day to welcome with you, Master. The tightness of this obi creates a pleasant tension... Fufu, please admire me in my Yamato Nadeshiko mode, okay?",
     swimsuit: "(...Ugh, isn't the fabric area too low for defense...?) U-Umm, Master! Please don't stare so much...! I'm so embarrassed, I don't know where to look...///",
@@ -355,7 +357,8 @@ function HomeContent() {
       return;
     }
 
-    if ((newOutfit === 'santa' || newOutfit === 'kimono') && plan !== 'ROYAL') {
+    // ★修正：ツインテールメイド（twin_maid）をロイヤルプラン限定に追加
+    if ((newOutfit === 'santa' || newOutfit === 'kimono' || newOutfit === 'twin_maid') && plan !== 'ROYAL') {
       setMessages(prev => [...prev, { id: Date.now().toString(), role: 'assistant', content: t.planLimitRoyal, mode: 'casual' }]);
       setShowCostume(false);
       return;
@@ -371,7 +374,8 @@ function HomeContent() {
         const reaction = OUTFIT_REACTIONS[lang][newOutfit] || OUTFIT_REACTIONS[lang].maid;
         
         let prefix = "[笑顔]";
-        if (affection >= 100 || newOutfit === 'swimsuit' || newOutfit === 'bunny') {
+        // ★修正：ツインテール時も照れプレフィックスを付ける
+        if (affection >= 100 || newOutfit === 'swimsuit' || newOutfit === 'bunny' || newOutfit === 'twin_maid') {
           prefix = "[照れ]";
         }
         if (newOutfit === 'maid') {
@@ -424,7 +428,11 @@ function HomeContent() {
         throw new Error(`Error: ${response.status}`);
       }
       const data = await response.json();
-      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: data.text, mode: mode }]);
+      
+      // ★修正：メッセージ表示の空行詰め処理（連続する改行を1つに）
+      const cleanedText = data.text.replace(/\n\s*\n/g, '\n').trim();
+      
+      setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: cleanedText, mode: mode }]);
     } catch (err) { alert(`Error: ${err.message}`); } finally { setIsLoading(false); }
   };
 
@@ -631,7 +639,7 @@ function HomeContent() {
                 {messages.filter(m => m.mode === 'professional').map((m, i) => (
                   <div key={i} className={`p-4 rounded-xl text-sm leading-relaxed ${m.role === 'assistant' ? 'bg-blue-50 border border-blue-100' : 'bg-slate-50 border border-slate-200'}`}>
                     <p className="text-[9px] font-bold mb-1 opacity-40 uppercase">{m.role === 'assistant' ? t.charName : 'User'}</p>
-                    <p className="whitespace-pre-wrap">{m.content.replace(/\[.*?\]/g, '')}</p>
+                    <p className="whitespace-pre-wrap">{m.content.replace(/\[.*?\]/g, '').replace(/\n\s*\n/g, '\n')}</p>
                   </div>
                 ))}
               </div>
@@ -710,6 +718,7 @@ function HomeContent() {
           <div className="space-y-2">
             {[
               {id: 'maid', name: lang === 'ja' ? 'メイド服' : 'Maid Dress'}, 
+              {id: 'twin_maid', name: lang === 'ja' ? 'ツインテールメイド 🎀' : 'Twin Tail Maid 🎀'}, // ★追加
               {id: 'santa', name: lang === 'ja' ? 'サンタ服 🎄' : 'Santa Outfit 🎄'}, 
               ...(new Date() >= new Date('2026-01-01') ? [{id: 'kimono', name: lang === 'ja' ? '晴れ着 🎍' : 'Kimono 🎍'}] : []),
               {id: 'swimsuit', name: lang === 'ja' ? '水着 👙' : 'Swimsuit 👙'}, 
