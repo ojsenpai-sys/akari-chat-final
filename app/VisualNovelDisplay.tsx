@@ -423,12 +423,15 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     }
   }
 
-  // ★膝上表示のため twin_maid はメイドと同じ位置に設定
-  const adjustPosition = (activeOutfit === 'santa' || activeOutfit === 'kimono') || isLoveMode;
+  // ★修正：サイズ決定のロジック（親密度100での強制ズームを排除）
+  // ツインテールメイド（twin_maid）と通常メイド（maid）は膝上なので、Love ModeでもPath 2（h-[140%]）を使用する。
+  const isFullBodyOutfit = activeOutfit === 'santa' || activeOutfit === 'kimono';
+  const adjustPosition = isFullBodyOutfit; // 親密度によらず、衣装の種類のみで配置を決定
+  
   const imageScale = isLoveMode ? "scale-110" : "scale-100";
   const imageStyle = adjustPosition
     ? `h-[150%] w-auto -bottom-[60%] md:h-auto md:max-h-[220%] md:-bottom-[120%] ${imageScale}` 
-    : "h-[140%] w-auto -bottom-[50%] md:h-auto md:max-h-[140%] md:-bottom-[45%]";
+    : `h-[140%] w-auto -bottom-[50%] md:h-auto md:max-h-[140%] md:-bottom-[45%] ${imageScale}`; // ★膝上Pathにもscaleを適用
 
   let currentBg = (plan === 'ROYAL') ? (isNightTime ? BG_ROYAL_NIGHT : BG_ROYAL_DAY) : (isNightTime ? BG_NIGHT : BG_DAY);
   if (currentSituation) currentBg = currentSituation.image;
