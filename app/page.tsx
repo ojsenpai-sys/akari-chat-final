@@ -344,7 +344,8 @@ function HomeContent() {
       setMessages(prev => [...prev, { 
         id: Date.now().toString(), 
         role: 'assistant', 
-        content: lang === 'ja' ? "[照れ]ご主人様、こんな夜更けにそのお姿は…少しはしたないですわ。今はルームウェア（水着）で失礼いたしますね？" : "[照れ]Master, it's a bit too late for that outfit. Let's stay in our room wear for now, shall we?", 
+        // ★修正点：ルームウェア（水着）の「（水着）」表記を削除
+        content: lang === 'ja' ? "[照れ]ご主人様、こんな夜更けにそのお姿は…少しはしたないですわ。今はルームウェアで失礼いたしますね？" : "[照れ]Master, it's a bit too late for that outfit. Let's stay in our room wear for now, shall we?", 
         mode: 'casual' 
       }]);
       setShowCostume(false);
@@ -429,7 +430,7 @@ function HomeContent() {
       }
       const data = await response.json();
       
-      // ★修正：メッセージ表示の空行詰め処理（連続する改行を1つに）
+      // ★メッセージ表示の空行詰め処理（連続する改行を1つに）
       const cleanedText = data.text.replace(/\n\s*\n/g, '\n').trim();
       
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: cleanedText, mode: mode }]);
