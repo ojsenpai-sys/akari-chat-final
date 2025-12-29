@@ -344,7 +344,6 @@ function HomeContent() {
       setMessages(prev => [...prev, { 
         id: Date.now().toString(), 
         role: 'assistant', 
-        // ★修正点：ルームウェア（水着）の「（水着）」表記を削除
         content: lang === 'ja' ? "[照れ]ご主人様、こんな夜更けにそのお姿は…少しはしたないですわ。今はルームウェアで失礼いたしますね？" : "[照れ]Master, it's a bit too late for that outfit. Let's stay in our room wear for now, shall we?", 
         mode: 'casual' 
       }]);
@@ -430,7 +429,7 @@ function HomeContent() {
       }
       const data = await response.json();
       
-      // ★メッセージ表示の空行詰め処理（連続する改行を1つに）
+      // ★修正：メッセージ表示の空行詰め処理（連続する改行を1つに）
       const cleanedText = data.text.replace(/\n\s*\n/g, '\n').trim();
       
       setMessages(prev => [...prev, { id: (Date.now() + 1).toString(), role: 'assistant', content: cleanedText, mode: mode }]);
@@ -572,6 +571,8 @@ function HomeContent() {
                <a href="/terms" target="_blank" className="hover:text-white transition-colors">{t.termsLink}</a>
                <a href="/privacy" target="_blank" className="hover:text-white transition-colors">{t.privacyLink}</a>
             </div>
+            {/* ★修正箇所：Stripe審査用に販売責任者名を追記 */}
+            <p className="mb-2">運営 / 販売責任者：古川 朋久</p>
             <p>{t.copyright}</p>
         </footer>
       </div>
@@ -607,10 +608,10 @@ function HomeContent() {
               <div className="flex items-center gap-2 text-orange-400 font-bold"><Heart size={12} className="text-pink-400" /> {t.affection}: {affection}</div>
            </div>
            <div className="flex flex-row gap-2 shrink-0">
-              <button onClick={() => setShowShop(true)} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-blue-400 rounded-xl border border-white/20 shadow-lg hover:bg-blue-600 hover:text-white transition-all"><ShoppingCart size={24} /></button>
-              <button onClick={() => setShowCostume(true)} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-pink-400 rounded-xl border border-white/20 shadow-lg hover:bg-pink-600 hover:text-white transition-all"><Shirt size={24} /></button>
-              <button onClick={() => setShowGift(true)} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-yellow-400 rounded-xl border border-white/20 shadow-lg hover:bg-yellow-600 hover:text-white transition-all"><Gift size={24} /></button>
-              <button onClick={() => signOut()} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-gray-400 rounded-xl border border-white/20 shadow-lg hover:bg-red-900 hover:text-white transition-all"><LogOut size={24} /></button>
+              <button onClick={() => setShowShop(true)} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-blue-400 rounded-xl border border-white/20 shadow-lg hover:bg-blue-600 transition-all"><ShoppingCart size={24} /></button>
+              <button onClick={() => setShowCostume(true)} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-pink-400 rounded-xl border border-white/20 shadow-lg hover:bg-pink-600 transition-all"><Shirt size={24} /></button>
+              <button onClick={() => setShowGift(true)} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-yellow-400 rounded-xl border border-white/20 shadow-lg hover:bg-yellow-600 transition-all"><Gift size={24} /></button>
+              <button onClick={() => signOut()} className="w-12 h-12 flex items-center justify-center bg-gray-900/80 text-gray-400 rounded-xl border border-white/20 shadow-lg hover:bg-red-900 transition-all"><LogOut size={24} /></button>
            </div>
         </div>
       )}
@@ -719,7 +720,7 @@ function HomeContent() {
           <div className="space-y-2">
             {[
               {id: 'maid', name: lang === 'ja' ? 'メイド服' : 'Maid Dress'}, 
-              {id: 'twin_maid', name: lang === 'ja' ? 'ツインテールメイド 🎀' : 'Twin Tail Maid 🎀'}, // ★追加
+              {id: 'twin_maid', name: lang === 'ja' ? 'ツインテールメイド 🎀' : 'Twin Tail Maid 🎀'}, 
               {id: 'santa', name: lang === 'ja' ? 'サンタ服 🎄' : 'Santa Outfit 🎄'}, 
               ...(new Date() >= new Date('2026-01-01') ? [{id: 'kimono', name: lang === 'ja' ? '晴れ着 🎍' : 'Kimono 🎍'}] : []),
               {id: 'swimsuit', name: lang === 'ja' ? '水着 👙' : 'Swimsuit 👙'}, 
