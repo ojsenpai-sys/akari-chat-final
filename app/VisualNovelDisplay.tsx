@@ -79,7 +79,7 @@ const KIMONO_EMOTIONS = {
 
 const LOVE_IMAGES = {
   maid: "/images/akari_maid_love.png",
-  twin_maid: "/images/akari_twin_love.png", // ★追加
+  twin_maid: "/images/akari_twin_love.png", 
   santa: "/images/akari_santa_love.png",
   swimsuit: "/images/akari_swim_love.png",
   bunny: "/images/akari_bunny_love.png",
@@ -88,7 +88,7 @@ const LOVE_IMAGES = {
 
 const ROOMWEAR_IMAGE = "/images/akari_roomwear.png"; 
 const ROOMWEAR_LOVE_IMAGE = "/images/akari_roomwear_love.png"; 
-const ROOMWEAR_LOVE_ROYAL_IMAGE = "/images/akari_roomwear_love_royal.png"; // ★追加：Royal版ルームウェア
+const ROOMWEAR_LOVE_ROYAL_IMAGE = "/images/akari_roomwear_love_royal.png"; 
 
 const BG_DAY = "/images/bg_room_day.jpg";
 const BG_NIGHT = "/images/bg_room_night.jpg";
@@ -284,15 +284,26 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     setIsExpanded(!isExpanded);
   };
 
-  // ★修正：ミュートトグル（直接再生制御を加えることで確実にオンオフできるように改善）
+  // ★修正：ミュートトグル（直接再生制御を強化して確実にオンオフできるように改善）
   const toggleMute = (e) => { 
     e.stopPropagation(); 
     const newMuted = !isMuted;
     setIsMuted(newMuted);
+    
     if (audioRef.current) {
       audioRef.current.muted = newMuted;
-      if (!newMuted && audioRef.current.paused) {
-        audioRef.current.play().catch(e => console.log("Play failed on toggle:", e));
+      if (!newMuted) {
+        // ミュート解除時は即座に再生を試みる（ユーザー操作による直接再生）
+        if (audioRef.current.paused) {
+          audioRef.current.play()
+            .then(() => fadeVolume(MAX_VOLUME))
+            .catch(e => console.log("Play failed on toggle:", e));
+        } else {
+          fadeVolume(MAX_VOLUME);
+        }
+      } else {
+        // ミュート時はボリュームを0にしてから停止感を出す
+        fadeVolume(0);
       }
     }
   };
@@ -310,7 +321,7 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     return () => clearInterval(timer);
   }, []);
 
-  // ★修正：BGM管理ロジック（isMutedの変化に即座に反応するように強化）
+  // ★修正：BGM管理ロジック（トラック変更と音量制御をより堅牢に）
   useEffect(() => {
     if (!audioRef.current) {
       audioRef.current = new Audio();
@@ -332,12 +343,14 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
       }
     };
 
-    if (!audio.src.includes(targetSrc)) {
+    if (!audio.src || !audio.src.includes(targetSrc)) {
+      // 曲が変わる場合（または初回）
       fadeVolume(0, () => {
         audio.src = targetSrc;
         playAudio();
       });
     } else {
+      // 曲は同じでミュート状態などが変わった場合
       playAudio();
     }
 
@@ -411,10 +424,8 @@ export default function VisualNovelDisplay({ messages, outfit = 'maid', currentP
     if (plan !== 'ROYAL') activeOutfit = 'maid'; 
   }
 
-  // ★修正：ルームウェア時間帯の画像選択ロジックを最優先にする
   if (isRoomwearTime && (activeOutfit === 'maid' || activeOutfit === 'swimsuit')) {
     if (isLoveMode) {
-      // 親密度100かつロイヤルプランなら royal版、そうでなければ通常版
       characterSrc = (plan === 'ROYAL') ? ROOMWEAR_LOVE_ROYAL_IMAGE : ROOMWEAR_LOVE_IMAGE;
     } else {
       characterSrc = ROOMWEAR_IMAGE;
